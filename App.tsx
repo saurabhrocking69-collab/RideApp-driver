@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
-const MAPS_KEY = 'AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ';
+const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
 // ── WebView Map ────────────────────────────────────
 const MapWebView = ({ pickup, drop, height = 180 }: any) => {
@@ -573,10 +573,10 @@ export default function App() {
 
       {/* Map */}
       <MapWebView
-        pickup={activeRide ? activeRide.pickup : 'Lucknow,India'}
-        drop={activeRide ? activeRide.drop_location : ''}
-        height={activeRide ? 160 : 180}
-      />
+  pickup={activeRide ? activeRide.pickup : 'Lucknow,India'}
+  drop={activeRide ? activeRide.drop_location : ''}
+  height={activeRide ? 140 : 160}
+/>
 
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.statsRow}>
@@ -804,7 +804,7 @@ const s = StyleSheet.create({
   rejectBtn:       { flex:1, padding:14, borderRadius:10, borderWidth:1, borderColor:'#e0e0e0', alignItems:'center' },
   rejectTxt:       { color:'#e94560', fontWeight:'bold' },
   acceptBtn:       { flex:2, padding:14, borderRadius:10, backgroundColor:'#4CAF50', alignItems:'center' },
-  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:16 },
+  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:14 },
   result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
   nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#eee', paddingBottom:12 },
   navItem:         { flex:1, alignItems:'center', paddingTop:10 },
