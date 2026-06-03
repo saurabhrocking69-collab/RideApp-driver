@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
-const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
+const MAPS_KEY = 'AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ';
 
 // ── WebView Map ────────────────────────────────────
 const MapWebView = ({ pickup, drop, height = 180 }: any) => {
@@ -130,8 +130,15 @@ export default function App() {
         setActiveRide(null);
         const pr = await fetch(`${API}/api/driver/pending-ride?phone=${dp}`);
         const pd = await pr.json();
-        if (pd.ride) { Vibration.vibrate([0, 200, 100, 200]); setRideReq(pd.ride); }
-        else setRideReq(null);
+        if (pd.ride) {
+          // Only vibrate if NEW ride (different id)
+          setRideReq((prev: any) => {
+            if (!prev || prev.id !== pd.ride.id) {
+              Vibration.vibrate([0, 200, 100, 200]);
+            }
+            return pd.ride;
+          });
+        } else setRideReq(null);
       } catch (_e) {}
     }, 4000);
   };
@@ -234,7 +241,9 @@ export default function App() {
   };
 
   const submitRegistration = async () => {
+    if (loading) return; // prevent double tap
     setLoading(true);
+    setResult('');
     try {
       const res  = await fetch(`${API}/api/driver/register-buddy`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -573,10 +582,10 @@ export default function App() {
 
       {/* Map */}
       <MapWebView
-  pickup={activeRide ? activeRide.pickup : 'Lucknow,India'}
-  drop={activeRide ? activeRide.drop_location : ''}
-  height={activeRide ? 140 : 160}
-/>
+        pickup={activeRide ? activeRide.pickup : 'Lucknow,India'}
+        drop={activeRide ? activeRide.drop_location : ''}
+        height={activeRide ? 160 : 180}
+      />
 
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.statsRow}>
@@ -680,6 +689,14 @@ export default function App() {
   if (activeTab === 'earnings') return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.greeting}>💰 Earnings</Text></View>
+      {rideReq && (
+        <TouchableOpacity
+          style={{ backgroundColor: '#e94560', padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          onPress={() => setActiveTab('home')}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride Aayi! ₹{rideReq.fare}</Text>
+          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
+        </TouchableOpacity>
+      )}
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.earningsHero}><Text style={s.earningsAmount}>₹{earnings.toFixed(0)}</Text><Text style={s.earningsLabel}>Aaj ki total kamai</Text></View>
         <View style={s.earningsCard}>
@@ -700,6 +717,14 @@ export default function App() {
   return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.greeting}>👤 Profile</Text></View>
+      {rideReq && (
+        <TouchableOpacity
+          style={{ backgroundColor: '#e94560', padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+          onPress={() => setActiveTab('home')}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride Aayi! ₹{rideReq.fare}</Text>
+          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
+        </TouchableOpacity>
+      )}
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.profileHero}>
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || selectedDriver?.name || 'D')[0].toUpperCase()}</Text></View>
@@ -804,7 +829,7 @@ const s = StyleSheet.create({
   rejectBtn:       { flex:1, padding:14, borderRadius:10, borderWidth:1, borderColor:'#e0e0e0', alignItems:'center' },
   rejectTxt:       { color:'#e94560', fontWeight:'bold' },
   acceptBtn:       { flex:2, padding:14, borderRadius:10, backgroundColor:'#4CAF50', alignItems:'center' },
-  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:14 },
+  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:16 },
   result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
   nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#eee', paddingBottom:12 },
   navItem:         { flex:1, alignItems:'center', paddingTop:10 },
