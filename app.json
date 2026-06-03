@@ -21,10 +21,22 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.saurabhspero.rideappdriver",
+      "permissions": ["CAMERA"]
+    },
+       "config": {
+      "googleMaps": {
+        "apiKey": "AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ"
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "8c13e622-0206-4e3f-ad33-8851c0f9353c"
+      }
     }
   }
 }
