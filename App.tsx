@@ -6,35 +6,30 @@ import {
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MapView, { Marker, Polyline } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ';
 
-const getDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-};
-
-const decodePolyline = (encoded: string) => {
-  const poly: { latitude: number; longitude: number }[] = [];
-  let index = 0, lat = 0, lng = 0;
-  while (index < encoded.length) {
-    let b, shift = 0, result = 0;
-    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    lat += (result & 1) ? ~(result >> 1) : result >> 1;
-    shift = 0; result = 0;
-    do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
-    lng += (result & 1) ? ~(result >> 1) : result >> 1;
-    poly.push({ latitude: lat / 1e5, longitude: lng / 1e5 });
+// ── WebView Map ────────────────────────────────────
+const MapWebView = ({ pickup, drop, height = 180 }: any) => {
+  let mapUrl = '';
+  if (pickup && drop) {
+    mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_KEY}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}&mode=driving`;
+  } else if (pickup) {
+    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${encodeURIComponent(pickup)}`;
+  } else {
+    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=Lucknow,India`;
   }
-  return poly;
+
+  const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;}body{background:#dbeafe;}</style></head><body><iframe width="100%" height="${height}" frameborder="0" style="border:0" src="${mapUrl}" allowfullscreen></iframe></body></html>`;
+
+  return (
+    <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled />
+  );
 };
 
-// ── Slide-in card ──────────────────────────────────
+// ── Slide-in ───────────────────────────────────────
 const SlideIn = ({ children, style }: any) => {
   const y       = useRef(new Animated.Value(80)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -47,7 +42,7 @@ const SlideIn = ({ children, style }: any) => {
   return <Animated.View style={[style, { transform: [{ translateY: y }], opacity }]}>{children}</Animated.View>;
 };
 
-// ── Countdown bar ──────────────────────────────────
+// ── Countdown ──────────────────────────────────────
 const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () => void }) => {
   const [left, setLeft] = useState(seconds);
   const anim = useRef(new Animated.Value(1)).current;
@@ -89,16 +84,14 @@ export default function App() {
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
-  const [driverLoc, setDriverLoc]   = useState<any>(null);
-  const [routeCoords, setRouteCoords] = useState<any[]>([]);
   const [eta, setEta]               = useState('');
   const [tripSummary, setTripSummary] = useState<any>(null);
-  const pollRef                     = useRef<any>(null);
+  const pollRef = useRef<any>(null);
 
   // Registration
-  const [regStep, setRegStep]     = useState(0);
-  const [regData, setRegData]     = useState<any>({ phone:'', vehicle_type:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
-  const [uploading, setUploading] = useState('');
+  const [regStep, setRegStep]       = useState(0);
+  const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
+  const [uploading, setUploading]   = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [driverInfo, setDriverInfo] = useState<any>(null);
 
@@ -155,7 +148,6 @@ export default function App() {
       locInterval = setInterval(async () => {
         try {
           const loc = await Location.getCurrentPositionAsync({});
-          setDriverLoc({ lat: loc.coords.latitude, lng: loc.coords.longitude });
           await fetch(`${API}/api/driver/update-location`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude })
@@ -168,24 +160,26 @@ export default function App() {
 
   useEffect(() => () => clearInterval(pollRef.current), []);
 
-  // ── Route ──────────────────────────────────────
-  const getRoute = async (origin: string, dest: string) => {
-    try {
-      const res  = await fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
-      const data = await res.json();
-      if (data.routes?.[0]) {
-        setRouteCoords(decodePolyline(data.routes[0].overview_polyline.points));
-        const leg = data.routes[0].legs[0];
-        setEta(leg.duration.text + ' · ' + leg.distance.text);
-      }
-    } catch (_e) {}
-  };
-
+  // ── Navigate ───────────────────────────────────
   const navigateTo = (location: string) => {
     const url = Platform.OS === 'ios'
       ? `maps:?daddr=${encodeURIComponent(location)}`
       : `google.navigation:q=${encodeURIComponent(location)}`;
-    Linking.openURL(url).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`));
+    Linking.openURL(url).catch(() =>
+      Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`)
+    );
+  };
+
+  // ── ETA ────────────────────────────────────────
+  const fetchEta = async (origin: string, dest: string) => {
+    try {
+      const res  = await fetch(
+        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`
+      );
+      const data = await res.json();
+      const el   = data.rows?.[0]?.elements?.[0];
+      if (el?.status === 'OK') setEta(el.duration.text + ' · ' + el.distance.text);
+    } catch (_e) {}
   };
 
   // ── Login ──────────────────────────────────────
@@ -247,7 +241,8 @@ export default function App() {
         body: JSON.stringify({ ...regData, name: regData.dl_name })
       });
       const data = await res.json();
-      if (data.success) setRegStep(99); else setResult('❌ ' + (data.error || 'Registration fail'));
+      if (data.success) setRegStep(99);
+      else setResult('❌ ' + (data.error || 'Registration fail'));
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
   };
@@ -278,7 +273,11 @@ export default function App() {
     setLoading(true);
     try {
       const data = await apiCall('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
-      if (data.success) { setResult('✅ Ride accept ki!'); setRideReq(null); await getRoute(rideReq.pickup, rideReq.drop_location); }
+      if (data.success) {
+        setResult('✅ Ride accept ki!');
+        setRideReq(null);
+        await fetchEta(rideReq.pickup, rideReq.drop_location);
+      }
     } catch (_e) { setResult('❌ Error'); }
     setLoading(false);
   };
@@ -305,16 +304,26 @@ export default function App() {
     setLoading(true);
     await apiCall('/api/rides/complete', { ride_id: activeRide.id });
     const fare = parseFloat(activeRide.fare || 0);
-    setEarnings(e => e + fare); setRides(r => r + 1);
-    setTripSummary({ fare: activeRide.fare, pickup: activeRide.pickup, drop: activeRide.drop_location,
-      passenger: activeRide.passenger_name, earned: '₹' + (fare * 0.85).toFixed(0), fee: '₹' + (fare * 0.15).toFixed(0) });
-    setActiveRide(null); setRouteCoords([]); setLoading(false);
+    setEarnings(e => e + fare);
+    setRides(r => r + 1);
+    setTripSummary({
+      fare: activeRide.fare,
+      pickup: activeRide.pickup,
+      drop: activeRide.drop_location,
+      passenger: activeRide.passenger_name,
+      earned: '₹' + (fare * 0.85).toFixed(0),
+      fee: '₹' + (fare * 0.15).toFixed(0)
+    });
+    setActiveRide(null);
+    setLoading(false);
   };
 
   const cancelTrip = async () => {
     setLoading(true);
     await apiCall('/api/rides/cancel', { ride_id: activeRide.id, reason: 'Driver cancelled' });
-    setResult('❌ Trip cancel ki'); setActiveRide(null); setRouteCoords([]); setLoading(false);
+    setResult('❌ Trip cancel ki');
+    setActiveRide(null);
+    setLoading(false);
   };
 
   // ── PhotoBox ───────────────────────────────────
@@ -334,11 +343,8 @@ export default function App() {
     </View>
   );
 
-  const defaultRegion = { latitude: 26.8467, longitude: 80.9462, latitudeDelta: 0.05, longitudeDelta: 0.05 };
-  const driverRegion  = driverLoc ? { latitude: driverLoc.lat, longitude: driverLoc.lng, latitudeDelta: 0.02, longitudeDelta: 0.02 } : defaultRegion;
-
   // ══════════════════════════════════════════════
-  //  REGISTRATION (steps 1-5 + success)
+  //  REGISTRATION STEPS
   // ══════════════════════════════════════════════
   if (screen === 'login' && regStep === 1) return (
     <View style={s.screen}>
@@ -376,7 +382,7 @@ export default function App() {
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(2)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 3 of 5</Text><View style={{ width: 50 }} /></View>
       <ScrollView style={{ flex: 1, padding: 20 }}>
-        <Text style={rs.bigTitle}>📄 Driving License</Text><Text style={rs.subTitle}>DL ki photo aur naam (learning DL bhi chalega)</Text>
+        <Text style={rs.bigTitle}>📄 Driving License</Text><Text style={rs.subTitle}>DL ki photo aur naam</Text>
         <View style={rs.adviceBox}>
           <Text style={rs.adviceTitle}>📸 Photo Tips:</Text>
           <Text style={rs.adviceText}>• DL ka front side clear photo lo</Text>
@@ -533,10 +539,10 @@ export default function App() {
           <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
           {[['Passenger', tripSummary.passenger || 'Customer'],
             ['Route', (tripSummary.pickup||'').substring(0,18) + ' → ' + (tripSummary.drop||'').substring(0,14)],
-            ['Total Fare', '₹' + tripSummary.fare], ['Platform Fee (15%)', tripSummary.fee],
+            ['Total Fare', '₹' + tripSummary.fare],
+            ['Platform Fee (15%)', tripSummary.fee],
             ['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
-            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10,
-              borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
               <Text style={{ fontSize: 14, color: '#666' }}>{k}</Text>
               <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? '#4CAF50' : '#333' }}>{v}</Text>
             </View>
@@ -564,12 +570,14 @@ export default function App() {
         </View>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
-      <View style={{ height: activeRide ? 160 : 180 }}>
-        <MapView style={{ flex: 1 }} region={driverRegion} showsUserLocation showsMyLocationButton>
-          {driverLoc && <Marker coordinate={{ latitude: driverLoc.lat, longitude: driverLoc.lng }} title="Aap"><View style={{ backgroundColor: '#1a1a2e', borderRadius: 16, padding: 5, borderWidth: 2, borderColor: '#4CAF50' }}><Text style={{ fontSize: 14 }}>🚗</Text></View></Marker>}
-          {routeCoords.length > 0 && <Polyline coordinates={routeCoords} strokeColor="#e94560" strokeWidth={4} />}
-        </MapView>
-      </View>
+
+      {/* Map */}
+      <MapWebView
+        pickup={activeRide ? activeRide.pickup : 'Lucknow,India'}
+        drop={activeRide ? activeRide.drop_location : ''}
+        height={activeRide ? 160 : 180}
+      />
+
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.statsRow}>
           <View style={s.statCard}><Text style={s.statIcon}>💰</Text><Text style={s.statValue}>₹{earnings.toFixed(0)}</Text><Text style={s.statLabel}>Aaj ki kamai</Text></View>
@@ -577,6 +585,7 @@ export default function App() {
           <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
         </View>
 
+        {/* Active Ride */}
         {activeRide && (
           <View style={s.tripCard}>
             <View style={s.tripBadge}>
@@ -600,16 +609,19 @@ export default function App() {
               <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
             </View>
             {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+
+            {/* Navigate buttons */}
             {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-              <TouchableOpacity style={{ backgroundColor: '#2196F3', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 10 }} onPress={() => navigateTo(activeRide.pickup)}>
+              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup)}>
                 <Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text>
               </TouchableOpacity>
             )}
             {activeRide.status === 'started' && (
-              <TouchableOpacity style={{ backgroundColor: '#2196F3', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 10 }} onPress={() => navigateTo(activeRide.drop_location)}>
+              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location)}>
                 <Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text>
               </TouchableOpacity>
             )}
+
             {activeRide.status === 'matched' && (
               <TouchableOpacity style={s.tripBtn} onPress={markArrived} disabled={loading}>
                 <Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
@@ -634,6 +646,7 @@ export default function App() {
           </View>
         )}
 
+        {/* Ride Request */}
         {rideReq && !activeRide && (
           <SlideIn>
             <View style={s.rideCard}>
@@ -703,7 +716,8 @@ export default function App() {
           </TouchableOpacity>
         ))}
         <TouchableOpacity style={s.logoutBtn} onPress={async () => {
-          await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo');
+          await AsyncStorage.removeItem('driverPhone');
+          await AsyncStorage.removeItem('driverInfo');
           setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone('');
         }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
@@ -775,6 +789,7 @@ const s = StyleSheet.create({
   tripTo:          { fontSize:14, color:'#e94560', fontWeight:'600' },
   tripBtn:         { backgroundColor:'#1a1a2e', borderRadius:10, padding:16, alignItems:'center', marginBottom:8 },
   tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:16 },
+  navBtn:          { backgroundColor:'#2196F3', borderRadius:10, padding:12, alignItems:'center', marginBottom:10 },
   cancelBtn:       { padding:12, alignItems:'center' },
   cancelTxt:       { color:'#e94560', fontWeight:'600' },
   rideCard:        { backgroundColor:'#fff', borderRadius:16, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#e94560' },
