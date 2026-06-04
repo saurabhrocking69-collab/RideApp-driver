@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, Platform
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -9,27 +9,21 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
-const MAPS_KEY = 'AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ';
+const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
-// ── WebView Map ────────────────────────────────────
 const MapWebView = ({ pickup, drop, height = 180 }: any) => {
   let mapUrl = '';
   if (pickup && drop) {
     mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_KEY}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}&mode=driving`;
-  } else if (pickup) {
+  } else if (pickup && pickup !== 'Lucknow,India') {
     mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${encodeURIComponent(pickup)}`;
   } else {
-    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=Lucknow,India`;
+    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=Lucknow,Uttar+Pradesh,India`;
   }
-
   const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;}body{background:#dbeafe;}</style></head><body><iframe width="100%" height="${height}" frameborder="0" style="border:0" src="${mapUrl}" allowfullscreen></iframe></body></html>`;
-
-  return (
-    <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled />
-  );
+  return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled />;
 };
 
-// ── Slide-in ───────────────────────────────────────
 const SlideIn = ({ children, style }: any) => {
   const y       = useRef(new Animated.Value(80)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -42,17 +36,13 @@ const SlideIn = ({ children, style }: any) => {
   return <Animated.View style={[style, { transform: [{ translateY: y }], opacity }]}>{children}</Animated.View>;
 };
 
-// ── Countdown ──────────────────────────────────────
 const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () => void }) => {
   const [left, setLeft] = useState(seconds);
   const anim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
     Animated.timing(anim, { toValue: 0, duration: seconds * 1000, useNativeDriver: false }).start();
     const t = setInterval(() => {
-      setLeft((l: number) => {
-        if (l <= 1) { clearInterval(t); onTimeout?.(); return 0; }
-        return l - 1;
-      });
+      setLeft((l: number) => { if (l <= 1) { clearInterval(t); onTimeout?.(); return 0; } return l - 1; });
     }, 1000);
     return () => clearInterval(t);
   }, []);
@@ -63,8 +53,7 @@ const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () 
         <Text style={{ fontSize: 12, fontWeight: 'bold', color: left <= 5 ? '#e94560' : '#333' }}>{left}s</Text>
       </View>
       <View style={{ height: 4, backgroundColor: '#f0f0f0', borderRadius: 2, overflow: 'hidden' }}>
-        <Animated.View style={{ height: 4, borderRadius: 2, backgroundColor: left <= 5 ? '#e94560' : '#4CAF50',
-          width: anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
+        <Animated.View style={{ height: 4, borderRadius: 2, backgroundColor: left <= 5 ? '#e94560' : '#4CAF50', width: anim.interpolate({ inputRange: [0, 1], outputRange: ['0%', '100%'] }) }} />
       </View>
     </View>
   );
@@ -86,6 +75,14 @@ export default function App() {
   const [otpInput, setOtpInput]     = useState('');
   const [eta, setEta]               = useState('');
   const [tripSummary, setTripSummary] = useState<any>(null);
+  const [driverGps, setDriverGps]   = useState<any>(null);
+  const [pickupInRange, setPickupInRange] = useState(false);
+  const [dropInRange, setDropInRange] = useState(false);
+  const [rangeDist, setRangeDist]   = useState(0);
+  const [target, setTarget]         = useState<any>(null);
+  const [chatMsgs, setChatMsgs]     = useState<any[]>([]);
+  const [chatInput, setChatInput]   = useState('');
+  const [showChat, setShowChat]     = useState(false);
   const pollRef = useRef<any>(null);
 
   // Registration
@@ -99,9 +96,6 @@ export default function App() {
     { phone: '8888888888', name: 'Raju',   vehicle: 'UP32AB1234', type: '🛺 Auto' },
     { phone: '7777777777', name: 'Amit',   vehicle: 'UP32CD5678', type: '🏍️ Bike' },
     { phone: '6666666666', name: 'Suresh', vehicle: 'UP32EF9012', type: '🚕 Taxi' },
-    { phone: '5555555555', name: 'Vikram', vehicle: 'UP32GH3456', type: '🚕 Economy' },
-    { phone: '4444444444', name: 'Rahul',  vehicle: 'UP32IJ7890', type: '🚗 Premium' },
-    { phone: '3333333333', name: 'Deepak', vehicle: 'UP32KL1234', type: '🏍️ Moto' },
   ];
   const selectedDriver = DRIVERS.find(d => d.phone === phone);
 
@@ -113,14 +107,21 @@ export default function App() {
         const savedInfo  = await AsyncStorage.getItem('driverInfo');
         if (savedPhone) {
           setPhone(savedPhone);
-          if (savedInfo) setDriverInfo(JSON.parse(savedInfo));
-          setScreen('home');
+          try {
+            const res  = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: savedPhone }) });
+            const data = await res.json();
+            if (data.success) {
+              setDriverInfo(data.driver);
+              await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
+              if (data.driver.status === 'approved') setScreen('home');
+            } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
+          } catch (_e) { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
         }
       } catch (_e) {}
     })();
   }, []);
 
-  // ── Polling ────────────────────────────────────
+  // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
     pollRef.current = setInterval(async () => {
       try {
@@ -131,21 +132,14 @@ export default function App() {
         const pr = await fetch(`${API}/api/driver/pending-ride?phone=${dp}`);
         const pd = await pr.json();
         if (pd.ride) {
-          // Only vibrate if NEW ride (different id)
-          setRideReq((prev: any) => {
-            if (!prev || prev.id !== pd.ride.id) {
-              Vibration.vibrate([0, 200, 100, 200]);
-            }
-            return pd.ride;
-          });
+          setRideReq((prev: any) => { if (!prev || prev.id !== pd.ride.id) Vibration.vibrate([0, 200, 100, 200]); return pd.ride; });
         } else setRideReq(null);
       } catch (_e) {}
     }, 4000);
   };
-
   const stopPolling = () => { clearInterval(pollRef.current); setRideReq(null); setActiveRide(null); };
 
-  // ── Location ───────────────────────────────────
+  // ── Location tracking + GPS range check ────────
   useEffect(() => {
     if (!isOnline) return;
     let locInterval: any;
@@ -155,34 +149,54 @@ export default function App() {
       locInterval = setInterval(async () => {
         try {
           const loc = await Location.getCurrentPositionAsync({});
-          await fetch(`${API}/api/driver/update-location`, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude })
-          });
+          setDriverGps({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+          await fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude }) });
+          // GPS range check for active ride
+          if (activeRide?.id) {
+            const type = activeRide.status === 'started' ? 'drop' : 'pickup';
+            const rr = await fetch(`${API}/api/rides/check-range`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, driver_lat: loc.coords.latitude, driver_lng: loc.coords.longitude, type }) });
+            const rd = await rr.json();
+            setRangeDist(rd.distance || 0);
+            if (type === 'pickup') setPickupInRange(rd.in_range);
+            else setDropInRange(rd.in_range);
+          }
         } catch (_e) {}
       }, 5000);
     })();
     return () => clearInterval(locInterval);
-  }, [isOnline]);
+  }, [isOnline, activeRide?.id, activeRide?.status]);
 
   useEffect(() => () => clearInterval(pollRef.current), []);
 
+  // ── Chat polling ───────────────────────────────
+  useEffect(() => {
+    if (!showChat || !activeRide?.id) return;
+    const load = async () => {
+      try { const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
+    };
+    load();
+    const iv = setInterval(load, 2500);
+    return () => clearInterval(iv);
+  }, [showChat, activeRide?.id]);
+
+  // ── Load daily target ──────────────────────────
+  useEffect(() => {
+    if (screen !== 'home' || !phone) return;
+    (async () => {
+      try { const r = await fetch(`${API}/api/driver/target?phone=${phone}`); const d = await r.json(); setTarget(d); } catch (_e) {}
+    })();
+  }, [screen, phone, rides]);
+
   // ── Navigate ───────────────────────────────────
   const navigateTo = (location: string) => {
-    const url = Platform.OS === 'ios'
-      ? `maps:?daddr=${encodeURIComponent(location)}`
-      : `google.navigation:q=${encodeURIComponent(location)}`;
-    Linking.openURL(url).catch(() =>
-      Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`)
-    );
+    const url = `google.navigation:q=${encodeURIComponent(location)}`;
+    Linking.openURL(url).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`));
   };
 
   // ── ETA ────────────────────────────────────────
   const fetchEta = async (origin: string, dest: string) => {
     try {
-      const res  = await fetch(
-        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`
-      );
+      const res  = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
       const data = await res.json();
       const el   = data.rows?.[0]?.elements?.[0];
       if (el?.status === 'OK') setEta(el.duration.text + ' · ' + el.distance.text);
@@ -194,10 +208,7 @@ export default function App() {
     if (loginPhone.length !== 10) { setResult('❌ 10 digit number daalo'); return; }
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/api/driver/login`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: loginPhone })
-      });
+      const res  = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
       const data = await res.json();
       if (!data.success) { setResult('❌ ' + data.message); setLoading(false); return; }
       if (data.driver.status === 'approved') {
@@ -215,10 +226,7 @@ export default function App() {
   const doUpload = async (field: string, base64: string) => {
     setUploading(field);
     try {
-      const up   = await fetch(`${API}/api/upload`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ image: `data:image/jpeg;base64,${base64}` })
-      });
+      const up   = await fetch(`${API}/api/upload`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: `data:image/jpeg;base64,${base64}` }) });
       const data = await up.json();
       if (data.success) setRegData((p: any) => ({ ...p, [field]: data.url }));
       else setResult('❌ Upload fail');
@@ -229,7 +237,7 @@ export default function App() {
   const fromCamera = async (field: string) => {
     const p = await ImagePicker.requestCameraPermissionsAsync();
     if (!p.granted) { setResult('❌ Camera permission do'); return; }
-    const r = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true });
+    const r = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true, cameraType: field === 'face_photo' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back });
     if (!r.canceled && r.assets?.[0]?.base64) doUpload(field, r.assets[0].base64);
   };
 
@@ -241,14 +249,10 @@ export default function App() {
   };
 
   const submitRegistration = async () => {
-    if (loading) return; // prevent double tap
-    setLoading(true);
-    setResult('');
+    if (loading) return;
+    setLoading(true); setResult('');
     try {
-      const res  = await fetch(`${API}/api/driver/register-buddy`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...regData, name: regData.dl_name })
-      });
+      const res  = await fetch(`${API}/api/driver/register-buddy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...regData, name: regData.dl_name }) });
       const data = await res.json();
       if (data.success) setRegStep(99);
       else setResult('❌ ' + (data.error || 'Registration fail'));
@@ -259,21 +263,14 @@ export default function App() {
   // ── Online toggle ──────────────────────────────
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
-    try {
-      await fetch(`${API}/api/driver/toggle-online`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, is_online: val })
-      });
-    } catch (_e) {}
+    try { await fetch(`${API}/api/driver/toggle-online`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, is_online: val }) }); } catch (_e) {}
     if (val) { setResult('🟢 Online hain — rides aayengi!'); startPolling(phone); }
     else { setResult('🔴 Offline hain'); stopPolling(); }
   };
 
   // ── Ride actions ───────────────────────────────
   const apiCall = async (endpoint: string, body: any) => {
-    const res = await fetch(`${API}${endpoint}`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
-    });
+    const res = await fetch(`${API}${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
     return res.json();
   };
 
@@ -282,15 +279,10 @@ export default function App() {
     setLoading(true);
     try {
       const data = await apiCall('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
-      if (data.success) {
-        setResult('✅ Ride accept ki!');
-        setRideReq(null);
-        await fetchEta(rideReq.pickup, rideReq.drop_location);
-      }
+      if (data.success) { setResult('✅ Ride accept ki!'); setRideReq(null); await fetchEta(rideReq.pickup, rideReq.drop_location); }
     } catch (_e) { setResult('❌ Error'); }
     setLoading(false);
   };
-
   const rejectRide = () => { setRideReq(null); setResult('❌ Ride reject ki'); };
 
   const markArrived = async () => {
@@ -315,14 +307,7 @@ export default function App() {
     const fare = parseFloat(activeRide.fare || 0);
     setEarnings(e => e + fare);
     setRides(r => r + 1);
-    setTripSummary({
-      fare: activeRide.fare,
-      pickup: activeRide.pickup,
-      drop: activeRide.drop_location,
-      passenger: activeRide.passenger_name,
-      earned: '₹' + (fare * 0.85).toFixed(0),
-      fee: '₹' + (fare * 0.15).toFixed(0)
-    });
+    setTripSummary({ fare: activeRide.fare, pickup: activeRide.pickup, drop: activeRide.drop_location, passenger: activeRide.passenger_name, earned: '₹' + (fare * 0.85).toFixed(0), fee: '₹' + (fare * 0.15).toFixed(0) });
     setActiveRide(null);
     setLoading(false);
   };
@@ -335,8 +320,16 @@ export default function App() {
     setLoading(false);
   };
 
+  // ── Chat ───────────────────────────────────────
+  const sendChat = async () => {
+    if (!chatInput.trim() || !activeRide?.id) return;
+    const msg = chatInput; setChatInput('');
+    try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
+  };
+  const callCustomer = () => { if (activeRide?.passenger_phone) Linking.openURL(`tel:${activeRide.passenger_phone}`); };
+
   // ── PhotoBox ───────────────────────────────────
-  const PhotoBox = ({ field, label, icon }: any) => (
+  const PhotoBox = ({ field, label, icon, cameraOnly }: any) => (
     <View style={rs.photoBox}>
       {regData[field] ? (
         <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>✅</Text><Text style={{ color: '#4CAF50', fontWeight: '600', marginTop: 4 }}>Uploaded</Text></View>
@@ -345,20 +338,25 @@ export default function App() {
       ) : (
         <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 28 }}>{icon}</Text><Text style={{ color: '#666', fontWeight: '600', marginTop: 4, marginBottom: 10 }}>{label}</Text></View>
       )}
-      <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-        <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Camera</Text></TouchableOpacity>
-        <TouchableOpacity style={rs.uploadBtn} onPress={() => fromGallery(field)}><Text style={rs.uploadBtnTxt}>🖼️ Gallery</Text></TouchableOpacity>
-      </View>
+      {cameraOnly ? (
+        <View style={{ marginTop: 10 }}>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Selfie Lo (Live)</Text></TouchableOpacity>
+          <Text style={{ fontSize: 11, color: '#c62828', textAlign: 'center', marginTop: 6 }}>🔒 Security: Sirf live selfie</Text>
+        </View>
+      ) : (
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Camera</Text></TouchableOpacity>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromGallery(field)}><Text style={rs.uploadBtnTxt}>🖼️ Gallery</Text></TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  REGISTRATION STEPS
-  // ══════════════════════════════════════════════
+  // ═══ REGISTRATION STEP 1 — Phone ═══
   if (screen === 'login' && regStep === 1) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(0)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 1 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }}>
+      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>📱 Phone Number</Text><Text style={rs.subTitle}>Aapka mobile number daalo</Text>
         <View style={[s.driverItem, { marginTop: 20 }]}>
           <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
@@ -370,10 +368,11 @@ export default function App() {
     </View>
   );
 
+  // ═══ REGISTRATION STEP 2 — Vehicle Type ═══
   if (screen === 'login' && regStep === 2) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }}>
+      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>🚗 Vehicle Type</Text><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
         {[{ id:'bike', icon:'🏍️', label:'Bike' },{ id:'auto', icon:'🛺', label:'Auto' },{ id:'car', icon:'🚕', label:'Car / Taxi' },{ id:'eriksha', icon:'🛵', label:'E-Riksha' }].map(v => (
           <TouchableOpacity key={v.id} style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive]} onPress={() => updateReg('vehicle_type', v.id)}>
@@ -382,21 +381,21 @@ export default function App() {
             {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20, marginLeft: 'auto' }}>✓</Text>}
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={[s.btn, !regData.vehicle_type && { opacity: 0.5 }]} disabled={!regData.vehicle_type} onPress={() => setRegStep(3)}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
+        <TouchableOpacity style={[s.btn, !regData.vehicle_type && { opacity: 0.5 }]} disabled={!regData.vehicle_type} onPress={() => { setResult(''); setRegStep(3); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
       </ScrollView>
     </View>
   );
 
+  // ═══ REGISTRATION STEP 3 — DL ═══
   if (screen === 'login' && regStep === 3) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(2)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 3 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }}>
+      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>📄 Driving License</Text><Text style={rs.subTitle}>DL ki photo aur naam</Text>
         <View style={rs.adviceBox}>
           <Text style={rs.adviceTitle}>📸 Photo Tips:</Text>
           <Text style={rs.adviceText}>• DL ka front side clear photo lo</Text>
           <Text style={rs.adviceText}>• Achhi roshni mein photo lo</Text>
-          <Text style={rs.adviceText}>• Saari details saaf dikhni chahiye</Text>
           <Text style={[rs.adviceText, { marginTop: 6, fontWeight: '600', color: '#c62828' }]}>⚠️ Har ride pe DL saath rakhna zaruri hai!</Text>
         </View>
         <Text style={rs.fieldLabel}>DL pe likha naam</Text>
@@ -405,14 +404,16 @@ export default function App() {
         <PhotoBox field="dl_photo" label="DL Photo" icon="📄" />
         {result ? <Text style={s.err}>{result}</Text> : null}
         <TouchableOpacity style={[s.btn, (!regData.dl_name || !regData.dl_photo) && { opacity: 0.5 }]} disabled={!regData.dl_name || !regData.dl_photo} onPress={() => { setResult(''); setRegStep(4); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
+        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
 
+  // ═══ REGISTRATION STEP 4 — Vehicle ═══
   if (screen === 'login' && regStep === 4) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 4 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }}>
+      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>🚗 Vehicle Details</Text>
         <Text style={rs.subTitle}>{regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' : 'Vehicle number aur front photo'}</Text>
         <Text style={rs.fieldLabel}>Vehicle Number {regData.vehicle_type === 'eriksha' ? '(optional)' : ''}</Text>
@@ -421,31 +422,34 @@ export default function App() {
         <Text style={rs.fieldLabel}>RC Photo (optional)</Text><PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
         {result ? <Text style={s.err}>{result}</Text> : null}
         <TouchableOpacity
-          style={[s.btn, (() => { const n = regData.vehicle_type !== 'eriksha'; return !(regData.vehicle_photo && (!n || regData.vehicle_no)) ? { opacity: 0.5 } : {}; })()]}
-          disabled={(() => { const n = regData.vehicle_type !== 'eriksha'; return !(regData.vehicle_photo && (!n || regData.vehicle_no)); })()}
+          style={[s.btn, (() => { const needNum = regData.vehicle_type !== 'eriksha'; const ok = regData.vehicle_photo && (!needNum || regData.vehicle_no); return !ok ? { opacity: 0.5 } : {}; })()]}
+          disabled={(() => { const needNum = regData.vehicle_type !== 'eriksha'; const ok = regData.vehicle_photo && (!needNum || regData.vehicle_no); return !ok; })()}
           onPress={() => { setResult(''); setRegStep(5); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
+        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
 
+  // ═══ REGISTRATION STEP 5 — Aadhaar + Selfie ═══
   if (screen === 'login' && regStep === 5) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(4)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 5 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }}>
+      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>🪪 Aadhaar & Photo</Text><Text style={rs.subTitle}>Last step!</Text>
         <Text style={rs.fieldLabel}>Aadhaar Number</Text>
         <TextInput style={rs.input} placeholder="12 digit Aadhaar" keyboardType="numeric" maxLength={12} value={regData.aadhaar_number} onChangeText={(v) => updateReg('aadhaar_number', v)} />
         <Text style={rs.fieldLabel}>Aadhaar Photo</Text><PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="🪪" />
-        <Text style={rs.fieldLabel}>Apni Selfie / Face Photo</Text><PhotoBox field="face_photo" label="Face Photo" icon="🤳" />
+        <Text style={rs.fieldLabel}>Apni Selfie / Face Photo</Text><PhotoBox field="face_photo" label="Face Photo" icon="🤳" cameraOnly />
         {result ? <Text style={s.err}>{result}</Text> : null}
-        <TouchableOpacity style={[s.btn, (!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo) && { opacity: 0.5 }]}
-          disabled={!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo || loading} onPress={submitRegistration}>
+        <TouchableOpacity style={[s.btn, (!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo) && { opacity: 0.5 }]} disabled={!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo || loading} onPress={submitRegistration}>
           <Text style={s.btnTxt}>{loading ? 'Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
         </TouchableOpacity>
+        <View style={{ height: 30 }} />
       </ScrollView>
     </View>
   );
 
+  // ═══ REGISTRATION DONE ═══
   if (screen === 'login' && regStep === 99) return (
     <View style={s.screen}>
       <View style={s.hero}><Text style={{ fontSize: 70 }}>🎉</Text><Text style={s.heroTitle}>Registration Done!</Text></View>
@@ -454,16 +458,12 @@ export default function App() {
         <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 16, marginTop: 20, width: '100%' }}>
           <Text style={{ color: '#ef6c00', textAlign: 'center', fontWeight: '600' }}>⏳ Status: Verification Pending</Text>
         </View>
-        <TouchableOpacity style={[s.btn, { marginTop: 30, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}>
-          <Text style={s.btnTxt}>🏠 Login Screen pe jao</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={[s.btn, { marginTop: 30, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}><Text style={s.btnTxt}>🏠 Login Screen pe jao</Text></TouchableOpacity>
       </View>
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  VERIFICATION STATUS
-  // ══════════════════════════════════════════════
+  // ═══ VERIFICATION STATUS ═══
   if (screen === 'login' && driverInfo && driverInfo.status !== 'approved') return (
     <View style={s.screen}>
       <View style={s.hero}>
@@ -473,8 +473,8 @@ export default function App() {
       <View style={{ padding: 24 }}>
         <View style={{ backgroundColor: driverInfo.status === 'pending' ? '#fff3e0' : '#ffebee', borderRadius: 14, padding: 20, marginBottom: 20 }}>
           <Text style={{ fontSize: 15, lineHeight: 24, textAlign: 'center', color: driverInfo.status === 'pending' ? '#ef6c00' : '#c62828' }}>
-            {driverInfo.status === 'pending' && 'Aapke documents admin verify kar raha hai.'}
-            {driverInfo.status === 'rejected' && 'Aapke documents mein kuch problem hai.'}
+            {driverInfo.status === 'pending' && 'Aapke documents admin verify kar raha hai. Thodi der mein status update hoga.'}
+            {driverInfo.status === 'rejected' && 'Aapke documents mein kuch problem hai. Neeche message padho aur dobara upload karo.'}
             {driverInfo.status === 'suspended' && 'Aapka account suspend kar diya gaya hai.'}
           </Text>
         </View>
@@ -485,24 +485,18 @@ export default function App() {
           </View>
         ) : null}
         {(driverInfo.status === 'rejected' || driverInfo.status === 'suspended') && (
-          <TouchableOpacity style={s.btn} onPress={() => { setRegData((p: any) => ({ ...p, phone: driverInfo.phone })); setDriverInfo(null); setRegStep(1); }}>
-            <Text style={s.btnTxt}>📄 Documents Dobara Upload Karo</Text>
-          </TouchableOpacity>
+          <TouchableOpacity style={s.btn} onPress={() => { setRegData((p: any) => ({ ...p, phone: driverInfo.phone })); setDriverInfo(null); setRegStep(1); }}><Text style={s.btnTxt}>📄 Documents Dobara Upload Karo</Text></TouchableOpacity>
         )}
-        <TouchableOpacity style={[s.btn, { backgroundColor: '#1a1a2e' }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
-          <Text style={s.btnTxt}>← Wapas Login pe jao</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={[s.btn, { backgroundColor: '#1a1a2e' }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}><Text style={s.btnTxt}>← Wapas Login pe jao</Text></TouchableOpacity>
       </View>
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  LOGIN SCREEN
-  // ══════════════════════════════════════════════
+  // ═══ LOGIN ═══
   if (screen === 'login') return (
     <View style={s.screen}>
       <View style={s.hero}><Text style={s.heroIcon}>🚖</Text><Text style={s.heroTitle}>RideApp Driver</Text><Text style={s.heroSub}>Spero Buddy Login</Text></View>
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={{ flex: 1, padding: 16 }} keyboardShouldPersistTaps="handled">
         <Text style={s.sectionTitle}>📱 Apne number se login karo:</Text>
         <View style={[s.driverItem, { marginBottom: 12 }]}>
           <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
@@ -530,46 +524,56 @@ export default function App() {
             {phone === d.phone && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) setScreen('home'); }} disabled={!phone}>
-          <Text style={s.btnTxt}>Test Login 🧪</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) setScreen('home'); }} disabled={!phone}><Text style={s.btnTxt}>Test Login 🧪</Text></TouchableOpacity>
+        <View style={{ height: 20 }} />
       </ScrollView>
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  TRIP SUMMARY
-  // ══════════════════════════════════════════════
+  // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
     <View style={s.screen}>
       <View style={[s.hero, { paddingTop: 50 }]}><Text style={{ fontSize: 60 }}>🎉</Text><Text style={s.heroTitle}>Trip Complete!</Text></View>
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16 }}>
           <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
-          {[['Passenger', tripSummary.passenger || 'Customer'],
-            ['Route', (tripSummary.pickup||'').substring(0,18) + ' → ' + (tripSummary.drop||'').substring(0,14)],
-            ['Total Fare', '₹' + tripSummary.fare],
-            ['Platform Fee (15%)', tripSummary.fee],
-            ['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
+          {[['Passenger', tripSummary.passenger || 'Customer'],['Route', (tripSummary.pickup||'').substring(0,18) + ' → ' + (tripSummary.drop||'').substring(0,14)],['Total Fare', '₹' + tripSummary.fare],['Platform Fee (15%)', tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
               <Text style={{ fontSize: 14, color: '#666' }}>{k}</Text>
               <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? '#4CAF50' : '#333' }}>{v}</Text>
             </View>
           ))}
         </View>
-        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 14, color: '#2e7d32', fontWeight: '600', textAlign: 'center' }}>💚 Paisa wallet mein add ho gaya!</Text>
-        </View>
-        <TouchableOpacity style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => setTripSummary(null)}>
-          <Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text>
-        </TouchableOpacity>
+        <TouchableOpacity style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => setTripSummary(null)}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></TouchableOpacity>
       </ScrollView>
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  HOME TAB
-  // ══════════════════════════════════════════════
+  // ═══ CHAT (driver) ═══
+  if (showChat) return (
+    <View style={s.screen}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => setShowChat(false)} style={{ width: 36 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.greeting}>💬 {activeRide?.passenger_name || 'Customer'}</Text>
+        <TouchableOpacity onPress={callCustomer} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>📞</Text></TouchableOpacity>
+      </View>
+      <ScrollView style={{ flex: 1, padding: 14 }}>
+        {chatMsgs.length === 0 ? (
+          <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi</Text>
+        ) : chatMsgs.map((m, i) => (
+          <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
+            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#1a1a2e', fontSize: 14 }}>{m.message}</Text>
+          </View>
+        ))}
+      </ScrollView>
+      <View style={cs.inputRow}>
+        <TextInput style={cs.input} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} />
+        <TouchableOpacity style={cs.send} onPress={sendChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // ═══ HOME TAB ═══
   if (activeTab === 'home') return (
     <View style={s.screen}>
       <View style={s.topBar}>
@@ -579,20 +583,27 @@ export default function App() {
         </View>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
-
-      {/* Map */}
-      <MapWebView
-        pickup={activeRide ? activeRide.pickup : 'Lucknow,India'}
-        drop={activeRide ? activeRide.drop_location : ''}
-        height={activeRide ? 160 : 180}
-      />
-
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <MapWebView pickup={activeRide ? activeRide.pickup : 'Lucknow,India'} drop={activeRide ? activeRide.drop_location : ''} height={activeRide ? 150 : 170} />
+      <ScrollView style={{ flex: 1, padding: 14 }}>
         <View style={s.statsRow}>
           <View style={s.statCard}><Text style={s.statIcon}>💰</Text><Text style={s.statValue}>₹{earnings.toFixed(0)}</Text><Text style={s.statLabel}>Aaj ki kamai</Text></View>
           <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
           <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
         </View>
+
+        {/* Daily Target */}
+        {target && !activeRide && (
+          <View style={s.targetCard}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>🎯 Daily Target</Text>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#4CAF50' : '#e94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
+            </View>
+            <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+              <View style={{ height: 8, borderRadius: 4, backgroundColor: target.achieved ? '#4CAF50' : '#e94560', width: `${Math.min(100, (target.completed / target.target) * 100)}%` }} />
+            </View>
+            <Text style={{ fontSize: 12, color: '#666' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
+          </View>
+        )}
 
         {/* Active Ride */}
         {activeRide && (
@@ -612,6 +623,13 @@ export default function App() {
               </View>
               <Text style={s.tripFare}>₹{activeRide.fare}</Text>
             </View>
+
+            {/* Chat + Call buttons */}
+            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+              <TouchableOpacity style={s.chatCallBtn} onPress={() => setShowChat(true)}><Text style={{ fontSize: 16 }}>💬</Text><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Chat</Text></TouchableOpacity>
+              <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Text style={{ fontSize: 16 }}>📞</Text><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
+            </View>
+
             <View style={s.tripRoute}>
               <Text style={s.tripFrom}>📍 {activeRide.pickup}</Text>
               <Text style={s.tripArrow}>↓</Text>
@@ -619,37 +637,45 @@ export default function App() {
             </View>
             {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
 
-            {/* Navigate buttons */}
+            {/* Navigate */}
             {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup)}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text></TouchableOpacity>
             )}
             {activeRide.status === 'started' && (
-              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location)}>
-                <Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text></TouchableOpacity>
             )}
 
+            {/* Arrived button */}
             {activeRide.status === 'matched' && (
-              <TouchableOpacity style={s.tripBtn} onPress={markArrived} disabled={loading}>
-                <Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
-              </TouchableOpacity>
+              <TouchableOpacity style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text></TouchableOpacity>
             )}
+
+            {/* OTP - GPS range unlock for start */}
             {activeRide.status === 'arrived' && (
               <View>
+                {!pickupInRange && (
+                  <View style={s.rangeWarn}>
+                    <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>📍 Pickup se {rangeDist}m door hain</Text>
+                    <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>15m ke andar aane par OTP daal sakte ho</Text>
+                  </View>
+                )}
                 <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold' }}
-                  placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
-                <TouchableOpacity style={s.tripBtn} onPress={startTrip} disabled={loading}>
-                  <Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
-                </TouchableOpacity>
+                <TextInput style={{ borderWidth: 2, borderColor: pickupInRange ? '#1a1a2e' : '#e0e0e0', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: pickupInRange ? '#fff' : '#f5f5f5' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} editable={pickupInRange} />
+                <TouchableOpacity style={[s.tripBtn, !pickupInRange && { opacity: 0.5 }]} onPress={startTrip} disabled={loading || !pickupInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : pickupInRange ? '🚀 OTP Verify & Trip Shuru' : '🔒 Pickup pe pahuncho'}</Text></TouchableOpacity>
               </View>
             )}
+
+            {/* Complete - GPS range unlock */}
             {activeRide.status === 'started' && (
-              <TouchableOpacity style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeTrip} disabled={loading}>
-                <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
-              </TouchableOpacity>
+              <View>
+                {!dropInRange && (
+                  <View style={s.rangeWarn}>
+                    <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>🎯 Drop se {rangeDist}m door hain</Text>
+                    <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>10m ke andar aane par complete kar sakte ho</Text>
+                  </View>
+                )}
+                <TouchableOpacity style={[s.tripBtn, { backgroundColor: dropInRange ? '#4CAF50' : '#aaa' }]} onPress={completeTrip} disabled={loading || !dropInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : dropInRange ? '✅ Trip Complete Karo' : '🔒 Drop pe pahuncho'}</Text></TouchableOpacity>
+              </View>
             )}
             <TouchableOpacity style={s.cancelBtn} onPress={cancelTrip} disabled={loading}><Text style={s.cancelTxt}>Cancel Trip</Text></TouchableOpacity>
           </View>
@@ -678,25 +704,17 @@ export default function App() {
           <View style={s.statusCard}><Text style={s.statusText}>{isOnline ? '✅ Online hain — rides ka intezaar...' : '💤 Online ho jao rides lene ke liye'}</Text></View>
         )}
         {result && !activeRide && !rideReq ? <Text style={s.result}>{result}</Text> : null}
+        <View style={{ height: 16 }} />
       </ScrollView>
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  EARNINGS TAB
-  // ══════════════════════════════════════════════
+  // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.greeting}>💰 Earnings</Text></View>
-      {rideReq && (
-        <TouchableOpacity
-          style={{ backgroundColor: '#e94560', padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          onPress={() => setActiveTab('home')}>
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride Aayi! ₹{rideReq.fare}</Text>
-          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
-        </TouchableOpacity>
-      )}
+      {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.earningsHero}><Text style={s.earningsAmount}>₹{earnings.toFixed(0)}</Text><Text style={s.earningsLabel}>Aaj ki total kamai</Text></View>
         <View style={s.earningsCard}>
@@ -707,24 +725,15 @@ export default function App() {
         </View>
         <TouchableOpacity style={s.payoutBtn}><Text style={s.payoutTxt}>💸 Payout Request Karo</Text></TouchableOpacity>
       </ScrollView>
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
     </View>
   );
 
-  // ══════════════════════════════════════════════
-  //  PROFILE TAB
-  // ══════════════════════════════════════════════
+  // ═══ PROFILE TAB ═══
   return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.greeting}>👤 Profile</Text></View>
-      {rideReq && (
-        <TouchableOpacity
-          style={{ backgroundColor: '#e94560', padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-          onPress={() => setActiveTab('home')}>
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride Aayi! ₹{rideReq.fare}</Text>
-          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
-        </TouchableOpacity>
-      )}
+      {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.profileHero}>
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || selectedDriver?.name || 'D')[0].toUpperCase()}</Text></View>
@@ -733,22 +742,18 @@ export default function App() {
           <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || selectedDriver?.type} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
-        {[['📋','Documents','License, RC, Insurance'],['🏦','Bank Details','Payout account'],['📞','Support','24x7 help'],['⚙️','Settings','Preferences']].map(([icon,title,sub],i) => (
+        {[['📋','Documents','License, RC'],['🏦','Bank Details','Payout account'],['📞','Support','24x7 help'],['⚙️','Settings','Preferences']].map(([icon,title,sub],i) => (
           <TouchableOpacity key={i} style={s.menuItem}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{sub}</Text></View>
             <Text style={{ fontSize: 20, color: '#ccc' }}>›</Text>
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={s.logoutBtn} onPress={async () => {
-          await AsyncStorage.removeItem('driverPhone');
-          await AsyncStorage.removeItem('driverInfo');
-          setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone('');
-        }}>
+        <TouchableOpacity style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </TouchableOpacity>
       </ScrollView>
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
     </View>
   );
 }
@@ -762,13 +767,14 @@ function Row({ k, v, bold, last }: any) {
   );
 }
 
-function BottomNav({ activeTab, setActiveTab }: any) {
+function BottomNav({ activeTab, setActiveTab, rideReq }: any) {
   return (
     <View style={s.nav}>
       {[['home','🏠','Home'],['earnings','💰','Earnings'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
         <TouchableOpacity key={t} style={s.navItem} onPress={() => setActiveTab(t)}>
           <Text style={s.navIcon}>{icon}</Text>
           <Text style={[s.navLbl, activeTab===t && s.navActive]}>{lbl}</Text>
+          {t === 'home' && rideReq && <View style={{ position: 'absolute', top: 4, right: 24, width: 8, height: 8, borderRadius: 4, backgroundColor: '#e94560' }} />}
         </TouchableOpacity>
       ))}
     </View>
@@ -787,17 +793,19 @@ const s = StyleSheet.create({
   driverItemIcon:  { fontSize:28, marginRight:14 },
   driverItemName:  { fontSize:16, fontWeight:'bold', color:'#1a1a2e' },
   driverItemVehicle:{ fontSize:13, color:'#666', marginTop:2 },
-  btn:             { backgroundColor:'#e94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:30 },
+  btn:             { backgroundColor:'#e94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:10 },
   btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
   err:             { textAlign:'center', color:'#e94560', marginVertical:10 },
   topBar:          { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop:48 },
   greeting:        { color:'#fff', fontSize:18, fontWeight:'bold' },
   subTxt:          { color:'#aaa', fontSize:12, marginTop:2 },
-  statsRow:        { flexDirection:'row', gap:10, marginBottom:16 },
+  notifBanner:     { backgroundColor:'#e94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  statsRow:        { flexDirection:'row', gap:10, marginBottom:14 },
   statCard:        { flex:1, backgroundColor:'#fff', borderRadius:14, padding:14, alignItems:'center', elevation:2 },
   statIcon:        { fontSize:24 },
   statValue:       { fontSize:20, fontWeight:'bold', color:'#1a1a2e', marginTop:4 },
   statLabel:       { fontSize:11, color:'#999', marginTop:2 },
+  targetCard:      { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:14, elevation:2 },
   statusCard:      { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:16, elevation:2 },
   statusText:      { fontSize:14, color:'#333', textAlign:'center' },
   tripCard:        { backgroundColor:'#fff', borderRadius:16, padding:16, marginBottom:16, elevation:4, borderWidth:2, borderColor:'#4CAF50' },
@@ -808,13 +816,15 @@ const s = StyleSheet.create({
   tripCustName:    { fontSize:16, fontWeight:'bold', color:'#1a1a2e' },
   tripCustPhone:   { fontSize:13, color:'#666', marginTop:2 },
   tripFare:        { fontSize:20, fontWeight:'bold', color:'#4CAF50' },
+  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#f0f0f0', borderRadius:10, padding:10 },
   tripRoute:       { backgroundColor:'#f9f9f9', borderRadius:10, padding:12, marginBottom:12 },
   tripFrom:        { fontSize:14, color:'#4CAF50', fontWeight:'600' },
   tripArrow:       { fontSize:16, textAlign:'center', color:'#999', marginVertical:4 },
   tripTo:          { fontSize:14, color:'#e94560', fontWeight:'600' },
   tripBtn:         { backgroundColor:'#1a1a2e', borderRadius:10, padding:16, alignItems:'center', marginBottom:8 },
-  tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:16 },
+  tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:15 },
   navBtn:          { backgroundColor:'#2196F3', borderRadius:10, padding:12, alignItems:'center', marginBottom:10 },
+  rangeWarn:       { backgroundColor:'#fff3e0', borderRadius:10, padding:12, marginBottom:10, borderWidth:1, borderColor:'#ffe0b2' },
   cancelBtn:       { padding:12, alignItems:'center' },
   cancelTxt:       { color:'#e94560', fontWeight:'600' },
   rideCard:        { backgroundColor:'#fff', borderRadius:16, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#e94560' },
@@ -829,7 +839,7 @@ const s = StyleSheet.create({
   rejectBtn:       { flex:1, padding:14, borderRadius:10, borderWidth:1, borderColor:'#e0e0e0', alignItems:'center' },
   rejectTxt:       { color:'#e94560', fontWeight:'bold' },
   acceptBtn:       { flex:2, padding:14, borderRadius:10, backgroundColor:'#4CAF50', alignItems:'center' },
-  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:16 },
+  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:15 },
   result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
   nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#eee', paddingBottom:12 },
   navItem:         { flex:1, alignItems:'center', paddingTop:10 },
@@ -870,4 +880,13 @@ const rs = StyleSheet.create({
   adviceBox:   { backgroundColor:'#e3f2fd', borderRadius:12, padding:14, marginTop:14, marginBottom:6 },
   adviceTitle: { fontSize:14, fontWeight:'bold', color:'#1565c0', marginBottom:6 },
   adviceText:  { fontSize:13, color:'#1976d2', marginTop:2 },
+});
+
+const cs = StyleSheet.create({
+  bubble:    { maxWidth:'75%', borderRadius:14, padding:12, marginBottom:8 },
+  mine:      { backgroundColor:'#e94560', alignSelf:'flex-end', borderBottomRightRadius:4 },
+  theirs:    { backgroundColor:'#fff', alignSelf:'flex-start', borderBottomLeftRadius:4, elevation:1 },
+  inputRow:  { flexDirection:'row', alignItems:'center', padding:10, backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0' },
+  input:     { flex:1, backgroundColor:'#f5f5f5', borderRadius:24, paddingHorizontal:16, paddingVertical:10, fontSize:14, marginRight:8 },
+  send:      { width:44, height:44, borderRadius:22, backgroundColor:'#e94560', alignItems:'center', justifyContent:'center' },
 });
