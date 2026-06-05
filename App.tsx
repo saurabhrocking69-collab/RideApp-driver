@@ -327,11 +327,16 @@ export default function App() {
     setActiveRide(null);
     setLoading(false);
   };
-
-  const cancelTrip = async () => {
+const cancelTrip = async () => {
     setLoading(true);
-    await apiCall('/api/rides/cancel', { ride_id: activeRide.id, reason: 'Driver cancelled' });
-    setResult('❌ Trip cancel ki');
+    try {
+      const cr = await fetch(`${API}/api/rides/cancel-smart`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: activeRide.id, cancelled_by: 'driver', reason: 'Driver cancelled', phone })
+      });
+      const cd = await cr.json();
+      setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancel ki');
+    } catch (_e) { setResult('❌ Trip cancel ki'); }
     setActiveRide(null);
     setLoading(false);
   };
