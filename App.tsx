@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -83,6 +83,8 @@ export default function App() {
   const [chatMsgs, setChatMsgs]     = useState<any[]>([]);
   const [chatInput, setChatInput]   = useState('');
   const [showChat, setShowChat]     = useState(false);
+  const [unreadChat, setUnreadChat] = useState(0);
+  const lastChatCount = useRef(0);
   const pollRef = useRef<any>(null);
 
   // Registration
@@ -172,12 +174,26 @@ export default function App() {
   useEffect(() => {
     if (!showChat || !activeRide?.id) return;
     const load = async () => {
-      try { const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
+      try { const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); lastChatCount.current = (d.messages || []).length; setUnreadChat(0); } catch (_e) {}
     };
     load();
     const iv = setInterval(load, 2500);
     return () => clearInterval(iv);
   }, [showChat, activeRide?.id]);
+
+  // ── Unread badge during ride ───────────────────
+  useEffect(() => {
+    if (!activeRide?.id || showChat) return;
+    const iv = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/api/chat/${activeRide.id}`);
+        const d = await r.json();
+        const msgs = d.messages || [];
+        if (msgs.length > lastChatCount.current) setUnreadChat(msgs.length - lastChatCount.current);
+      } catch (_e) {}
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [activeRide?.id, showChat]);
 
   // ── Load daily target ──────────────────────────
   useEffect(() => {
@@ -339,9 +355,8 @@ export default function App() {
         <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 28 }}>{icon}</Text><Text style={{ color: '#666', fontWeight: '600', marginTop: 4, marginBottom: 10 }}>{label}</Text></View>
       )}
       {cameraOnly ? (
-        <View style={{ marginTop: 10 }}>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Selfie Lo (Live)</Text></TouchableOpacity>
-          <Text style={{ fontSize: 11, color: '#c62828', textAlign: 'center', marginTop: 6 }}>🔒 Security: Sirf live selfie</Text>
+        <View style={{ marginTop: 8, width: '100%' }}>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Selfie Lo</Text></TouchableOpacity>
         </View>
       ) : (
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
@@ -439,12 +454,14 @@ export default function App() {
         <Text style={rs.fieldLabel}>Aadhaar Number</Text>
         <TextInput style={rs.input} placeholder="12 digit Aadhaar" keyboardType="numeric" maxLength={12} value={regData.aadhaar_number} onChangeText={(v) => updateReg('aadhaar_number', v)} />
         <Text style={rs.fieldLabel}>Aadhaar Photo</Text><PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="🪪" />
-        <Text style={rs.fieldLabel}>Apni Selfie / Face Photo</Text><PhotoBox field="face_photo" label="Face Photo" icon="🤳" cameraOnly />
+        <Text style={rs.fieldLabel}>Apni Selfie / Face Photo</Text>
+        <Text style={{ fontSize: 11, color: '#c62828', marginBottom: 8 }}>🔒 Security: Sirf live selfie le sakte ho, gallery se nahi</Text>
+        <PhotoBox field="face_photo" label="Face Photo" icon="🤳" cameraOnly />
         {result ? <Text style={s.err}>{result}</Text> : null}
         <TouchableOpacity style={[s.btn, (!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo) && { opacity: 0.5 }]} disabled={!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo || loading} onPress={submitRegistration}>
           <Text style={s.btnTxt}>{loading ? 'Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
         </TouchableOpacity>
-        <View style={{ height: 30 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
     </View>
   );
@@ -551,13 +568,13 @@ export default function App() {
 
   // ═══ CHAT (driver) ═══
   if (showChat) return (
-    <View style={s.screen}>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setShowChat(false)} style={{ width: 36 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
         <Text style={s.greeting}>💬 {activeRide?.passenger_name || 'Customer'}</Text>
         <TouchableOpacity onPress={callCustomer} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>📞</Text></TouchableOpacity>
       </View>
-      <ScrollView style={{ flex: 1, padding: 14 }}>
+      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
         {chatMsgs.length === 0 ? (
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi</Text>
         ) : chatMsgs.map((m, i) => (
@@ -567,146 +584,158 @@ export default function App() {
         ))}
       </ScrollView>
       <View style={cs.inputRow}>
-        <TextInput style={cs.input} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} />
+        <TextInput style={cs.input} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={sendChat} />
         <TouchableOpacity style={cs.send} onPress={sendChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 
-  // ═══ HOME TAB ═══
+  // ═══ HOME TAB — Uber style ═══
   if (activeTab === 'home') return (
     <View style={s.screen}>
-      <View style={s.topBar}>
-        <View>
-          <Text style={s.greeting}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
-          <Text style={s.subTxt}>{driverInfo?.name || selectedDriver?.name} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
-        </View>
-        <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
+      {/* Full map background */}
+      <View style={s.mapFull}>
+        <MapWebView pickup={activeRide ? activeRide.pickup : 'Lucknow,India'} drop={activeRide ? activeRide.drop_location : ''} height={900} />
       </View>
-      <MapWebView pickup={activeRide ? activeRide.pickup : 'Lucknow,India'} drop={activeRide ? activeRide.drop_location : ''} height={activeRide ? 150 : 170} />
-      <ScrollView style={{ flex: 1, padding: 14 }}>
-        <View style={s.statsRow}>
-          <View style={s.statCard}><Text style={s.statIcon}>💰</Text><Text style={s.statValue}>₹{earnings.toFixed(0)}</Text><Text style={s.statLabel}>Aaj ki kamai</Text></View>
-          <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
-          <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
+      {/* Top overlay */}
+      <View style={s.topOverlay}>
+        <View style={s.topGlass}>
+          <View style={{ flex: 1 }}>
+            <Text style={s.greetingDark}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
+            <Text style={s.subTxtDark}>{driverInfo?.name || selectedDriver?.name} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
+          </View>
+          <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
         </View>
-
-        {/* Daily Target */}
-        {target && !activeRide && (
-          <View style={s.targetCard}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>🎯 Daily Target</Text>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#4CAF50' : '#e94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
-            </View>
-            <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-              <View style={{ height: 8, borderRadius: 4, backgroundColor: target.achieved ? '#4CAF50' : '#e94560', width: `${Math.min(100, (target.completed / target.target) * 100)}%` }} />
-            </View>
-            <Text style={{ fontSize: 12, color: '#666' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
+      </View>
+      {/* Bottom sheet */}
+      <View style={[s.bottomSheet, { maxHeight: activeRide || rideReq ? '75%' : '55%' }]}>
+        <View style={s.sheetHandle} />
+        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
+          <View style={s.statsRow}>
+            <View style={s.statCard}><Text style={s.statIcon}>💰</Text><Text style={s.statValue}>₹{earnings.toFixed(0)}</Text><Text style={s.statLabel}>Aaj ki kamai</Text></View>
+            <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
+            <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
-        )}
 
-        {/* Active Ride */}
-        {activeRide && (
-          <View style={s.tripCard}>
-            <View style={s.tripBadge}>
-              <Text style={s.tripBadgeTxt}>
-                {activeRide.status === 'matched' && '🚗 Pickup ki taraf jao'}
-                {activeRide.status === 'arrived' && '📍 Pickup pe pahunche'}
-                {activeRide.status === 'started' && '🛣️ Trip chal rahi hai'}
-              </Text>
-            </View>
-            <View style={s.tripCustomer}>
-              <View style={s.tripAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{activeRide.passenger_name?.[0] || 'P'}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={s.tripCustName}>{activeRide.passenger_name || 'Passenger'}</Text>
-                <Text style={s.tripCustPhone}>📞 {activeRide.passenger_phone || 'N/A'}</Text>
+          {target && !activeRide && (
+            <View style={s.targetCard}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>🎯 Daily Target</Text>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#4CAF50' : '#e94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
               </View>
-              <Text style={s.tripFare}>₹{activeRide.fare}</Text>
+              <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+                <View style={{ height: 8, borderRadius: 4, backgroundColor: target.achieved ? '#4CAF50' : '#e94560', width: `${Math.min(100, (target.completed / target.target) * 100)}%` }} />
+              </View>
+              <Text style={{ fontSize: 12, color: '#666' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
             </View>
+          )}
 
-            {/* Chat + Call buttons */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-              <TouchableOpacity style={s.chatCallBtn} onPress={() => setShowChat(true)}><Text style={{ fontSize: 16 }}>💬</Text><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Chat</Text></TouchableOpacity>
-              <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Text style={{ fontSize: 16 }}>📞</Text><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
-            </View>
+          {activeRide && (
+            <View style={s.tripCard}>
+              <View style={s.tripBadge}>
+                <Text style={s.tripBadgeTxt}>
+                  {activeRide.status === 'matched' && '🚗 Pickup ki taraf jao'}
+                  {activeRide.status === 'arrived' && '📍 Pickup pe pahunche'}
+                  {activeRide.status === 'started' && '🛣️ Trip chal rahi hai'}
+                </Text>
+              </View>
+              <View style={s.tripCustomer}>
+                <View style={s.tripAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{activeRide.passenger_name?.[0] || 'P'}</Text></View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.tripCustName}>{activeRide.passenger_name || 'Passenger'}</Text>
+                  <Text style={s.tripCustPhone}>📞 {activeRide.passenger_phone || 'N/A'}</Text>
+                </View>
+                <Text style={s.tripFare}>₹{activeRide.fare}</Text>
+              </View>
 
-            <View style={s.tripRoute}>
-              <Text style={s.tripFrom}>📍 {activeRide.pickup}</Text>
-              <Text style={s.tripArrow}>↓</Text>
-              <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
-            </View>
-            {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
-
-            {/* Navigate */}
-            {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text></TouchableOpacity>
-            )}
-            {activeRide.status === 'started' && (
-              <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text></TouchableOpacity>
-            )}
-
-            {/* Arrived button */}
-            {activeRide.status === 'matched' && (
-              <TouchableOpacity style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text></TouchableOpacity>
-            )}
-
-            {/* OTP - GPS range unlock for start */}
-            {activeRide.status === 'arrived' && (
-              <View>
-                {!pickupInRange && (
-                  <View style={s.rangeWarn}>
-                    <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>📍 Pickup se {rangeDist}m door hain</Text>
-                    <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>15m ke andar aane par OTP daal sakte ho</Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                <TouchableOpacity style={s.chatCallBtn} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
+                  <View>
+                    <Text style={{ fontSize: 16 }}>💬</Text>
+                    {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
-                )}
-                <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                <TextInput style={{ borderWidth: 2, borderColor: pickupInRange ? '#1a1a2e' : '#e0e0e0', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: pickupInRange ? '#fff' : '#f5f5f5' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} editable={pickupInRange} />
-                <TouchableOpacity style={[s.tripBtn, !pickupInRange && { opacity: 0.5 }]} onPress={startTrip} disabled={loading || !pickupInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : pickupInRange ? '🚀 OTP Verify & Trip Shuru' : '🔒 Pickup pe pahuncho'}</Text></TouchableOpacity>
+                  <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Text style={{ fontSize: 16 }}>📞</Text><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
-            )}
+              {unreadChat > 0 && (
+                <TouchableOpacity style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Customer ne {unreadChat} message bheja</Text>
+                </TouchableOpacity>
+              )}
 
-            {/* Complete - GPS range unlock */}
-            {activeRide.status === 'started' && (
-              <View>
-                {!dropInRange && (
-                  <View style={s.rangeWarn}>
-                    <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>🎯 Drop se {rangeDist}m door hain</Text>
-                    <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>10m ke andar aane par complete kar sakte ho</Text>
-                  </View>
-                )}
-                <TouchableOpacity style={[s.tripBtn, { backgroundColor: dropInRange ? '#4CAF50' : '#aaa' }]} onPress={completeTrip} disabled={loading || !dropInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : dropInRange ? '✅ Trip Complete Karo' : '🔒 Drop pe pahuncho'}</Text></TouchableOpacity>
+              <View style={s.tripRoute}>
+                <Text style={s.tripFrom}>📍 {activeRide.pickup}</Text>
+                <Text style={s.tripArrow}>↓</Text>
+                <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
               </View>
-            )}
-            <TouchableOpacity style={s.cancelBtn} onPress={cancelTrip} disabled={loading}><Text style={s.cancelTxt}>Cancel Trip</Text></TouchableOpacity>
-          </View>
-        )}
+              {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
 
-        {/* Ride Request */}
-        {rideReq && !activeRide && (
-          <SlideIn>
-            <View style={s.rideCard}>
-              <View style={s.rideHeader}><Text style={s.rideTitle}>🔔 Nayi Ride!</Text><Text style={s.rideFare}>₹{rideReq.fare}</Text></View>
-              <View style={s.rideDetails}>
-                <Text style={s.rideFrom}>📍 {rideReq.pickup}</Text>
-                <Text style={s.rideDivider}>↓</Text>
-                <Text style={s.rideTo}>🎯 {rideReq.drop_location}</Text>
-              </View>
-              <CountdownBar seconds={20} onTimeout={rejectRide} />
-              <View style={[s.rideActions, { marginTop: 12 }]}>
-                <TouchableOpacity style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></TouchableOpacity>
-                <TouchableOpacity style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></TouchableOpacity>
-              </View>
+              {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
+                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text></TouchableOpacity>
+              )}
+              {activeRide.status === 'started' && (
+                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text></TouchableOpacity>
+              )}
+
+              {activeRide.status === 'matched' && (
+                <TouchableOpacity style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text></TouchableOpacity>
+              )}
+
+              {activeRide.status === 'arrived' && (
+                <View>
+                  {!pickupInRange && (
+                    <View style={s.rangeWarn}>
+                      <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>📍 Pickup se {rangeDist}m door hain</Text>
+                      <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>15m ke andar aane par OTP daal sakte ho</Text>
+                    </View>
+                  )}
+                  <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
+                  <TextInput style={{ borderWidth: 2, borderColor: pickupInRange ? '#1a1a2e' : '#e0e0e0', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: pickupInRange ? '#fff' : '#f5f5f5' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} editable={pickupInRange} />
+                  <TouchableOpacity style={[s.tripBtn, !pickupInRange && { opacity: 0.5 }]} onPress={startTrip} disabled={loading || !pickupInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : pickupInRange ? '🚀 OTP Verify & Trip Shuru' : '🔒 Pickup pe pahuncho'}</Text></TouchableOpacity>
+                </View>
+              )}
+
+              {activeRide.status === 'started' && (
+                <View>
+                  {!dropInRange && (
+                    <View style={s.rangeWarn}>
+                      <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>🎯 Drop se {rangeDist}m door hain</Text>
+                      <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>10m ke andar aane par complete kar sakte ho</Text>
+                    </View>
+                  )}
+                  <TouchableOpacity style={[s.tripBtn, { backgroundColor: dropInRange ? '#4CAF50' : '#aaa' }]} onPress={completeTrip} disabled={loading || !dropInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : dropInRange ? '✅ Trip Complete Karo' : '🔒 Drop pe pahuncho'}</Text></TouchableOpacity>
+                </View>
+              )}
+              <TouchableOpacity style={s.cancelBtn} onPress={cancelTrip} disabled={loading}><Text style={s.cancelTxt}>Cancel Trip</Text></TouchableOpacity>
             </View>
-          </SlideIn>
-        )}
+          )}
 
-        {!activeRide && !rideReq && (
-          <View style={s.statusCard}><Text style={s.statusText}>{isOnline ? '✅ Online hain — rides ka intezaar...' : '💤 Online ho jao rides lene ke liye'}</Text></View>
-        )}
-        {result && !activeRide && !rideReq ? <Text style={s.result}>{result}</Text> : null}
-        <View style={{ height: 16 }} />
-      </ScrollView>
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
+          {rideReq && !activeRide && (
+            <SlideIn>
+              <View style={s.rideCard}>
+                <View style={s.rideHeader}><Text style={s.rideTitle}>🔔 Nayi Ride!</Text><Text style={s.rideFare}>₹{rideReq.fare}</Text></View>
+                <View style={s.rideDetails}>
+                  <Text style={s.rideFrom}>📍 {rideReq.pickup}</Text>
+                  <Text style={s.rideDivider}>↓</Text>
+                  <Text style={s.rideTo}>🎯 {rideReq.drop_location}</Text>
+                </View>
+                <CountdownBar seconds={20} onTimeout={rejectRide} />
+                <View style={[s.rideActions, { marginTop: 12 }]}>
+                  <TouchableOpacity style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></TouchableOpacity>
+                  <TouchableOpacity style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></TouchableOpacity>
+                </View>
+              </View>
+            </SlideIn>
+          )}
+
+          {!activeRide && !rideReq && (
+            <View style={s.statusCard}><Text style={s.statusText}>{isOnline ? '✅ Online hain — rides ka intezaar...' : '💤 Online ho jao rides lene ke liye'}</Text></View>
+          )}
+          {result && !activeRide && !rideReq ? <Text style={s.result}>{result}</Text> : null}
+        </ScrollView>
+      </View>
+      <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} /></View>
     </View>
   );
 
@@ -783,6 +812,15 @@ function BottomNav({ activeTab, setActiveTab, rideReq }: any) {
 
 const s = StyleSheet.create({
   screen:          { flex:1, backgroundColor:'#f5f5f5' },
+  mapFull:         { position:'absolute', top:0, left:0, right:0, bottom:0 },
+  topOverlay:      { position:'absolute', top:0, left:0, right:0, paddingTop:44, paddingHorizontal:14 },
+  topGlass:        { flexDirection:'row', alignItems:'center', backgroundColor:'rgba(255,255,255,0.95)', borderRadius:16, padding:12, elevation:6, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:8 },
+  greetingDark:    { color:'#1a1a2e', fontSize:15, fontWeight:'bold' },
+  subTxtDark:      { color:'#666', fontSize:11, marginTop:2 },
+  bottomSheet:     { position:'absolute', bottom:0, left:0, right:0, backgroundColor:'#fff', borderTopLeftRadius:24, borderTopRightRadius:24, padding:16, paddingTop:8, elevation:12, shadowColor:'#000', shadowOpacity:0.15, shadowRadius:12 },
+  sheetHandle:     { width:40, height:4, borderRadius:2, backgroundColor:'#ddd', alignSelf:'center', marginBottom:12 },
+  navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
+  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#e94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
   hero:            { backgroundColor:'#1a1a2e', alignItems:'center', padding:50, paddingBottom:40 },
   heroIcon:        { fontSize:60 },
   heroTitle:       { color:'#fff', fontSize:28, fontWeight:'bold', marginTop:10 },
@@ -872,7 +910,7 @@ const rs = StyleSheet.create({
   subTitle:    { fontSize:14, color:'#888', marginTop:6, marginBottom:10 },
   fieldLabel:  { fontSize:14, fontWeight:'600', color:'#333', marginTop:16, marginBottom:8 },
   input:       { borderWidth:1, borderColor:'#e0e0e0', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#fff' },
-  photoBox:    { borderWidth:2, borderColor:'#e0e0e0', borderStyle:'dashed', borderRadius:14, padding:24, alignItems:'center', backgroundColor:'#fafafa' },
+  photoBox:    { borderWidth:2, borderColor:'#e0e0e0', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#fafafa' },
   vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:2, borderColor:'transparent' },
   vehBoxActive:{ backgroundColor:'#1a1a2e', borderColor:'#e94560' },
   uploadBtn:   { flex:1, backgroundColor:'#1a1a2e', borderRadius:8, padding:10, alignItems:'center' },
@@ -886,7 +924,7 @@ const cs = StyleSheet.create({
   bubble:    { maxWidth:'75%', borderRadius:14, padding:12, marginBottom:8 },
   mine:      { backgroundColor:'#e94560', alignSelf:'flex-end', borderBottomRightRadius:4 },
   theirs:    { backgroundColor:'#fff', alignSelf:'flex-start', borderBottomLeftRadius:4, elevation:1 },
-  inputRow:  { flexDirection:'row', alignItems:'center', padding:10, backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0' },
+  inputRow:  { flexDirection:'row', alignItems:'center', padding:10, paddingBottom:28, backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0' },
   input:     { flex:1, backgroundColor:'#f5f5f5', borderRadius:24, paddingHorizontal:16, paddingVertical:10, fontSize:14, marginRight:8 },
   send:      { width:44, height:44, borderRadius:22, backgroundColor:'#e94560', alignItems:'center', justifyContent:'center' },
 });
