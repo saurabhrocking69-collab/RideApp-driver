@@ -11,17 +11,74 @@ import { WebView } from 'react-native-webview';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
-const MapWebView = ({ pickup, drop, height = 180 }: any) => {
-  let mapUrl = '';
-  if (pickup && drop) {
-    mapUrl = `https://www.google.com/maps/embed/v1/directions?key=${MAPS_KEY}&origin=${encodeURIComponent(pickup)}&destination=${encodeURIComponent(drop)}&mode=driving`;
-  } else if (pickup && pickup !== 'Lucknow,India') {
-    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=${encodeURIComponent(pickup)}`;
-  } else {
-    mapUrl = `https://www.google.com/maps/embed/v1/place?key=${MAPS_KEY}&q=Lucknow,Uttar+Pradesh,India`;
+const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, height = 220 }: any) => {
+  const centerLat = pickupCoords?.lat || driverLat || 26.8467;
+  const centerLng = pickupCoords?.lng || driverLng || 80.9462;
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>* { margin: 0; padding: 0; } html, body, #map { height: 100%; width: 100%; } #map { background: #e8eaed; }</style>
+</head>
+<body>
+<div id="map"></div>
+<script>
+  function initMap() {
+    const map = new google.maps.Map(document.getElementById('map'), {
+      center: { lat: ${centerLat}, lng: ${centerLng} }, zoom: 14,
+      disableDefaultUI: true, zoomControl: true,
+      styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }, { featureType: 'transit', stylers: [{ visibility: 'off' }] }]
+    });
+    const bounds = new google.maps.LatLngBounds();
+    let hasPoint = false;
+    ${pickupCoords?.lat ? `
+    new google.maps.Marker({
+      position: { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} }, map,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#4CAF50', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 },
+      title: 'Pickup', animation: google.maps.Animation.DROP
+    });
+    bounds.extend({ lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} }); hasPoint = true;
+    ` : ''}
+    ${dropCoords?.lat ? `
+    new google.maps.Marker({
+      position: { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} }, map,
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#e94560', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 },
+      title: 'Drop', animation: google.maps.Animation.DROP
+    });
+    bounds.extend({ lat: ${dropCoords.lat}, lng: ${dropCoords.lng} }); hasPoint = true;
+    ` : ''}
+    ${driverLat && driverLng ? `
+    new google.maps.Marker({
+      position: { lat: ${driverLat}, lng: ${driverLng} }, map,
+      label: { text: '🚗', fontSize: '22px' },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
+      title: 'Driver'
+    });
+    bounds.extend({ lat: ${driverLat}, lng: ${driverLng} }); hasPoint = true;
+    ` : ''}
+    ${customerLat && customerLng ? `
+    new google.maps.Marker({
+      position: { lat: ${customerLat}, lng: ${customerLng} }, map,
+      label: { text: '🧑', fontSize: '22px' },
+      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
+      title: 'Customer'
+    });
+    bounds.extend({ lat: ${customerLat}, lng: ${customerLng} }); hasPoint = true;
+    ` : ''}
+    ${pickupCoords?.lat && dropCoords?.lat ? `
+    const ds = new google.maps.DirectionsService();
+    const dr = new google.maps.DirectionsRenderer({ map, suppressMarkers: true, polylineOptions: { strokeColor: '#1a1a2e', strokeWeight: 4, strokeOpacity: 0.8 } });
+    ds.route({ origin: { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} }, destination: { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} }, travelMode: 'DRIVING' }, (r, s) => { if (s === 'OK') dr.setDirections(r); });
+    ` : ''}
+    if (hasPoint) { map.fitBounds(bounds, 80); if (map.getZoom() > 16) map.setZoom(16); }
   }
-  const html = `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;}body{background:#dbeafe;}</style></head><body><iframe width="100%" height="${height}" frameborder="0" style="border:0" src="${mapUrl}" allowfullscreen></iframe></body></html>`;
-  return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled />;
+</script>
+<script async src="https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=initMap"></script>
+</body>
+</html>`;
+
+  return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
 
 const SlideIn = ({ children, style }: any) => {
@@ -74,7 +131,10 @@ export default function App() {
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
   const [eta, setEta]               = useState('');
-  const [tripSummary, setTripSummary] = useState<any>(null);
+  const [tripSummary, setTripSummary]   = useState<any>(null);
+  const [paymentWaiting, setPaymentWaiting] = useState(false);
+  const [paymentRideId, setPaymentRideId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
   const [pickupInRange, setPickupInRange] = useState(false);
   const [dropInRange, setDropInRange] = useState(false);
@@ -129,7 +189,10 @@ export default function App() {
       try {
         const ar = await fetch(`${API}/api/driver/active-ride?phone=${dp}`);
         const ad = await ar.json();
-        if (ad.ride) { setActiveRide(ad.ride); setRideReq(null); return; }
+        if (ad.ride) { 
+          setActiveRide({ ...ad.ride, passenger_name: ad.ride.passenger_name || 'Passenger' }); 
+          setRideReq(null); return; 
+        }
         setActiveRide(null);
         const pr = await fetch(`${API}/api/driver/pending-ride?phone=${dp}`);
         const pd = await pr.json();
@@ -320,14 +383,41 @@ export default function App() {
   const completeTrip = async () => {
     setLoading(true);
     await apiCall('/api/rides/complete', { ride_id: activeRide.id });
+    setPaymentRideId(activeRide.id);
+    setPaymentWaiting(true);
     const fare = parseFloat(activeRide.fare || 0);
     setEarnings(e => e + fare);
     setRides(r => r + 1);
-    setTripSummary({ fare: activeRide.fare, pickup: activeRide.pickup, drop: activeRide.drop_location, passenger: activeRide.passenger_name, earned: '₹' + (fare * 0.85).toFixed(0), fee: '₹' + (fare * 0.15).toFixed(0) });
     setActiveRide(null);
     setLoading(false);
   };
-const cancelTrip = async () => {
+
+  // Payment status polling (driver wait kare)
+  useEffect(() => {
+    if (!paymentWaiting || !paymentRideId) return;
+    const iv = setInterval(async () => {
+      try {
+        const res = await fetch(`${API}/api/rides/payment-status/${paymentRideId}`);
+        const data = await res.json();
+        if (data.payment_status === 'completed') {
+          setPaymentMethod(data.payment_method);
+          setPaymentWaiting(false);
+          const fare = parseFloat(data.fare || 0);
+          setTripSummary({
+            fare: data.fare, payment_method: data.payment_method,
+            earned: '₹' + (fare * 0.85).toFixed(0),
+            fee: '₹' + (fare * 0.15).toFixed(0),
+          });
+          clearInterval(iv);
+        } else if (data.payment_status === 'cash_pending') {
+          setPaymentMethod('cash');
+        }
+      } catch (_e) {}
+    }, 3000);
+    return () => clearInterval(iv);
+  }, [paymentWaiting, paymentRideId]);
+
+  const cancelTrip = async () => {
     setLoading(true);
     try {
       const cr = await fetch(`${API}/api/rides/cancel-smart`, {
@@ -552,6 +642,64 @@ const cancelTrip = async () => {
     </View>
   );
 
+  // ═══ PAYMENT WAITING SCREEN ═══
+  if (paymentWaiting) return (
+    <View style={s.screen}>
+      <View style={[s.hero, { paddingTop: 60, paddingBottom: 40 }]}>
+        <Text style={{ fontSize: 60 }}>{paymentMethod === 'cash' ? '💵' : '⏳'}</Text>
+        <Text style={s.heroTitle}>{paymentMethod === 'cash' ? 'Cash Payment' : 'Payment ka intezaar...'}</Text>
+        <Text style={s.heroSub}>{paymentMethod === 'cash' ? 'Customer se cash lo' : 'Customer payment kar raha hai...'}</Text>
+      </View>
+      <ScrollView style={{ flex: 1, padding: 16 }}>
+        {/* Payment method info */}
+        {paymentMethod === 'cash' ? (
+          <View>
+            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 16, padding: 20, marginBottom: 16, alignItems: 'center' }}>
+              <Text style={{ fontSize: 50 }}>💵</Text>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2e7d32', marginTop: 10 }}>Customer cash de raha hai</Text>
+              <Text style={{ fontSize: 13, color: '#388e3c', marginTop: 6, textAlign: 'center' }}>Customer se cash lo aur confirm karo</Text>
+            </View>
+            {/* Commission info */}
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#e65100', marginBottom: 8 }}>💰 Commission Info</Text>
+              <Text style={{ fontSize: 13, color: '#ef6c00', lineHeight: 20 }}>Cash payment mein 15% commission aapke next payout pe deduct hoga. Sirf aapki net earning wallet mein aayegi.</Text>
+            </View>
+            {/* Cash confirm button */}
+            <TouchableOpacity style={{ backgroundColor: '#4CAF50', borderRadius: 14, padding: 18, alignItems: 'center', elevation: 4, marginBottom: 12 }}
+              onPress={async () => {
+                try {
+                  await fetch(`${API}/api/rides/cash-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: paymentRideId, phone }) });
+                  setPaymentWaiting(false);
+                  const fare = parseFloat(String(earnings) || '0');
+                  setTripSummary({ fare: '₹' + fare, payment_method: 'cash', earned: '₹' + (fare * 0.85).toFixed(0), fee: '₹' + (fare * 0.15).toFixed(0) });
+                } catch (_e) { setResult('❌ Error'); }
+              }}>
+              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✅ Cash Mil Gaya — Confirm</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View>
+            {/* Waiting animation */}
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', elevation: 3, marginBottom: 16 }}>
+              <Text style={{ fontSize: 50, marginBottom: 12 }}>💳</Text>
+              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Online Payment Processing</Text>
+              <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>Customer UPI/Card se payment kar raha hai. Thoda wait karo...</Text>
+              <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
+                {[0,1,2].map(i => (
+                  <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', opacity: 0.3 + i * 0.35 }} />
+                ))}
+              </View>
+            </View>
+            <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14 }}>
+              <Text style={{ fontSize: 13, color: '#1565c0', textAlign: 'center' }}>💡 Payment complete hote hi aapको automatically rating screen dikhega</Text>
+            </View>
+          </View>
+        )}
+      </ScrollView>
+    </View>
+  );
+
+ 
   // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
     <View style={s.screen}>
@@ -559,7 +707,13 @@ const cancelTrip = async () => {
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16 }}>
           <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
-          {[['Passenger', tripSummary.passenger || 'Customer'],['Route', (tripSummary.pickup||'').substring(0,18) + ' → ' + (tripSummary.drop||'').substring(0,14)],['Total Fare', '₹' + tripSummary.fare],['Platform Fee (15%)', tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
+          {/* Payment method badge */}
+          <View style={{ backgroundColor: tripSummary.payment_method === 'cash' ? '#e8f5e9' : tripSummary.payment_method === 'wallet' ? '#e3f2fd' : '#f3e5f5', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center' }}>
+            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>
+              {tripSummary.payment_method === 'cash' ? '💵 Cash Payment' : tripSummary.payment_method === 'wallet' ? '💰 Wallet Payment' : '💳 Online Payment'}
+            </Text>
+          </View>
+          {[['Total Fare', '₹' + tripSummary.fare],['Platform Fee (15%)', tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
               <Text style={{ fontSize: 14, color: '#666' }}>{k}</Text>
               <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? '#4CAF50' : '#333' }}>{v}</Text>
@@ -599,22 +753,25 @@ const cancelTrip = async () => {
   if (activeTab === 'home') return (
     <View style={s.screen}>
       {/* Full map background */}
-      <View style={s.mapFull}>
-        <MapWebView pickup={activeRide ? activeRide.pickup : 'Lucknow,India'} drop={activeRide ? activeRide.drop_location : ''} height={900} />
+      <View style={s.mapFit}>
+        <MapWebView
+          pickupCoords={activeRide ? { lat: activeRide.pickup_lat, lng: activeRide.pickup_lng } : null}
+          dropCoords={activeRide ? { lat: activeRide.drop_lat, lng: activeRide.drop_lng } : null}
+          driverLat={driverGps?.lat}
+          driverLng={driverGps?.lng}
+          height={220}
+        />
       </View>
-      {/* Top overlay */}
-      <View style={s.topOverlay}>
-        <View style={s.topGlass}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.greetingDark}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
-            <Text style={s.subTxtDark}>{driverInfo?.name || selectedDriver?.name} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
-          </View>
-          <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
+      {/* Top bar */}
+      <View style={s.topBar}>
+        <View style={{ flex: 1 }}>
+          <Text style={s.greeting}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
+          <Text style={s.subTxt}>{driverInfo?.name || selectedDriver?.name} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
         </View>
+        <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
-      {/* Bottom sheet */}
-      <View style={[s.bottomSheet, { maxHeight: activeRide || rideReq ? '75%' : '55%' }]}>
-        <View style={s.sheetHandle} />
+      {/* Content */}
+      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><Text style={s.statValue}>₹{earnings.toFixed(0)}</Text><Text style={s.statLabel}>Aaj ki kamai</Text></View>
@@ -703,13 +860,10 @@ const cancelTrip = async () => {
 
               {activeRide.status === 'started' && (
                 <View>
-                  {!dropInRange && (
-                    <View style={s.rangeWarn}>
-                      <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>🎯 Drop se {rangeDist}m door hain</Text>
-                      <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>10m ke andar aane par complete kar sakte ho</Text>
-                    </View>
-                  )}
-                  <TouchableOpacity style={[s.tripBtn, { backgroundColor: dropInRange ? '#4CAF50' : '#aaa' }]} onPress={completeTrip} disabled={loading || !dropInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : dropInRange ? '✅ Trip Complete Karo' : '🔒 Drop pe pahuncho'}</Text></TouchableOpacity>
+                  {/* GPS Range check disabled for testing */}
+                  <TouchableOpacity style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeTrip} disabled={loading}>
+                    <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                  </TouchableOpacity>
                 </View>
               )}
               <TouchableOpacity style={s.cancelBtn} onPress={cancelTrip} disabled={loading}><Text style={s.cancelTxt}>Cancel Trip</Text></TouchableOpacity>
@@ -817,6 +971,7 @@ function BottomNav({ activeTab, setActiveTab, rideReq }: any) {
 
 const s = StyleSheet.create({
   screen:          { flex:1, backgroundColor:'#f5f5f5' },
+  mapFit:          { height: 220, width: '100%', backgroundColor: '#e8eaed' },
   mapFull:         { position:'absolute', top:0, left:0, right:0, bottom:0 },
   topOverlay:      { position:'absolute', top:0, left:0, right:0, paddingTop:44, paddingHorizontal:14 },
   topGlass:        { flexDirection:'row', alignItems:'center', backgroundColor:'rgba(255,255,255,0.95)', borderRadius:16, padding:12, elevation:6, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:8 },
