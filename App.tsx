@@ -853,7 +853,7 @@ export default function App() {
                     </View>
                   )}
                   <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                  <TextInput style={{ borderWidth: 2, borderColor: pickupInRange ? '#1a1a2e' : '#e0e0e0', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: pickupInRange ? '#fff' : '#f5f5f5' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} editable={pickupInRange} />
+                  <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
                   <TouchableOpacity style={[s.tripBtn, !pickupInRange && { opacity: 0.5 }]} onPress={startTrip} disabled={loading || !pickupInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : pickupInRange ? '🚀 OTP Verify & Trip Shuru' : '🔒 Pickup pe pahuncho'}</Text></TouchableOpacity>
                 </View>
               )}
