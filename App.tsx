@@ -132,7 +132,9 @@ export default function App() {
   const [otpInput, setOtpInput]     = useState('');
   const [eta, setEta]               = useState('');
   const [tripSummary, setTripSummary]   = useState<any>(null);
-  const [paymentWaiting, setPaymentWaiting] = useState(false);
+  const [paymentWaiting, setPaymentWaiting]     = useState(false);
+  const [showDriverCancelModal, setShowDriverCancelModal] = useState(false);
+  const [cancelReason, setCancelReason]         = useState('');
   const [paymentRideId, setPaymentRideId] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
@@ -282,9 +284,20 @@ export default function App() {
   }, [screen, phone, rides]);
 
   // ── Navigate ───────────────────────────────────
-  const navigateTo = (location: string) => {
-    const url = `google.navigation:q=${encodeURIComponent(location)}`;
-    Linking.openURL(url).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`));
+  const navigateTo = (location: string, lat?: number, lng?: number) => {
+    // Coordinates available hain toh use karo (accurate)
+    if (lat && lng) {
+      const url = `google.navigation:q=${lat},${lng}`;
+      Linking.openURL(url).catch(() => 
+        Linking.openURL(`https://maps.google.com/?daddr=${lat},${lng}`)
+      );
+    } else {
+      // Fallback — address se
+      const url = `google.navigation:q=${encodeURIComponent(location)}`;
+      Linking.openURL(url).catch(() => 
+        Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`)
+      );
+    }
   };
 
   // ── ETA ────────────────────────────────────────
@@ -449,13 +462,25 @@ export default function App() {
 
   const completeTrip = async () => {
     setLoading(true);
-    await apiCall('/api/rides/complete', { ride_id: activeRide.id });
-    setPaymentRideId(activeRide.id);
-    setPaymentWaiting(true);
-    const fare = parseFloat(activeRide.fare || 0);
-    setEarnings(e => e + fare);
-    setRides(r => r + 1);
-    setActiveRide(null);
+    try {
+      const res = await fetch(`${API}/api/rides/complete`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: activeRide.id })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPaymentRideId(activeRide.id);
+        setPaymentWaiting(true);
+        const fare = parseFloat(activeRide.fare || 0);
+        setEarnings(e => e + fare);
+        setRides(r => r + 1);
+        setActiveRide(null);
+      } else {
+        setResult('❌ ' + (data.message || 'Complete nahi hua, retry karo'));
+      }
+    } catch (_e) {
+      setResult('❌ Network error — retry karo');
+    }
     setLoading(false);
   };
 
@@ -489,12 +514,20 @@ export default function App() {
     try {
       const cr = await fetch(`${API}/api/rides/cancel-smart`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: activeRide.id, cancelled_by: 'driver', reason: 'Driver cancelled', phone })
+        body: JSON.stringify({ ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone })
       });
       const cd = await cr.json();
-      setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancel ki');
-    } catch (_e) { setResult('❌ Trip cancel ki'); }
-    setActiveRide(null);
+      if (cd.success) {
+        setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancel ki');
+        setActiveRide(null);
+        setShowDriverCancelModal(false);
+      } else {
+        setResult('❌ Cancel nahi hua — retry karo');
+      }
+    } catch (_e) {
+      setResult('❌ Network error — retry karo');
+      setActiveRide(null);
+    }
     setLoading(false);
   };
 
@@ -898,7 +931,39 @@ export default function App() {
     </View>
   );
 
- 
+  // ═══ DRIVER CANCEL MODAL ═══
+  if (showDriverCancelModal) return (
+    <View style={s.screen}>
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#ddd', alignSelf: 'center', marginBottom: 16 }} />
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Trip Cancel karein?</Text>
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600' }}>⚠️ Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
+          </View>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>Cancel ka reason?</Text>
+          {['Customer nahi mila', 'Galat location', 'Emergency aa gayi', 'Vehicle problem', 'Customer rude tha'].map((reason, i) => (
+            <TouchableOpacity key={i}
+              style={{ backgroundColor: cancelReason === reason ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 14, marginBottom: 8 }}
+              onPress={() => setCancelReason(reason)}>
+              <Text style={{ fontSize: 14, color: cancelReason === reason ? '#fff' : '#333' }}>{reason}</Text>
+            </TouchableOpacity>
+          ))}
+          <TouchableOpacity
+            style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8, opacity: cancelReason ? 1 : 0.5 }}
+            disabled={!cancelReason || loading}
+            onPress={cancelTrip}>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{loading ? '⏳ Cancel ho raha hai...' : '✕ Trip Cancel Karo'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={{ padding: 14, alignItems: 'center' }} onPress={() => { setShowDriverCancelModal(false); setCancelReason(''); }}>
+            <Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 14 }}>Nahi, trip rakhni hai</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+
+
   // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
     <View style={s.screen}>
@@ -1033,10 +1098,10 @@ export default function App() {
               {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
 
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text></TouchableOpacity>
+                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text></TouchableOpacity>
               )}
               {activeRide.status === 'started' && (
-                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text></TouchableOpacity>
+                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}><Text style={{ color: '#8ae961', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text></TouchableOpacity>
               )}
 
               {activeRide.status === 'matched' && (
@@ -1061,7 +1126,9 @@ export default function App() {
                   </TouchableOpacity>
                 </View>
               )}
-              <TouchableOpacity style={s.cancelBtn} onPress={cancelTrip} disabled={loading}><Text style={s.cancelTxt}>Cancel Trip</Text></TouchableOpacity>
+              <TouchableOpacity style={s.cancelBtn} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
+                <Text style={s.cancelTxt}>✕ Cancel Trip</Text>
+              </TouchableOpacity>
             </View>
           )}
 
