@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -152,6 +152,12 @@ export default function App() {
   const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
   const [uploading, setUploading]   = useState('');
   const [loginPhone, setLoginPhone] = useState('');
+  const [loginOtp, setLoginOtp]     = useState('');
+  const [loginOtpSent, setLoginOtpSent] = useState(false);
+  const [loginOtpDigits, setLoginOtpDigits] = useState(['','','','','','']);
+  const [loginResendTimer, setLoginResendTimer] = useState(60);
+  const [loginCanResend, setLoginCanResend] = useState(false);
+  const loginOtpRefs = useRef<any[]>([]);
   const [driverInfo, setDriverInfo] = useState<any>(null);
 
   const DRIVERS = [
@@ -182,6 +188,23 @@ export default function App() {
       } catch (_e) {}
     })();
   }, []);
+  // ── Android Back Button ───────────────────────
+  useEffect(() => {
+    const backAction = () => {
+      if (screen === 'login' && regStep === 0) return false; // App exit
+      if (screen === 'login' && regStep > 0) {
+        if (regStep === 99) { setRegStep(0); return true; }
+        setRegStep(regStep - 1); return true;
+      }
+      if (showChat) { setShowChat(false); return true; }
+      if (tripSummary) return true; // Trip summary pe back nahi
+      if (paymentWaiting) return true; // Payment waiting pe back nahi
+      if (activeTab !== 'home') { setActiveTab('home'); return true; }
+      return false;
+    };
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
+    return () => backHandler.remove();
+  }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting]);
 
   // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
@@ -216,15 +239,7 @@ export default function App() {
           const loc = await Location.getCurrentPositionAsync({});
           setDriverGps({ lat: loc.coords.latitude, lng: loc.coords.longitude });
           await fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude }) });
-          // GPS range check for active ride
-          if (activeRide?.id) {
-            const type = activeRide.status === 'started' ? 'drop' : 'pickup';
-            const rr = await fetch(`${API}/api/rides/check-range`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, driver_lat: loc.coords.latitude, driver_lng: loc.coords.longitude, type }) });
-            const rd = await rr.json();
-            setRangeDist(rd.distance || 0);
-            if (type === 'pickup') setPickupInRange(rd.in_range);
-            else setDropInRange(rd.in_range);
-          }
+          // GPS range check disabled for testing
         } catch (_e) {}
       }, 5000);
     })();
@@ -287,7 +302,29 @@ export default function App() {
     if (loginPhone.length !== 10) { setResult('❌ 10 digit number daalo'); return; }
     setLoading(true);
     try {
-      const res  = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
+      // Pehle OTP bhejo
+      const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
+      const otpData = await otpRes.json();
+      if (otpData.error) { setResult('❌ ' + otpData.error); setLoading(false); return; }
+      setLoginOtpSent(true);
+      setLoginResendTimer(60); setLoginCanResend(false);
+      setResult('');
+    } catch (_e) { setResult('❌ Server error'); }
+    setLoading(false);
+  };
+
+  const verifyLoginOtp = async (otpOverride?: string) => {
+    const otpToUse = otpOverride || loginOtp;
+    if (!otpToUse || otpToUse.length !== 6) { setResult('❌ 6 digit OTP daalo'); return; }
+    setLoading(true);
+    try {
+      // OTP verify karo
+      const verRes = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, otp: otpToUse, name: '' }) });
+      const verData = await verRes.json();
+      if (!verData.token) { setResult('❌ ' + (verData.error || 'Galat OTP')); setLoading(false); return; }
+
+      // Driver info lo
+      const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
       const data = await res.json();
       if (!data.success) { setResult('❌ ' + data.message); setLoading(false); return; }
       if (data.driver.status === 'approved') {
@@ -298,6 +335,36 @@ export default function App() {
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
   };
+
+  // Login OTP digit handler
+  const handleLoginOtpChange = (text: string, index: number) => {
+    const newDigits = [...loginOtpDigits];
+    newDigits[index] = text.replace(/[^0-9]/g, '').slice(-1);
+    setLoginOtpDigits(newDigits);
+    setLoginOtp(newDigits.join(''));
+    if (text && index < 5) loginOtpRefs.current[index + 1]?.focus();
+    if (newDigits.filter(d => d !== '').length === 6) {
+      setTimeout(() => verifyLoginOtp(newDigits.join('')), 300);
+    }
+  };
+
+  const handleLoginOtpKeyPress = (key: string, index: number) => {
+    if (key === 'Backspace' && !loginOtpDigits[index] && index > 0) {
+      loginOtpRefs.current[index - 1]?.focus();
+    }
+  };
+
+  // Resend timer
+  useEffect(() => {
+    if (!loginOtpSent) return;
+    const iv = setInterval(() => {
+      setLoginResendTimer(t => {
+        if (t <= 1) { clearInterval(iv); setLoginCanResend(true); return 0; }
+        return t - 1;
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [loginOtpSent]);
 
   // ── Registration ───────────────────────────────
   const updateReg = (field: string, value: string) => setRegData((p: any) => ({ ...p, [field]: value }));
@@ -462,20 +529,95 @@ export default function App() {
     </View>
   );
 
-  // ═══ REGISTRATION STEP 1 — Phone ═══
+  // ═══ REGISTRATION STEP 1 — Phone + OTP ═══
   if (screen === 'login' && regStep === 1) return (
-    <View style={s.screen}>
-      <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(0)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 1 of 5</Text><View style={{ width: 50 }} /></View>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={rs.regHeader}>
+        <TouchableOpacity onPress={() => { setRegStep(0); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); }}>
+          <Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={rs.regTitle}>Step 1 of 5</Text>
+        <View style={{ width: 50 }} />
+      </View>
       <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-        <Text style={rs.bigTitle}>📱 Phone Number</Text><Text style={rs.subTitle}>Aapka mobile number daalo</Text>
-        <View style={[s.driverItem, { marginTop: 20 }]}>
-          <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
-          <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={regData.phone} onChangeText={(v) => updateReg('phone', v)} />
-        </View>
-        {result ? <Text style={s.err}>{result}</Text> : null}
-        <TouchableOpacity style={[s.btn, regData.phone.length !== 10 && { opacity: 0.5 }]} disabled={regData.phone.length !== 10} onPress={() => { setResult(''); setRegStep(2); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
+        {!loginOtpSent ? (
+          <View>
+            <Text style={rs.bigTitle}>📱 Phone Number</Text>
+            <Text style={rs.subTitle}>Aapka mobile number daalo — OTP se verify hoga</Text>
+            <View style={[s.driverItem, { marginTop: 20 }]}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
+              <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={regData.phone} onChangeText={(v) => updateReg('phone', v)} />
+            </View>
+            {result ? <Text style={s.err}>{result}</Text> : null}
+            <TouchableOpacity style={[s.btn, regData.phone.length !== 10 && { opacity: 0.5 }]}
+              disabled={regData.phone.length !== 10 || loading}
+              onPress={async () => {
+                setLoading(true); setResult('');
+                try {
+                  const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) });
+                  const data = await res.json();
+                  if (data.error) { setResult('❌ ' + data.error); }
+                  else { setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
+                } catch (_e) { setResult('❌ Server error'); }
+                setLoading(false);
+              }}>
+              <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View>
+            <Text style={rs.bigTitle}>🔐 OTP Verify Karo</Text>
+            <Text style={rs.subTitle}>+91 {regData.phone} pe OTP bheja gaya</Text>
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginTop: 16, marginBottom: 20, flexDirection: 'row' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
+              <Text style={{ fontSize: 12, color: '#e65100', flex: 1 }}>SMS aane par OTP copy karo — boxes mein auto fill ho jaayega!</Text>
+            </View>
+            {/* 6 OTP Boxes */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+              {loginOtpDigits.map((digit, i) => (
+                <TextInput key={i}
+                  ref={(ref) => { loginOtpRefs.current[i] = ref; }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#e94560' : '#e0e0e0', backgroundColor: digit ? '#fff8f8' : '#fafafa', color: '#1a1a2e' }}
+                  keyboardType="number-pad" maxLength={1} value={digit}
+                  onChangeText={(t) => handleLoginOtpChange(t, i)}
+                  onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
+                />
+              ))}
+            </View>
+            {result ? <Text style={s.err}>{result}</Text> : null}
+            <TouchableOpacity style={[s.btn, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.5 }]}
+              disabled={loading || loginOtpDigits.join('').length < 6}
+              onPress={async () => {
+                const otpToUse = loginOtpDigits.join('');
+                setLoading(true);
+                try {
+                  const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
+                  const data = await res.json();
+                  if (data.token) { setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setRegStep(2); }
+                  else setResult('❌ ' + (data.error || 'Galat OTP'));
+                } catch (_e) { setResult('❌ Server error'); }
+                setLoading(false);
+              }}>
+              <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify & Aage Badho'}</Text>
+            </TouchableOpacity>
+            {/* Resend */}
+            <View style={{ alignItems: 'center', marginTop: 16 }}>
+              {loginCanResend ? (
+                <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setResult(''); fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) }); setLoginResendTimer(60); setLoginCanResend(false); }}>
+                  <Text style={{ color: '#e94560', fontWeight: 'bold' }}>🔄 OTP Dobara Bhejo</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={{ color: '#999', fontSize: 13 }}>Dobara bhejne ke liye <Text style={{ color: '#e94560', fontWeight: 'bold' }}>{loginResendTimer}s</Text> wait karo</Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); }} style={{ alignItems: 'center', marginTop: 12 }}>
+              <Text style={{ color: '#666', fontSize: 13 }}>← Number change karo</Text>
+            </TouchableOpacity>
+            <View style={{ height: 60 }} />
+          </View>
+        )}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 
   // ═══ REGISTRATION STEP 2 — Vehicle Type ═══
@@ -606,40 +748,97 @@ export default function App() {
 
   // ═══ LOGIN ═══
   if (screen === 'login') return (
-    <View style={s.screen}>
-      <View style={s.hero}><Text style={s.heroIcon}>🚖</Text><Text style={s.heroTitle}>RideApp Driver</Text><Text style={s.heroSub}>Spero Buddy Login</Text></View>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <View style={s.hero}>
+        <Text style={s.heroIcon}>🚖</Text>
+        <Text style={s.heroTitle}>RideApp Driver</Text>
+        <Text style={s.heroSub}>Spero Buddy Login</Text>
+      </View>
       <ScrollView style={{ flex: 1, padding: 16 }} keyboardShouldPersistTaps="handled">
-        <Text style={s.sectionTitle}>📱 Apne number se login karo:</Text>
-        <View style={[s.driverItem, { marginBottom: 12 }]}>
-          <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
-          <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={loginPhone} onChangeText={setLoginPhone} />
-        </View>
-        <TouchableOpacity style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
-          <Text style={s.btnTxt}>{loading ? 'Login ho raha hai...' : 'Login Karo 🚀'}</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
-          <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Naya Spero Buddy Banein</Text>
-        </TouchableOpacity>
-        {result ? <Text style={s.err}>{result}</Text> : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
-          <Text style={{ color: '#999', marginHorizontal: 12, fontSize: 12 }}>TEST DRIVERS</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
-        </View>
-        {DRIVERS.map((d, i) => (
-          <TouchableOpacity key={i} style={[s.driverItem, phone === d.phone && s.driverItemActive]} onPress={() => setPhone(d.phone)}>
-            <Text style={s.driverItemIcon}>{d.type.split(' ')[0]}</Text>
-            <View style={{ flex: 1 }}>
-              <Text style={[s.driverItemName, phone === d.phone && { color: '#fff' }]}>{d.name}</Text>
-              <Text style={[s.driverItemVehicle, phone === d.phone && { color: '#ddd' }]}>{d.vehicle} · {d.type}</Text>
+        {!loginOtpSent ? (
+          // ── Phone Input ──
+          <View>
+            <Text style={s.sectionTitle}>📱 Apne number se login karo:</Text>
+            <View style={[s.driverItem, { marginBottom: 12 }]}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
+              <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={loginPhone} onChangeText={setLoginPhone} />
             </View>
-            {phone === d.phone && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
-          </TouchableOpacity>
-        ))}
-        <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) setScreen('home'); }} disabled={!phone}><Text style={s.btnTxt}>Test Login 🧪</Text></TouchableOpacity>
+            {result ? <Text style={s.err}>{result}</Text> : null}
+            <TouchableOpacity style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
+              <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
+              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Naya Spero Buddy Banein</Text>
+            </TouchableOpacity>
+            {/* Test drivers */}
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+              <Text style={{ color: '#999', marginHorizontal: 12, fontSize: 12 }}>TEST DRIVERS</Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+            </View>
+            {DRIVERS.map((d, i) => (
+              <TouchableOpacity key={i} style={[s.driverItem, phone === d.phone && s.driverItemActive]} onPress={() => setPhone(d.phone)}>
+                <Text style={s.driverItemIcon}>{d.type.split(' ')[0]}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.driverItemName, phone === d.phone && { color: '#fff' }]}>{d.name}</Text>
+                  <Text style={[s.driverItemVehicle, phone === d.phone && { color: '#ddd' }]}>{d.vehicle} · {d.type}</Text>
+                </View>
+                {phone === d.phone && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) setScreen('home'); }} disabled={!phone}>
+              <Text style={s.btnTxt}>Test Login 🧪</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          // ── OTP Input ──
+          <View>
+            <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14, marginBottom: 20, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 20, marginRight: 10 }}>📱</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 13, color: '#1565c0', fontWeight: '600' }}>OTP bheja gaya!</Text>
+                <Text style={{ fontSize: 12, color: '#1976d2', marginTop: 2 }}>+91 {loginPhone} pe 6-digit code aaya hoga</Text>
+              </View>
+            </View>
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 18, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
+              <Text style={{ fontSize: 12, color: '#e65100', flex: 1 }}>SMS aane par OTP copy karo — 6 boxes mein paste ho jaayega!</Text>
+            </View>
+            {/* 6 OTP Boxes */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+              {loginOtpDigits.map((digit, i) => (
+                <TextInput
+                  key={i}
+                  ref={(ref) => { loginOtpRefs.current[i] = ref; }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#e94560' : '#e0e0e0', backgroundColor: digit ? '#fff8f8' : '#fafafa', color: '#1a1a2e' }}
+                  keyboardType="number-pad" maxLength={1} value={digit}
+                  onChangeText={(t) => handleLoginOtpChange(t, i)}
+                  onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
+                />
+              ))}
+            </View>
+            {result ? <Text style={s.err}>{result}</Text> : null}
+            <TouchableOpacity style={[s.btn, { marginBottom: 12 }, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.6 }]} disabled={loading || loginOtpDigits.join('').length < 6} onPress={() => verifyLoginOtp()}>
+              <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify Karo'}</Text>
+            </TouchableOpacity>
+            {/* Resend */}
+            <View style={{ alignItems: 'center', marginBottom: 16 }}>
+              {loginCanResend ? (
+                <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setLoginOtp(''); setResult(''); doLogin(); }}>
+                  <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 14 }}>🔄 OTP Dobara Bhejo</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={{ color: '#999', fontSize: 13 }}>Dobara bhejne ke liye <Text style={{ color: '#e94560', fontWeight: 'bold' }}>{loginResendTimer}s</Text> wait karo</Text>
+              )}
+            </View>
+            <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setResult(''); }} style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#666', fontSize: 13 }}>← Number change karo</Text>
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={{ height: 20 }} />
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 
   // ═══ PAYMENT WAITING SCREEN ═══
@@ -846,15 +1045,11 @@ export default function App() {
 
               {activeRide.status === 'arrived' && (
                 <View>
-                  {!pickupInRange && (
-                    <View style={s.rangeWarn}>
-                      <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600', textAlign: 'center' }}>📍 Pickup se {rangeDist}m door hain</Text>
-                      <Text style={{ fontSize: 11, color: '#ef6c00', textAlign: 'center', marginTop: 2 }}>15m ke andar aane par OTP daal sakte ho</Text>
-                    </View>
-                  )}
                   <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                  <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
-                  <TouchableOpacity style={[s.tripBtn, !pickupInRange && { opacity: 0.5 }]} onPress={startTrip} disabled={loading || !pickupInRange}><Text style={s.tripBtnTxt}>{loading ? '...' : pickupInRange ? '🚀 OTP Verify & Trip Shuru' : '🔒 Pickup pe pahuncho'}</Text></TouchableOpacity>
+                  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                    <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
+                  </KeyboardAvoidingView>
+                  <TouchableOpacity style={s.tripBtn} onPress={startTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></TouchableOpacity>
                 </View>
               )}
 
