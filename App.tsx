@@ -175,6 +175,14 @@ type Screen = 'login' | 'home';
 export default function App() {
   const [screen, setScreen]         = useState<Screen>('login');
   const dstore = useDriverStore();
+  // Store watcher — guaranteed UI update
+  useEffect(() => {
+    const unsub = useDriverStore.subscribe((state) => {
+      setActiveRide(state.activeRide);
+      setRideReq(state.pendingRide);
+    });
+    return unsub;
+  }, []);
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
@@ -275,9 +283,7 @@ export default function App() {
     setRideReq(null); setActiveRide(null);
   };
 
-  // Store → local state sync
-  useEffect(() => { setActiveRide(dstore.activeRide); }, [dstore.activeRide]);
-  useEffect(() => { setRideReq(dstore.pendingRide); }, [dstore.pendingRide]);
+  // (Store sync ab subscribe se hota hai — upar dekho)
 
   // ── Location tracking + GPS range check ────────
   useEffect(() => {
