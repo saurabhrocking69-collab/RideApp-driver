@@ -7,6 +7,8 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 
@@ -253,6 +255,26 @@ export default function App() {
       } catch (_e) {}
     })();
   }, []);
+  // ── FCM Token Register ────────────────────────
+  const registerFCM = async (userPhone: string) => {
+    try {
+      if (!Device.isDevice) return;
+      const { status: existing } = await Notifications.getPermissionsAsync();
+      let finalStatus = existing;
+      if (existing !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') return;
+      const token = (await Notifications.getExpoPushTokenAsync({
+        projectId: '8c13e622-0206-4e3f-ad33-8851c0f9353c'
+      })).data;
+      await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
+      console.log('✅ Driver FCM token saved');
+    } catch (e) {
+      console.log('FCM error:', e);
+    }
+  };
   // ── Android Back Button ───────────────────────
   useEffect(() => {
     const backAction = () => {
@@ -400,6 +422,7 @@ export default function App() {
         setPhone(data.driver.phone); setDriverInfo(data.driver); setScreen('home'); setResult('');
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
+        registerFCM(data.driver.phone);
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
