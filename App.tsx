@@ -7,6 +7,8 @@ import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
+import { apiGet, apiPost } from './api';
+import { useDriverStore } from './store';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
@@ -81,6 +83,58 @@ const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLa
   return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
 
+// ─── Count-Up — earnings number badhta dikhe ───
+const CountUp = ({ value, style, prefix = '₹' }: any) => {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    const target = parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
+    if (target === 0) { setDisplay(0); return; }
+    let cur = 0;
+    const step = Math.max(1, Math.ceil(target / 25));
+    const t = setInterval(() => {
+      cur = Math.min(cur + step, target);
+      setDisplay(cur);
+      if (cur >= target) clearInterval(t);
+    }, 35);
+    return () => clearInterval(t);
+  }, [value]);
+  return <Text style={style}>{prefix}{display.toFixed(0)}</Text>;
+};
+
+// ─── Celebration — trip complete pe ───
+const Celebration = () => {
+  const particles = useRef([0,1,2,3,4,5,6,7,8,9].map(() => ({
+    x: new Animated.Value(0),
+    y: new Animated.Value(0),
+    o: new Animated.Value(1),
+    r: new Animated.Value(0),
+  }))).current;
+  useEffect(() => {
+    particles.forEach((p, i) => {
+      const angle = (i / 10) * Math.PI * 2;
+      const dist = 60 + Math.random() * 50;
+      Animated.parallel([
+        Animated.timing(p.x, { toValue: Math.cos(angle) * dist, duration: 900, useNativeDriver: true }),
+        Animated.timing(p.y, { toValue: Math.sin(angle) * dist - 30, duration: 900, useNativeDriver: true }),
+        Animated.timing(p.o, { toValue: 0, duration: 900, useNativeDriver: true }),
+        Animated.timing(p.r, { toValue: 1, duration: 900, useNativeDriver: true }),
+      ]).start();
+    });
+  }, []);
+  return (
+    <View style={{ alignItems: 'center', justifyContent: 'center', height: 80, marginBottom: -40 }}>
+      {particles.map((p, i) => (
+        <Animated.Text key={i} style={{
+          position: 'absolute', fontSize: 20, opacity: p.o,
+          transform: [{ translateX: p.x }, { translateY: p.y }, { rotate: p.r.interpolate({ inputRange: [0,1], outputRange: ['0deg', '360deg'] }) }]
+        }}>
+          {['🎉','💰','✨','🎊','⭐'][i % 5]}
+        </Animated.Text>
+      ))}
+    </View>
+  );
+};
+
 const SlideIn = ({ children, style }: any) => {
   const y       = useRef(new Animated.Value(80)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -120,6 +174,7 @@ type Screen = 'login' | 'home';
 
 export default function App() {
   const [screen, setScreen]         = useState<Screen>('login');
+  const dstore = useDriverStore();
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
@@ -210,24 +265,19 @@ export default function App() {
 
   // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
-    pollRef.current = setInterval(async () => {
-      try {
-        const ar = await fetch(`${API}/api/driver/active-ride?phone=${dp}`);
-        const ad = await ar.json();
-        if (ad.ride) { 
-          setActiveRide({ ...ad.ride, passenger_name: ad.ride.passenger_name || 'Passenger' }); 
-          setRideReq(null); return; 
-        }
-        setActiveRide(null);
-        const pr = await fetch(`${API}/api/driver/pending-ride?phone=${dp}`);
-        const pd = await pr.json();
-        if (pd.ride) {
-          setRideReq((prev: any) => { if (!prev || prev.id !== pd.ride.id) Vibration.vibrate([0, 200, 100, 200]); return pd.ride; });
-        } else setRideReq(null);
-      } catch (_e) {}
-    }, 4000);
+    // Store ka single polling engine — overlap guard ke saath
+    useDriverStore.getState().startPolling(dp, () => {
+      Vibration.vibrate([0, 200, 100, 200]);
+    });
   };
-  const stopPolling = () => { clearInterval(pollRef.current); setRideReq(null); setActiveRide(null); };
+  const stopPolling = () => {
+    useDriverStore.getState().clearAll();
+    setRideReq(null); setActiveRide(null);
+  };
+
+  // Store → local state sync
+  useEffect(() => { setActiveRide(dstore.activeRide); }, [dstore.activeRide]);
+  useEffect(() => { setRideReq(dstore.pendingRide); }, [dstore.pendingRide]);
 
   // ── Location tracking + GPS range check ────────
   useEffect(() => {
@@ -428,26 +478,40 @@ export default function App() {
   };
 
   // ── Ride actions ───────────────────────────────
+  // Smart API call — timeout + retry, kabhi hang nahi
   const apiCall = async (endpoint: string, body: any) => {
-    const res = await fetch(`${API}${endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-    return res.json();
+    return apiPost(endpoint, body);
   };
 
   const acceptRide = async () => {
     if (!rideReq) return;
     setLoading(true);
-    try {
-      const data = await apiCall('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
-      if (data.success) { setResult('✅ Ride accept ki!'); setRideReq(null); await fetchEta(rideReq.pickup, rideReq.drop_location); }
-    } catch (_e) { setResult('❌ Error'); }
+    const data = await apiCall('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
+    if (data._error) {
+      setResult('❌ ' + data.message);
+    } else if (data.success) {
+      setResult('✅ Ride accept ki!');
+      setRideReq(null);
+      fetchEta(rideReq.pickup, rideReq.drop_location);
+    } else {
+      setResult('❌ ' + (data.message || 'Ride kisi aur ko mil gayi'));
+      setRideReq(null);
+    }
     setLoading(false);
   };
-  const rejectRide = () => { setRideReq(null); setResult('❌ Ride reject ki'); };
+  const rejectRide = () => {
+    setRideReq(null);
+    useDriverStore.getState().clearAll();
+    // Polling dobara start karo taaki nayi rides aati rahein
+    if (isOnline) startPolling(phone);
+    setResult('❌ Ride reject ki');
+  };
 
   const markArrived = async () => {
     setLoading(true);
-    await apiCall('/api/rides/arrived', { ride_id: activeRide.id });
-    setActiveRide({ ...activeRide, status: 'arrived' });
+    const data = await apiCall('/api/rides/arrived', { ride_id: activeRide.id });
+    if (data._error) setResult('❌ ' + data.message);
+    else setActiveRide({ ...activeRide, status: 'arrived' });
     setLoading(false);
   };
 
@@ -455,7 +519,8 @@ export default function App() {
     if (otpInput.length !== 4) { setResult('❌ 4 digit OTP daalo'); return; }
     setLoading(true);
     const data = await apiCall('/api/rides/start', { ride_id: activeRide.id, otp: otpInput });
-    if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
+    if (data._error) setResult('❌ ' + data.message);
+    else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
     else setResult('❌ ' + (data.message || 'Galat OTP!'));
     setLoading(false);
   };
@@ -967,7 +1032,13 @@ export default function App() {
   // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
     <View style={s.screen}>
-      <View style={[s.hero, { paddingTop: 50 }]}><Text style={{ fontSize: 60 }}>🎉</Text><Text style={s.heroTitle}>Trip Complete!</Text></View>
+      <View style={[s.hero, { paddingTop: 50 }]}>
+        <Celebration />
+        <Text style={{ fontSize: 60 }}>🎉</Text>
+        <Text style={s.heroTitle}>Trip Complete!</Text>
+        <CountUp value={tripSummary.earned} style={{ color: '#4CAF50', fontSize: 36, fontWeight: 'bold', marginTop: 8 }} />
+        <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Aapki kamai is trip se</Text>
+      </View>
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16 }}>
           <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
@@ -1038,7 +1109,7 @@ export default function App() {
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
           <View style={s.statsRow}>
-            <View style={s.statCard}><Text style={s.statIcon}>💰</Text><Text style={s.statValue}>₹{earnings.toFixed(0)}</Text><Text style={s.statLabel}>Aaj ki kamai</Text></View>
+            <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
