@@ -343,6 +343,8 @@ export default function App() {
 
   // ── Wallet / Earnings + Bonus State ──────────
   const [bonusData, setBonusData] = useState<any>({ rides_today: 0, available_bonuses: [], claimed_tiers: [], next_target: null });
+  const [driverOffers, setDriverOffers] = useState<any[]>([]);
+  const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
   const [bonusClaiming, setBonusClaiming] = useState(false);
   const [driverWallet, setDriverWallet] = useState<any>({ balance: 0, total_earned: 0, total_withdrawn: 0 });
   const [driverRideHistory, setDriverRideHistory] = useState<any[]>([]);
@@ -497,6 +499,9 @@ export default function App() {
 
   const loadUpiId = async (ph: string) => {
     try { const r = await fetch(`${API}/api/driver/upi?phone=${ph}`); const d = await r.json(); setDriverUpiId(d.upi_id || ''); setUpiInput(d.upi_id || ''); } catch (_e) {}
+  };
+  const loadDriverOffers = async () => {
+    try { const r = await fetch(`${API}/api/offers/active?role=driver`); const d = await r.json(); setDriverOffers(d.offers || []); } catch (_e) {}
   };
   const saveUpiId = async () => {
     if (!upiInput.trim()) return;
@@ -703,7 +708,7 @@ export default function App() {
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
-        loadUpiId(data.driver.phone);
+        loadUpiId(data.driver.phone); loadDriverOffers();
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
@@ -1574,6 +1579,22 @@ export default function App() {
             <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
+
+          {/* Driver-targeted marketing banners */}
+          {driverOffers.filter(o => !offerDismissed.has(o.id)).map((offer: any) => (
+            <View key={offer.id} style={{ borderRadius: 14, marginBottom: 10, backgroundColor: offer.type === 'incentive' ? '#e8f5e9' : '#fff3e0', borderWidth: 1.5, borderColor: offer.type === 'incentive' ? '#2e7d32' : '#e65100', overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>{offer.type === 'incentive' ? '💰' : '📢'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#1a1a2e' }}>{offer.title}</Text>
+                  {offer.body ? <Text style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{offer.body}</Text> : null}
+                </View>
+                <TouchableOpacity onPress={() => setOfferDismissed(s => new Set([...s, offer.id]))} style={{ padding: 6 }}>
+                  <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ))}
 
           {target && !activeRide && (
             <View style={s.targetCard}>
