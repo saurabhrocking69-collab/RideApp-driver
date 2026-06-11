@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
+  View, Text, TouchableOpacity, StyleSheet, Image,
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler
 } from 'react-native';
 import * as Location from 'expo-location';
@@ -350,6 +350,11 @@ export default function App() {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
 
+  // ── Driver UPI ───────────────────────────────
+  const [driverUpiId, setDriverUpiId] = useState('');
+  const [upiInput, setUpiInput] = useState('');
+  const [upiSaving, setUpiSaving] = useState(false);
+
   // ── Hourly Booking State ──────────────────────
   const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
@@ -393,7 +398,7 @@ export default function App() {
             if (data.success) {
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
-              if (data.driver.status === 'approved') setScreen('home');
+              if (data.driver.status === 'approved') { setScreen('home'); loadUpiId(savedPhone); }
             } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
           } catch (_e) { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
         }
@@ -473,6 +478,21 @@ export default function App() {
   const stopPolling = () => {
     useDriverStore.getState().clearAll();
     setRideReq(null); setActiveRide(null);
+  };
+
+  const loadUpiId = async (ph: string) => {
+    try { const r = await fetch(`${API}/api/driver/upi?phone=${ph}`); const d = await r.json(); setDriverUpiId(d.upi_id || ''); setUpiInput(d.upi_id || ''); } catch (_e) {}
+  };
+  const saveUpiId = async () => {
+    if (!upiInput.trim()) return;
+    setUpiSaving(true);
+    try {
+      const res = await fetch(`${API}/api/driver/upi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, upi_id: upiInput.trim() }) });
+      const d = await res.json();
+      if (d.success) { setDriverUpiId(d.upi_id); setResult('✅ UPI ID save ho gaya!'); }
+      else setResult('❌ ' + (d.error || 'Error'));
+    } catch (_e) { setResult('❌ Server error'); }
+    setUpiSaving(false);
   };
 
   const loadDriverWallet = async (ph: string) => {
@@ -654,6 +674,7 @@ export default function App() {
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
+        loadUpiId(data.driver.phone);
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
@@ -1339,11 +1360,30 @@ export default function App() {
           <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
         </View>
 
+        {/* ── My UPI QR — customer scan kar sakta hai ── */}
+        {driverUpiId ? (() => {
+          const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=RideApp%20Trip`;
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(upiLink)}`;
+          return (
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 3, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>📱 Customer Ko Dikhao — Scan Kare</Text>
+              <Text style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>GPay · PhonePe · Paytm · Koi bhi UPI</Text>
+              <Image source={{ uri: qrUrl }} style={{ width: 200, height: 200, borderRadius: 12 }} resizeMode="contain" />
+              <Text style={{ fontSize: 12, color: '#1565c0', marginTop: 10, fontWeight: '600' }}>{driverUpiId}</Text>
+              <View style={{ backgroundColor: '#e94560', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 7, marginTop: 10 }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>₹{paymentFare}</Text>
+              </View>
+            </View>
+          );
+        })() : (
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#ffe082' }}>
+            <Text style={{ fontSize: 13, color: '#e65100', textAlign: 'center' }}>⚠️ UPI ID set karo profile mein QR dikhane ke liye</Text>
+          </View>
+        )}
+
         {/* ── Customer app se payment ── */}
         {paymentMethod !== 'cash' ? (
-          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', elevation: 2, marginBottom: 14 }}>
-            <Text style={{ fontSize: 40, marginBottom: 10 }}>⏳</Text>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Customer App Se Payment Ka Wait</Text>
+          <View style={{ backgroundColor: '#f5f5f5', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 14 }}>
             <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>Customer abhi app mein pay kar raha hai...</Text>
             <FloatingDots color="#e94560" />
           </View>
@@ -1893,6 +1933,34 @@ export default function App() {
           <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || selectedDriver?.type} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
+        {/* UPI ID Section */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>📱 Mera UPI ID</Text>
+          <Text style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Customer aapka QR scan karke seedha pay karega</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: '#1a1a2e' }}
+              placeholder="yourname@upi / 9999@paytm"
+              value={upiInput}
+              onChangeText={setUpiInput}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholderTextColor="#bbb"
+            />
+            <TouchableOpacity onPress={saveUpiId}
+              style={{ backgroundColor: upiSaving ? '#ccc' : '#1a1a2e', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Save</Text>
+            </TouchableOpacity>
+          </View>
+          {driverUpiId ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 6, backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8 }}>
+              <Text style={{ fontSize: 14 }}>✅</Text>
+              <Text style={{ fontSize: 12, color: '#2e7d32', fontWeight: '600', flex: 1 }}>{driverUpiId}</Text>
+            </View>
+          ) : null}
+          {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? '#4CAF50' : '#e94560', marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
+        </View>
+
         {[['📋','Documents','License, RC'],['🏦','Bank Details','Payout account'],['📞','Support','24x7 help'],['⚙️','Settings','Preferences']].map(([icon,title,sub],i) => (
           <Bouncy key={i} style={s.menuItem} onPress={() => {}}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
