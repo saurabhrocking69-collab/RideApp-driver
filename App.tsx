@@ -341,6 +341,15 @@ export default function App() {
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
 
+  // ── Hourly Booking State ──────────────────────
+  const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
+  const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
+  const [hourlyOtpInput, setHourlyOtpInput]     = useState('');
+  const [hourlyActualKm, setHourlyActualKm]     = useState('');
+  const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
+  const hourlyTimerRef = useRef<any>(null);
+  const [hEarlyEndLoading, setHEarlyEndLoading] = useState(false);
+
   // Registration
   const [regStep, setRegStep]       = useState(0);
   const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
@@ -488,6 +497,40 @@ export default function App() {
     const iv = setInterval(load, 2500);
     return () => clearInterval(iv);
   }, [showChat, activeRide?.id]);
+
+  // ── Hourly ride polling ───────────────────────
+  useEffect(() => {
+    if (!isOnline || !phone) return;
+    let stopped = false;
+    const iv = setInterval(async () => {
+      if (stopped) return;
+      try {
+        const active = await fetch(`${API}/api/hourly/driver-active?phone=${phone}`).then(r => r.json());
+        if (active.booking && !['completed','cancelled'].includes(active.booking.status)) {
+          setActiveHourlyRide(active.booking);
+          setHourlyRideReq(null);
+          return;
+        }
+        setActiveHourlyRide(null);
+        if (!activeRide) {
+          const pending = await fetch(`${API}/api/hourly/driver-pending?phone=${phone}`).then(r => r.json());
+          if (pending.booking) setHourlyRideReq(pending.booking);
+          else setHourlyRideReq(null);
+        }
+      } catch (_e) {}
+    }, 4000);
+    return () => { stopped = true; clearInterval(iv); };
+  }, [isOnline, phone, activeRide?.id]);
+
+  // Hourly trip timer
+  useEffect(() => {
+    if (activeHourlyRide?.status === 'active') {
+      if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
+      const startMs = activeHourlyRide.started_at ? new Date(activeHourlyRide.started_at).getTime() : Date.now();
+      hourlyTimerRef.current = setInterval(() => setHourlyTimerSec(Math.floor((Date.now() - startMs) / 1000)), 1000);
+      return () => { if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current); };
+    }
+  }, [activeHourlyRide?.status, activeHourlyRide?.started_at]);
 
   // ── Unread badge during ride ───────────────────
   useEffect(() => {
@@ -802,6 +845,81 @@ export default function App() {
     try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
   const callCustomer = () => { if (activeRide?.passenger_phone) Linking.openURL(`tel:${activeRide.passenger_phone}`); };
+
+  // ── Hourly ride functions ──────────────────────
+  const acceptHourlyRide = async () => {
+    if (!hourlyRideReq) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/hourly/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: hourlyRideReq.id, driver_phone: phone }) });
+      const data = await res.json();
+      if (data.success) { setActiveHourlyRide({ ...hourlyRideReq, driver_phone: phone, status: 'matched' }); setHourlyRideReq(null); }
+      else { setResult('❌ ' + (data.message || 'Accept nahi hua')); setHourlyRideReq(null); }
+    } catch (_e) { setResult('❌ Network error'); }
+    setLoading(false);
+  };
+
+  const startHourlyTrip = async () => {
+    if (!activeHourlyRide) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput }) });
+      const data = await res.json();
+      if (data.success) { setActiveHourlyRide((p: any) => ({ ...p, status: 'active', started_at: new Date().toISOString() })); setHourlyOtpInput(''); setResult(''); }
+      else setResult('❌ ' + (data.message || 'Galat OTP!'));
+    } catch (_e) { setResult('❌ Network error'); }
+    setLoading(false);
+  };
+
+  const completeHourlyTrip = async () => {
+    if (!activeHourlyRide) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/hourly/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, actual_km: parseInt(hourlyActualKm) || 0 }) });
+      const data = await res.json();
+      if (data.success) {
+        if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
+        setTripSummary({ fare: data.total_fare, payment_method: 'wallet', earned: '₹' + parseFloat(data.driver_earning).toFixed(0), fee: '₹' + (data.total_fare - data.driver_earning).toFixed(0), isHourly: true, extraKmInfo: data.extra_km > 0 ? `+${data.extra_km} km extra — ₹${data.extra_km_charge}` : null });
+        setActiveHourlyRide(null); setHourlyActualKm(''); setHourlyTimerSec(0);
+        setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
+      } else setResult('❌ ' + (data.message || 'Complete nahi hua'));
+    } catch (_e) { setResult('❌ Network error'); }
+    setLoading(false);
+  };
+
+  const requestHourlyEarlyEnd = async () => {
+    if (!activeHourlyRide) return;
+    setHEarlyEndLoading(true);
+    try {
+      await fetch(`${API}/api/hourly/early-end-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, requested_by: 'driver' }) });
+      setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: 'driver' }));
+    } catch (_e) {}
+    setHEarlyEndLoading(false);
+  };
+
+  const confirmHourlyEarlyEnd = async () => {
+    if (!activeHourlyRide) return;
+    setHEarlyEndLoading(true);
+    try {
+      const res = await fetch(`${API}/api/hourly/early-end-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const data = await res.json();
+      if (data.success) {
+        if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
+        setTripSummary({ fare: activeHourlyRide.base_fare, payment_method: 'wallet', earned: '₹' + data.driver_earning, fee: '₹' + Math.round(data.driver_earning * 0.12 / 0.88), isHourly: true, earlyEnd: true });
+        setActiveHourlyRide(null); setHourlyTimerSec(0);
+        setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
+      }
+    } catch (_e) {}
+    setHEarlyEndLoading(false);
+  };
+
+  const rejectHourlyEarlyEnd = async () => {
+    if (!activeHourlyRide) return;
+    try {
+      await fetch(`${API}/api/hourly/early-end-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: null }));
+    } catch (_e) {}
+  };
 
   // ── PhotoBox ───────────────────────────────────
   const PhotoBox = ({ field, label, icon, cameraOnly }: any) => (
@@ -1266,7 +1384,14 @@ export default function App() {
               {tripSummary.payment_method === 'cash' ? '💵 Cash Payment' : tripSummary.payment_method === 'wallet' ? '💰 Wallet Payment' : '💳 Online Payment'}
             </Text>
           </View>
-          {[['Total Fare', '₹' + tripSummary.fare],['Platform Fee (15%)', tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
+          {tripSummary.isHourly && (
+            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>⏱️ Hourly Trip · 💰 Wallet Payment</Text>
+              {tripSummary.earlyEnd && <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>Early end — 70% minimum protection applied</Text>}
+              {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#e65100', marginTop: 4 }}>📍 {tripSummary.extraKmInfo}</Text>}
+            </View>
+          )}
+          {[['Total Fare', '₹' + tripSummary.fare],[`Platform Fee (${tripSummary.isHourly ? '12' : '15'}%)`, tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
               <Text style={{ fontSize: 14, color: '#666' }}>{k}</Text>
               <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? '#4CAF50' : '#333' }}>{v}</Text>
@@ -1444,7 +1569,114 @@ export default function App() {
             </SlideIn>
           )}
 
-          {!activeRide && !rideReq && (
+          {/* ─── HOURLY RIDE REQUEST ─── */}
+          {hourlyRideReq && !activeRide && !activeHourlyRide && (
+            <SlideIn>
+              <View style={[s.rideCard, { borderLeftWidth: 4, borderLeftColor: '#e94560' }]}>
+                <View style={s.rideHeader}>
+                  <View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <View style={{ backgroundColor: '#e94560', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⏱️ HOURLY</Text></View>
+                      <Text style={s.rideTitle}>{hourlyRideReq.package_hours === 8 ? 'Full Day' : `${hourlyRideReq.package_hours} Hours`}</Text>
+                    </View>
+                    <Text style={{ fontSize: 11, color: '#888' }}>{hourlyRideReq.km_included} km included · {hourlyRideReq.is_roundtrip ? '🔄 Round trip' : '➡️ One way'}</Text>
+                  </View>
+                  <Text style={s.rideFare}>₹{hourlyRideReq.base_fare}</Text>
+                </View>
+                <View style={s.rideDetails}>
+                  <Text style={s.rideFrom}>📍 {hourlyRideReq.pickup}</Text>
+                  {hourlyRideReq.drop_location && <><Text style={s.rideDivider}>↓</Text><Text style={s.rideTo}>🎯 {hourlyRideReq.drop_location}</Text></>}
+                  {!hourlyRideReq.drop_location && <Text style={[s.rideTo, { color: '#999' }]}>📍 Drop: Flexible</Text>}
+                </View>
+                <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4 }}>
+                  <Text style={{ color: '#2e7d32', fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
+                </View>
+                <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />
+                <View style={[s.rideActions, { marginTop: 12 }]}>
+                  <Bouncy style={s.rejectBtn} onPress={() => setHourlyRideReq(null)}><Text style={s.rejectTxt}>✕ Skip</Text></Bouncy>
+                  <Bouncy style={s.acceptBtn} onPress={acceptHourlyRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></Bouncy>
+                </View>
+              </View>
+            </SlideIn>
+          )}
+
+          {/* ─── ACTIVE HOURLY RIDE ─── */}
+          {activeHourlyRide && (
+            <View style={[s.tripCard, { borderLeftWidth: 4, borderLeftColor: '#e94560' }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                <View style={{ backgroundColor: '#e94560', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>⏱️ HOURLY TRIP</Text></View>
+                {activeHourlyRide.status === 'active' && (
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1a1a2e', fontVariant: ['tabular-nums'] }}>
+                    {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')}:{String(hourlyTimerSec%60).padStart(2,'0')}
+                  </Text>
+                )}
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                <Text style={{ color: '#666', fontSize: 13 }}>{activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} · {activeHourlyRide.km_included} km · ₹{activeHourlyRide.base_fare}</Text>
+                <Text style={{ color: activeHourlyRide.status === 'active' ? '#4CAF50' : '#e94560', fontSize: 12, fontWeight: '600' }}>
+                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : '🛣️ Trip chal rahi hai'}
+                </Text>
+              </View>
+
+              <View style={s.tripRoute}>
+                <Text style={s.tripFrom}>📍 {activeHourlyRide.pickup}</Text>
+                {activeHourlyRide.drop_location && <><Text style={s.tripArrow}>↓</Text><Text style={s.tripTo}>🎯 {activeHourlyRide.drop_location}</Text></>}
+              </View>
+
+              {activeHourlyRide.status === 'matched' && (
+                <View style={{ marginTop: 10 }}>
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
+                  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                    <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
+                  </KeyboardAvoidingView>
+                  <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                  <TouchableOpacity style={s.navBtn} onPress={() => activeHourlyRide.pickup_lat ? undefined : undefined}>
+                    <Text style={{ color: '#fff', fontWeight: '600' }} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>🗺️ Pickup Navigate Karo</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {activeHourlyRide.status === 'active' && (
+                <View style={{ marginTop: 10 }}>
+                  <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10 }}>
+                    <Text style={{ color: '#2e7d32', fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} minimum · Pura milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
+                  </View>
+
+                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Actual KM (optional, extra charge ke liye):</Text>
+                  <TextInput style={{ borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 8, padding: 10, fontSize: 16, backgroundColor: '#fff', marginBottom: 10 }} placeholder="Enter actual KM" keyboardType="numeric" value={hourlyActualKm} onChangeText={setHourlyActualKm} />
+
+                  <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeHourlyTrip} disabled={loading}>
+                    <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                  </Bouncy>
+
+                  {activeHourlyRide.early_end_requested_by === 'customer' && (
+                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginTop: 10 }}>
+                      <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
+                      <Text style={{ color: '#666', fontSize: 12, marginBottom: 10 }}>70% minimum aapko milega guaranteed.</Text>
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Agree</Text></Bouncy>
+                        <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                      </View>
+                    </View>
+                  )}
+
+                  {!activeHourlyRide.early_end_requested_by && (
+                    <Bouncy style={[s.cancelBtn, { marginTop: 10, borderColor: '#e94560', borderWidth: 1 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
+                      <Text style={s.cancelTxt}>⏹️ Early End Request (mutual)</Text>
+                    </Bouncy>
+                  )}
+                  {activeHourlyRide.early_end_requested_by === 'driver' && (
+                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginTop: 10, alignItems: 'center' }}>
+                      <Text style={{ color: '#e65100', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
+          )}
+
+          {!activeRide && !rideReq && !activeHourlyRide && !hourlyRideReq && (
             <View style={s.statusCard}><Text style={s.statusText}>{isOnline ? '✅ Online hain — rides ka intezaar...' : '💤 Online ho jao rides lene ke liye'}</Text></View>
           )}
           {result && !activeRide && !rideReq ? <Text style={s.result}>{result}</Text> : null}
