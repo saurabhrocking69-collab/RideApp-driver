@@ -283,7 +283,7 @@ export default function App() {
   // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
     try {
-      if (!Device.isDevice) return;
+      // if (!Device.isDevice) return;
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
       if (existing !== 'granted') {
@@ -938,7 +938,7 @@ export default function App() {
                 {phone === d.phone && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) setScreen('home'); }} disabled={!phone}>
+            <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) { setScreen('home'); registerFCM(phone); } }} disabled={!phone}>
               <Text style={s.btnTxt}>Test Login 🧪</Text>
             </TouchableOpacity>
           </View>
