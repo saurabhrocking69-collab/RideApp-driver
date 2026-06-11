@@ -341,6 +341,15 @@ export default function App() {
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
 
+  // ── Wallet / Earnings Detail State ───────────
+  const [driverWallet, setDriverWallet] = useState<any>({ balance: 0, total_earned: 0, total_withdrawn: 0 });
+  const [driverRideHistory, setDriverRideHistory] = useState<any[]>([]);
+  const [driverHourlyHistory, setDriverHourlyHistory] = useState<any[]>([]);
+  const [walletEarningsTab, setWalletEarningsTab] = useState<'summary'|'rides'|'hourly'>('summary');
+  const [payoutInput, setPayoutInput] = useState('');
+  const [payoutLoading, setPayoutLoading] = useState(false);
+  const [walletLoaded, setWalletLoaded] = useState(false);
+
   // ── Hourly Booking State ──────────────────────
   const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
@@ -464,6 +473,30 @@ export default function App() {
   const stopPolling = () => {
     useDriverStore.getState().clearAll();
     setRideReq(null); setActiveRide(null);
+  };
+
+  const loadDriverWallet = async (ph: string) => {
+    try {
+      const r = await fetch(`${API}/api/wallet/driver/detail?phone=${ph}`);
+      const d = await r.json();
+      setDriverWallet(d.wallet || { balance: 0, total_earned: 0, total_withdrawn: 0 });
+      setDriverRideHistory(d.rides || []);
+      setDriverHourlyHistory(d.hourly_rides || []);
+      setWalletLoaded(true);
+    } catch (_e) {}
+  };
+  const requestPayout = async () => {
+    const amt = parseFloat(payoutInput);
+    if (!amt || amt < 100) { setResult('❌ Min ₹100 chahiye payout ke liye'); return; }
+    if (amt > driverWallet.balance) { setResult('❌ Wallet mein itna balance nahi hai'); return; }
+    setPayoutLoading(true);
+    try {
+      const res = await fetch(`${API}/api/driver/payout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
+      const d = await res.json();
+      if (d.success) { setResult('✅ Payout request bhej di!'); setPayoutInput(''); loadDriverWallet(phone); }
+      else setResult('❌ ' + (d.message || d.error || 'Error'));
+    } catch (_e) { setResult('❌ Server error'); }
+    setPayoutLoading(false);
   };
 
   // (Store sync ab subscribe se hota hai — upar dekho)
@@ -1705,31 +1738,147 @@ export default function App() {
   );
 
   // ═══ EARNINGS TAB ═══
-  if (activeTab === 'earnings') return (
+  if (activeTab === 'earnings') {
+    if (!walletLoaded) loadDriverWallet(phone);
+    const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
+    return (
     <View style={s.screen}>
-      <View style={s.topBar}><Text style={s.greeting}>💰 Earnings</Text></View>
-      {(rideReq || hourlyRideReq) && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{hourlyRideReq ? '⏱️ Hourly Ride!' : '🔔 Nayi Ride!'} ₹{(rideReq || hourlyRideReq)?.fare || (hourlyRideReq)?.base_fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
-      <ScrollView style={{ flex: 1, padding: 16 }}>
-        <View style={s.earningsHero}>
-          <Text style={{ color: '#aaa', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>AAJ KI KAMAI</Text>
-          <CountUp value={earnings} style={s.earningsAmount} />
-          <Text style={s.earningsLabel}>Total earned today</Text>
+      {/* Dark header */}
+      <View style={{ backgroundColor: '#1a1a2e', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 }}>💰 Wallet & Earnings</Text>
+          <TouchableOpacity onPress={() => loadDriverWallet(phone)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+            <Text style={{ fontSize: 16 }}>⟳</Text>
+          </TouchableOpacity>
         </View>
-        <View style={s.earningsCard}>
-          <Row k="Total Rides" v={rides.toString()} />
-          <Row k="Average per ride" v={'₹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
-          <Row k="Platform fee" v={'₹' + (earnings * 0.13).toFixed(0)} />
-          <Row k="Net Earnings" v={'₹' + (earnings * 0.87).toFixed(0)} bold last />
+        {/* 3-stat grid */}
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+            <Text style={{ color: '#4CAF50', fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.balance || 0).toFixed(0)}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Wallet Balance</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+            <Text style={{ color: '#FFD700', fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.total_earned || 0).toFixed(0)}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Life Earned</Text>
+          </View>
+          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+            <CountUp value={earnings} style={{ color: '#e94560', fontSize: 22, fontWeight: '900' }} />
+            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Aaj Ki Kamai</Text>
+          </View>
         </View>
-        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-          <Text style={{ fontSize: 13, color: '#2e7d32', fontWeight: '600', marginBottom: 4 }}>💡 Tip: Hourly bookings pe 12% commission hai</Text>
-          <Text style={{ fontSize: 12, color: '#4CAF50' }}>Standard rides: 15% · Hourly rides: 12%</Text>
-        </View>
-        <TouchableOpacity style={s.payoutBtn}><Text style={s.payoutTxt}>💸 Payout Request Karo</Text></TouchableOpacity>
+      </View>
+
+      {(rideReq || hourlyRideReq) && (
+        <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{hourlyRideReq ? '⏱️ Hourly Ride!' : '🔔 Nayi Ride!'} ₹{(rideReq || hourlyRideReq)?.fare || hourlyRideReq?.base_fare}</Text>
+          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* Tabs */}
+      <View style={{ flexDirection: 'row', margin: 14, gap: 8 }}>
+        {(['summary', 'rides', 'hourly'] as const).map(t => (
+          <TouchableOpacity key={t} onPress={() => setWalletEarningsTab(t)}
+            style={{ flex: 1, borderRadius: 20, paddingVertical: 8, alignItems: 'center', backgroundColor: walletEarningsTab === t ? '#1a1a2e' : '#f0f0f0' }}>
+            <Text style={{ fontSize: 11, fontWeight: '700', color: walletEarningsTab === t ? '#fff' : '#888', textTransform: 'capitalize' }}>{t === 'summary' ? 'Summary' : t === 'rides' ? 'Rides' : 'Hourly'}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+
+      <ScrollView style={{ flex: 1, paddingHorizontal: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+
+        {walletEarningsTab === 'summary' && (<>
+          <View style={s.earningsCard}>
+            <Row k="Total Rides (All Time)" v={driverRideHistory.length.toString()} />
+            <Row k="Hourly Rides" v={driverHourlyHistory.length.toString()} />
+            <Row k="Aaj Ke Rides" v={rides.toString()} />
+            <Row k="Avg Per Ride" v={'₹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
+            <Row k="Platform Fee (15%)" v={'₹' + (earnings * 0.15).toFixed(0)} />
+            <Row k="Aaj Ki Net Kamai" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
+          </View>
+          <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 14, marginBottom: 14 }}>
+            <Text style={{ fontSize: 13, color: '#2e7d32', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
+            <Text style={{ fontSize: 12, color: '#4CAF50', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}70% minimum guaranteed on early end</Text>
+          </View>
+          {/* Payout */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>💸 Payout Request</Text>
+            <Text style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>Available: ₹{parseFloat(driverWallet.balance || 0).toFixed(0)} · Min ₹100</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput
+                style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15, color: '#1a1a2e' }}
+                placeholder="Enter amount (₹)"
+                keyboardType="numeric"
+                value={payoutInput}
+                onChangeText={setPayoutInput}
+                placeholderTextColor="#bbb"
+              />
+              <TouchableOpacity onPress={requestPayout}
+                style={{ backgroundColor: payoutLoading ? '#ccc' : '#4CAF50', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Request</Text>
+              </TouchableOpacity>
+            </View>
+            {result ? <Text style={{ color: result.includes('✅') ? '#4CAF50' : '#e94560', marginTop: 8, fontWeight: '600' }}>{result}</Text> : null}
+          </View>
+          <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
+            {[100, 200, 500, 1000].map(a => (
+              <TouchableOpacity key={a} onPress={() => setPayoutInput(a.toString())}
+                style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, paddingVertical: 9, alignItems: 'center' }}>
+                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </>)}
+
+        {walletEarningsTab === 'rides' && (<>
+          {driverRideHistory.length === 0 ? (
+            <View style={{ alignItems: 'center', padding: 40 }}>
+              <Text style={{ fontSize: 36 }}>🛺</Text>
+              <Text style={{ color: '#bbb', marginTop: 10 }}>Koi completed ride nahi mili</Text>
+            </View>
+          ) : driverRideHistory.map((r: any, i: number) => (
+            <View key={r.id || i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{r.passenger_name || 'Passenger'}</Text>
+                  <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{fmtDate(r.created_at)} · {r.payment_method}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: '#4CAF50', fontSize: 16, fontWeight: '800' }}>₹{parseFloat(r.fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#bbb', fontSize: 10 }}>Net: ₹{(parseFloat(r.fare || 0) * 0.85).toFixed(0)}</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </>)}
+
+        {walletEarningsTab === 'hourly' && (<>
+          {driverHourlyHistory.length === 0 ? (
+            <View style={{ alignItems: 'center', padding: 40 }}>
+              <Text style={{ fontSize: 36 }}>⏱️</Text>
+              <Text style={{ color: '#bbb', marginTop: 10 }}>Koi hourly ride nahi mili</Text>
+            </View>
+          ) : driverHourlyHistory.map((h: any, i: number) => (
+            <View key={h.id || i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{h.vehicle_type} · {h.package_hours}h Package</Text>
+                  <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{h.customer_phone} · {fmtDate(h.created_at)}</Text>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ color: '#4CAF50', fontSize: 16, fontWeight: '800' }}>₹{parseFloat(h.driver_earning || h.base_fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#bbb', fontSize: 10 }}>Base: ₹{parseFloat(h.base_fare || 0).toFixed(0)}</Text>
+                </View>
+              </View>
+            </View>
+          ))}
+        </>)}
+
       </ScrollView>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
     </View>
   );
+  }
 
   // ═══ PROFILE TAB ═══
   return (
