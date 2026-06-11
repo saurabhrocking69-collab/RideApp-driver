@@ -255,6 +255,31 @@ export default function App() {
       } catch (_e) {}
     })();
   }, []);
+  // ── Notification Handler ──────────────────────
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
+      }),
+    });
+
+    const sub1 = Notifications.addNotificationReceivedListener(notification => {
+      console.log('📱 Driver notification:', notification);
+    });
+
+    const sub2 = Notifications.addNotificationResponseReceivedListener(response => {
+      console.log('👆 Driver notification tapped:', response);
+    });
+
+    return () => {
+      sub1.remove();
+      sub2.remove();
+    };
+  }, []);
   // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
     try {
