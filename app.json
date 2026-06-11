@@ -24,13 +24,18 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.saurabhspero.rideappdriver",
-      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS"]
+      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "READ_EXTERNAL_STORAGE"]
     },
        "config": {
       "googleMaps": {
-        "apiKey": "AIzaSyAD-A9qcLSXbgrz4CI4PYLFOZ"
+        "apiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4"
       }
     },
+    "plugins": [
+      ["expo-notifications", { "icon": "./assets/icon.png", "color": "#ffffff" }],
+      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }],
+      ["expo-image-picker", { "photosPermission": "Documents upload karne ke liye gallery access chahiye" }]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     },

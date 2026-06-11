@@ -8,7 +8,6 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 
@@ -172,6 +171,134 @@ const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () 
   );
 };
 
+// ─── Bouncy Button ───
+const Bouncy = ({ children, onPress, style, disabled }: any) => {
+  const scale = useRef(new Animated.Value(1)).current;
+  const pressIn  = () => Animated.spring(scale, { toValue: 0.94, friction: 5, useNativeDriver: true }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1,    friction: 4, useNativeDriver: true }).start();
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <TouchableOpacity onPress={onPress} onPressIn={pressIn} onPressOut={pressOut} style={style} disabled={disabled} activeOpacity={0.85}>
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
+
+// ─── PulseView — scale pulse loop ───
+const PulseView = ({ children, style }: any) => {
+  const anim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    Animated.loop(Animated.sequence([
+      Animated.timing(anim, { toValue: 1.18, duration: 650, useNativeDriver: true }),
+      Animated.timing(anim, { toValue: 1,    duration: 650, useNativeDriver: true }),
+    ])).start();
+  }, []);
+  return <Animated.View style={[style, { transform: [{ scale: anim }] }]}>{children}</Animated.View>;
+};
+
+// ─── FloatingDots — animated bouncing dots ───
+const FloatingDots = ({ color = '#e94560' }: any) => {
+  const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
+  useEffect(() => {
+    dots.forEach((d, i) => {
+      Animated.loop(Animated.sequence([
+        Animated.delay(i * 200),
+        Animated.timing(d, { toValue: -9, duration: 280, useNativeDriver: true }),
+        Animated.timing(d, { toValue: 0,  duration: 280, useNativeDriver: true }),
+        Animated.delay(540),
+      ])).start();
+    });
+  }, []);
+  return (
+    <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+      {dots.map((d, i) => (
+        <Animated.View key={i} style={{ width: 11, height: 11, borderRadius: 5.5, backgroundColor: color, transform: [{ translateY: d }] }} />
+      ))}
+    </View>
+  );
+};
+
+// ─── ScreenIn — screen slide-in transition ───
+const ScreenIn = ({ children, style }: any) => {
+  const x = useRef(new Animated.Value(45)).current;
+  const o = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(x, { toValue: 0, friction: 9, tension: 65, useNativeDriver: true }),
+      Animated.timing(o, { toValue: 1, duration: 230, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  return <Animated.View style={[style, { transform: [{ translateX: x }], opacity: o }]}>{children}</Animated.View>;
+};
+
+// ─── TripStatusBar — matched → arrived → started → done ───
+const TripStatusBar = ({ status }: { status: string }) => {
+  const idx = status === 'matched' ? 0 : status === 'arrived' ? 1 : status === 'started' ? 2 : 3;
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(anim, { toValue: idx, friction: 8, tension: 60, useNativeDriver: false }).start();
+  }, [idx]);
+  const steps = [{ icon: '🚗', label: 'Jao' }, { icon: '📍', label: 'Pahunche' }, { icon: '🛣️', label: 'Trip' }, { icon: '✅', label: 'Done' }];
+  return (
+    <View style={{ paddingHorizontal: 4, paddingBottom: 10, paddingTop: 2 }}>
+      <View style={{ height: 3, backgroundColor: '#e8f5e9', borderRadius: 2, marginHorizontal: 10, marginBottom: 8, overflow: 'hidden' }}>
+        <Animated.View style={{ height: 3, backgroundColor: '#4CAF50', borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }) }} />
+      </View>
+      <View style={{ flexDirection: 'row' }}>
+        {steps.map((s, i) => (
+          <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i <= idx ? '#4CAF50' : '#efefef', alignItems: 'center', justifyContent: 'center', transform: [{ scale: i === idx ? 1.2 : 1 }], elevation: i === idx ? 4 : 0 }}>
+              <Text style={{ fontSize: 12 }}>{i <= idx ? s.icon : '·'}</Text>
+            </View>
+            <Text style={{ fontSize: 9, marginTop: 3, color: i <= idx ? '#4CAF50' : '#bbb', fontWeight: i === idx ? 'bold' : 'normal' }}>{s.label}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+// ─── AnimatedBar — target progress fill animation ───
+const AnimatedBar = ({ pct, color }: { pct: number; color: string }) => {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.timing(anim, { toValue: Math.min(pct, 100), duration: 900, useNativeDriver: false }).start();
+  }, [pct]);
+  return <Animated.View style={{ height: 8, borderRadius: 4, backgroundColor: color, width: anim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }} />;
+};
+
+// ─── MapOverlay — LIVE badge + route bar over map ───
+const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
+  const pulse = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!live) return;
+    Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1.7, duration: 750, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 1,   duration: 750, useNativeDriver: true }),
+    ])).start();
+  }, [live]);
+  return (
+    <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} pointerEvents="none">
+      {live && (
+        <View style={{ position: 'absolute', top: 10, right: 10, flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(46,125,50,0.92)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 5, elevation: 4 }}>
+          <Animated.View style={{ width: 7, height: 7, borderRadius: 3.5, backgroundColor: '#fff', marginRight: 5, transform: [{ scale: pulse }] }} />
+          <Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold', letterSpacing: 0.5 }}>LIVE</Text>
+        </View>
+      )}
+      {hasRoute && (
+        <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(26,26,46,0.88)', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{pickup}</Text>
+          <Text style={{ color: '#555', fontSize: 12, marginHorizontal: 5 }}>→</Text>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#e94560', marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{drop}</Text>
+        </View>
+      )}
+    </View>
+  );
+};
+
 type Screen = 'login' | 'home';
 
 export default function App() {
@@ -201,6 +328,7 @@ export default function App() {
   const [showDriverCancelModal, setShowDriverCancelModal] = useState(false);
   const [cancelReason, setCancelReason]         = useState('');
   const [paymentRideId, setPaymentRideId] = useState('');
+  const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
   const [pickupInRange, setPickupInRange] = useState(false);
@@ -212,7 +340,6 @@ export default function App() {
   const [showChat, setShowChat]     = useState(false);
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
-  const pollRef = useRef<any>(null);
 
   // Registration
   const [regStep, setRegStep]       = useState(0);
@@ -350,8 +477,6 @@ export default function App() {
     })();
     return () => clearInterval(locInterval);
   }, [isOnline, activeRide?.id, activeRide?.status]);
-
-  useEffect(() => () => clearInterval(pollRef.current), []);
 
   // ── Chat polling ───────────────────────────────
   useEffect(() => {
@@ -589,6 +714,7 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         setPaymentRideId(activeRide.id);
+        setPaymentFare(String(activeRide.fare || '0'));
         setPaymentWaiting(true);
         const fare = parseFloat(activeRide.fare || 0);
         setEarnings(e => e + fare);
@@ -627,6 +753,25 @@ export default function App() {
     }, 3000);
     return () => clearInterval(iv);
   }, [paymentWaiting, paymentRideId]);
+
+  const confirmDirectPayment = async (method: 'cash' | 'upi_direct') => {
+    setLoading(true);
+    try {
+      await fetch(`${API}/api/rides/cash-confirm`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: paymentRideId, phone, payment_method: method })
+      });
+      setPaymentWaiting(false);
+      const fare = parseFloat(paymentFare || '0');
+      setTripSummary({
+        fare: paymentFare,
+        payment_method: method === 'upi_direct' ? 'upi' : 'cash',
+        earned: '₹' + (fare * 0.85).toFixed(0),
+        fee: '₹' + (fare * 0.15).toFixed(0),
+      });
+    } catch (_e) { setResult('❌ Error'); }
+    setLoading(false);
+  };
 
   const cancelTrip = async () => {
     setLoading(true);
@@ -916,12 +1061,12 @@ export default function App() {
               <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={loginPhone} onChangeText={setLoginPhone} />
             </View>
             {result ? <Text style={s.err}>{result}</Text> : null}
-            <TouchableOpacity style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
+            <Bouncy style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
               <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
+            </Bouncy>
+            <Bouncy style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
               <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Naya Spero Buddy Banein</Text>
-            </TouchableOpacity>
+            </Bouncy>
             {/* Test drivers */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
               <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
@@ -938,9 +1083,9 @@ export default function App() {
                 {phone === d.phone && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
               </TouchableOpacity>
             ))}
-            <TouchableOpacity style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) { setScreen('home'); registerFCM(phone); } }} disabled={!phone}>
+            <Bouncy style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) { setScreen('home'); registerFCM(phone); } }} disabled={!phone}>
               <Text style={s.btnTxt}>Test Login 🧪</Text>
-            </TouchableOpacity>
+            </Bouncy>
           </View>
         ) : (
           // ── OTP Input ──
@@ -970,9 +1115,9 @@ export default function App() {
               ))}
             </View>
             {result ? <Text style={s.err}>{result}</Text> : null}
-            <TouchableOpacity style={[s.btn, { marginBottom: 12 }, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.6 }]} disabled={loading || loginOtpDigits.join('').length < 6} onPress={() => verifyLoginOtp()}>
+            <Bouncy style={[s.btn, { marginBottom: 12 }, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.6 }]} disabled={loading || loginOtpDigits.join('').length < 6} onPress={() => verifyLoginOtp()}>
               <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify Karo'}</Text>
-            </TouchableOpacity>
+            </Bouncy>
             {/* Resend */}
             <View style={{ alignItems: 'center', marginBottom: 16 }}>
               {loginCanResend ? (
@@ -995,59 +1140,78 @@ export default function App() {
 
   // ═══ PAYMENT WAITING SCREEN ═══
   if (paymentWaiting) return (
-    <View style={s.screen}>
-      <View style={[s.hero, { paddingTop: 60, paddingBottom: 40 }]}>
-        <Text style={{ fontSize: 60 }}>{paymentMethod === 'cash' ? '💵' : '⏳'}</Text>
-        <Text style={s.heroTitle}>{paymentMethod === 'cash' ? 'Cash Payment' : 'Payment ka intezaar...'}</Text>
-        <Text style={s.heroSub}>{paymentMethod === 'cash' ? 'Customer se cash lo' : 'Customer payment kar raha hai...'}</Text>
+    <ScreenIn style={s.screen}>
+      <View style={[s.hero, { paddingTop: 50, paddingBottom: 28 }]}>
+        <Text style={{ fontSize: 60 }}>💰</Text>
+        <Text style={s.heroTitle}>Trip Complete!</Text>
+        <Text style={{ color: '#4CAF50', fontSize: 40, fontWeight: 'bold', marginTop: 8 }}>₹{paymentFare}</Text>
+        <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} (15% fee ke baad)</Text>
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }}>
-        {/* Payment method info */}
-        {paymentMethod === 'cash' ? (
-          <View>
-            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 16, padding: 20, marginBottom: 16, alignItems: 'center' }}>
-              <Text style={{ fontSize: 50 }}>💵</Text>
-              <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#2e7d32', marginTop: 10 }}>Customer cash de raha hai</Text>
-              <Text style={{ fontSize: 13, color: '#388e3c', marginTop: 6, textAlign: 'center' }}>Customer se cash lo aur confirm karo</Text>
-            </View>
-            {/* Commission info */}
-            <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 16, marginBottom: 16 }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#e65100', marginBottom: 8 }}>💰 Commission Info</Text>
-              <Text style={{ fontSize: 13, color: '#ef6c00', lineHeight: 20 }}>Cash payment mein 15% commission aapke next payout pe deduct hoga. Sirf aapki net earning wallet mein aayegi.</Text>
-            </View>
-            {/* Cash confirm button */}
-            <TouchableOpacity style={{ backgroundColor: '#4CAF50', borderRadius: 14, padding: 18, alignItems: 'center', elevation: 4, marginBottom: 12 }}
-              onPress={async () => {
-                try {
-                  await fetch(`${API}/api/rides/cash-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: paymentRideId, phone }) });
-                  setPaymentWaiting(false);
-                  const fare = parseFloat(String(earnings) || '0');
-                  setTripSummary({ fare: '₹' + fare, payment_method: 'cash', earned: '₹' + (fare * 0.85).toFixed(0), fee: '₹' + (fare * 0.15).toFixed(0) });
-                } catch (_e) { setResult('❌ Error'); }
-              }}>
-              <Text style={{ color: '#fff', fontSize: 16, fontWeight: 'bold' }}>✅ Cash Mil Gaya — Confirm</Text>
-            </TouchableOpacity>
+      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
+
+        {/* ── Driver se directly pay kiya ── */}
+        <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 12 }}>
+          Customer ne aapko directly pay kiya?
+        </Text>
+
+        <Bouncy
+          style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#a5d6a7', opacity: loading ? 0.6 : 1 }}
+          onPress={() => confirmDirectPayment('cash')} disabled={loading}>
+          <Text style={{ fontSize: 36, marginRight: 14 }}>💵</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2e7d32' }}>Cash Mila — ₹{paymentFare}</Text>
+            <Text style={{ fontSize: 12, color: '#388e3c', marginTop: 3 }}>Customer ne haath mein cash diya</Text>
+          </View>
+          <Text style={{ fontSize: 22, color: '#2e7d32' }}>›</Text>
+        </Bouncy>
+
+        <Bouncy
+          style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 18, marginBottom: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#90caf9', opacity: loading ? 0.6 : 1 }}
+          onPress={() => confirmDirectPayment('upi_direct')} disabled={loading}>
+          <Text style={{ fontSize: 36, marginRight: 14 }}>📱</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1565c0' }}>UPI / QR Se Mila — ₹{paymentFare}</Text>
+            <Text style={{ fontSize: 12, color: '#1976d2', marginTop: 3 }}>Customer ne mera QR scan kiya ya UPI pe diya</Text>
+          </View>
+          <Text style={{ fontSize: 22, color: '#1565c0' }}>›</Text>
+        </Bouncy>
+
+        {/* ── Divider ── */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+          <Text style={{ color: '#999', marginHorizontal: 12, fontSize: 13, fontWeight: '600' }}>YA</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+        </View>
+
+        {/* ── Customer app se payment ── */}
+        {paymentMethod !== 'cash' ? (
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 20, alignItems: 'center', elevation: 2, marginBottom: 14 }}>
+            <Text style={{ fontSize: 40, marginBottom: 10 }}>⏳</Text>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Customer App Se Payment Ka Wait</Text>
+            <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>Customer abhi app mein pay kar raha hai...</Text>
+            <FloatingDots color="#e94560" />
           </View>
         ) : (
-          <View>
-            {/* Waiting animation */}
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 24, alignItems: 'center', elevation: 3, marginBottom: 16 }}>
-              <Text style={{ fontSize: 50, marginBottom: 12 }}>💳</Text>
-              <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Online Payment Processing</Text>
-              <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>Customer UPI/Card se payment kar raha hai. Thoda wait karo...</Text>
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 16 }}>
-                {[0,1,2].map(i => (
-                  <View key={i} style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', opacity: 0.3 + i * 0.35 }} />
-                ))}
-              </View>
-            </View>
-            <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14 }}>
-              <Text style={{ fontSize: 13, color: '#1565c0', textAlign: 'center' }}>💡 Payment complete hote hi aapको automatically rating screen dikhega</Text>
-            </View>
+          <View style={{ backgroundColor: '#fff8e1', borderRadius: 14, padding: 18, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#ffe082' }}>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#f57f17', marginBottom: 6 }}>💵 Customer Ne Cash Select Kiya</Text>
+            <Text style={{ fontSize: 13, color: '#e65100', marginBottom: 16, lineHeight: 20 }}>
+              Customer ne app mein cash payment select ki hai. Unse ₹{paymentFare} cash lo aur confirm karo.
+            </Text>
+            <TouchableOpacity
+              style={{ backgroundColor: '#4CAF50', borderRadius: 12, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
+              onPress={() => confirmDirectPayment('cash')} disabled={loading}>
+              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>✅ ₹{paymentFare} Cash Mil Gaya</Text>
+            </TouchableOpacity>
           </View>
         )}
+
+        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14 }}>
+          <Text style={{ fontSize: 12, color: '#888', textAlign: 'center', lineHeight: 18 }}>
+            💡 15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
+          </Text>
+        </View>
       </ScrollView>
-    </View>
+    </ScreenIn>
   );
 
   // ═══ DRIVER CANCEL MODAL ═══
@@ -1085,7 +1249,7 @@ export default function App() {
 
   // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
-    <View style={s.screen}>
+    <ScreenIn style={s.screen}>
       <View style={[s.hero, { paddingTop: 50 }]}>
         <Celebration />
         <Text style={{ fontSize: 60 }}>🎉</Text>
@@ -1109,9 +1273,9 @@ export default function App() {
             </View>
           ))}
         </View>
-        <TouchableOpacity style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => setTripSummary(null)}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></TouchableOpacity>
+        <Bouncy style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => setTripSummary(null)}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
       </ScrollView>
-    </View>
+    </ScreenIn>
   );
 
   // ═══ CHAT (driver) ═══
@@ -1150,11 +1314,15 @@ export default function App() {
           driverLng={driverGps?.lng}
           height={220}
         />
+        <MapOverlay hasRoute={!!activeRide} pickup={activeRide?.pickup} drop={activeRide?.drop_location} live={activeRide?.status === 'started'} />
       </View>
       {/* Top bar */}
       <View style={s.topBar}>
         <View style={{ flex: 1 }}>
-          <Text style={s.greeting}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            {isOnline && <PulseView><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginRight: 7 }} /></PulseView>}
+            <Text style={s.greeting}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
+          </View>
           <Text style={s.subTxt}>{driverInfo?.name || selectedDriver?.name} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
         </View>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
@@ -1175,7 +1343,7 @@ export default function App() {
                 <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#4CAF50' : '#e94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
               </View>
               <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-                <View style={{ height: 8, borderRadius: 4, backgroundColor: target.achieved ? '#4CAF50' : '#e94560', width: `${Math.min(100, (target.completed / target.target) * 100)}%` }} />
+                <AnimatedBar pct={Math.min(100, (target.completed / target.target) * 100)} color={target.achieved ? '#4CAF50' : '#e94560'} />
               </View>
               <Text style={{ fontSize: 12, color: '#666' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
             </View>
@@ -1183,6 +1351,7 @@ export default function App() {
 
           {activeRide && (
             <View style={s.tripCard}>
+              <TripStatusBar status={activeRide.status} />
               <View style={s.tripBadge}>
                 <Text style={s.tripBadgeTxt}>
                   {activeRide.status === 'matched' && '🚗 Pickup ki taraf jao'}
@@ -1230,7 +1399,7 @@ export default function App() {
               )}
 
               {activeRide.status === 'matched' && (
-                <TouchableOpacity style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text></TouchableOpacity>
+                <Bouncy style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text></Bouncy>
               )}
 
               {activeRide.status === 'arrived' && (
@@ -1239,21 +1408,21 @@ export default function App() {
                   <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
                     <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
                   </KeyboardAvoidingView>
-                  <TouchableOpacity style={s.tripBtn} onPress={startTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></TouchableOpacity>
+                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
                 </View>
               )}
 
               {activeRide.status === 'started' && (
                 <View>
                   {/* GPS Range check disabled for testing */}
-                  <TouchableOpacity style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeTrip} disabled={loading}>
+                  <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeTrip} disabled={loading}>
                     <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
-                  </TouchableOpacity>
+                  </Bouncy>
                 </View>
               )}
-              <TouchableOpacity style={s.cancelBtn} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
+              <Bouncy style={s.cancelBtn} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
                 <Text style={s.cancelTxt}>✕ Cancel Trip</Text>
-              </TouchableOpacity>
+              </Bouncy>
             </View>
           )}
 
@@ -1268,8 +1437,8 @@ export default function App() {
                 </View>
                 <CountdownBar seconds={20} onTimeout={rejectRide} />
                 <View style={[s.rideActions, { marginTop: 12 }]}>
-                  <TouchableOpacity style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></TouchableOpacity>
-                  <TouchableOpacity style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></TouchableOpacity>
+                  <Bouncy style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></Bouncy>
+                  <Bouncy style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></Bouncy>
                 </View>
               </View>
             </SlideIn>
@@ -1291,7 +1460,7 @@ export default function App() {
       <View style={s.topBar}><Text style={s.greeting}>💰 Earnings</Text></View>
       {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1, padding: 16 }}>
-        <View style={s.earningsHero}><Text style={s.earningsAmount}>₹{earnings.toFixed(0)}</Text><Text style={s.earningsLabel}>Aaj ki total kamai</Text></View>
+        <View style={s.earningsHero}><CountUp value={earnings} style={s.earningsAmount} /><Text style={s.earningsLabel}>Aaj ki total kamai</Text></View>
         <View style={s.earningsCard}>
           <Row k="Total Rides" v={rides.toString()} />
           <Row k="Average per ride" v={'₹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
@@ -1318,15 +1487,15 @@ export default function App() {
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
         {[['📋','Documents','License, RC'],['🏦','Bank Details','Payout account'],['📞','Support','24x7 help'],['⚙️','Settings','Preferences']].map(([icon,title,sub],i) => (
-          <TouchableOpacity key={i} style={s.menuItem}>
+          <Bouncy key={i} style={s.menuItem} onPress={() => {}}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{sub}</Text></View>
             <Text style={{ fontSize: 20, color: '#ccc' }}>›</Text>
-          </TouchableOpacity>
+          </Bouncy>
         ))}
-        <TouchableOpacity style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
-        </TouchableOpacity>
+        </Bouncy>
       </ScrollView>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
     </View>
@@ -1346,11 +1515,11 @@ function BottomNav({ activeTab, setActiveTab, rideReq }: any) {
   return (
     <View style={s.nav}>
       {[['home','🏠','Home'],['earnings','💰','Earnings'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
-        <TouchableOpacity key={t} style={s.navItem} onPress={() => setActiveTab(t)}>
+        <Bouncy key={t} style={s.navItem} onPress={() => setActiveTab(t)}>
           <Text style={s.navIcon}>{icon}</Text>
           <Text style={[s.navLbl, activeTab===t && s.navActive]}>{lbl}</Text>
           {t === 'home' && rideReq && <View style={{ position: 'absolute', top: 4, right: 24, width: 8, height: 8, borderRadius: 4, backgroundColor: '#e94560' }} />}
-        </TouchableOpacity>
+        </Bouncy>
       ))}
     </View>
   );
