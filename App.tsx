@@ -550,9 +550,14 @@ export default function App() {
   useEffect(() => {
     if (screen !== 'home' || !phone) return;
     (async () => {
-      try { const r = await fetch(`${API}/api/driver/target?phone=${phone}`); const d = await r.json(); setTarget(d); } catch (_e) {}
+      try {
+        const r = await fetch(`${API}/api/driver/target?phone=${phone}`);
+        const d = await r.json();
+        setTarget(d);
+        if (d?.completed && rides === 0) setRides(d.completed);
+      } catch (_e) {}
     })();
-  }, [screen, phone, rides]);
+  }, [screen, phone]);
 
   // ── Navigate ───────────────────────────────────
   const navigateTo = (location: string, lat?: number, lng?: number) => {
@@ -1554,16 +1559,29 @@ export default function App() {
           {rideReq && !activeRide && (
             <SlideIn>
               <View style={s.rideCard}>
-                <View style={s.rideHeader}><Text style={s.rideTitle}>🔔 Nayi Ride!</Text><Text style={s.rideFare}>₹{rideReq.fare}</Text></View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+                  <View style={{ backgroundColor: '#fff3e0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginRight: 8 }}>
+                    <Text style={{ color: '#e65100', fontSize: 11, fontWeight: '700' }}>🔔 NEW RIDE</Text>
+                  </View>
+                  {driverGps && rideReq.pickup_lat && (
+                    <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#2e7d32', fontSize: 11, fontWeight: '600' }}>
+                        📍 {haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km door
+                      </Text>
+                    </View>
+                  )}
+                </View>
+                <View style={s.rideHeader}><Text style={s.rideTitle}>{rideReq.ride_type === 'car' ? '🚕' : rideReq.ride_type === 'bike' ? '🏍️' : rideReq.ride_type === 'eriksha' ? '🛵' : '🛺'} {rideReq.passenger_name || 'Passenger'}</Text><Text style={s.rideFare}>₹{rideReq.fare}</Text></View>
                 <View style={s.rideDetails}>
                   <Text style={s.rideFrom}>📍 {rideReq.pickup}</Text>
                   <Text style={s.rideDivider}>↓</Text>
                   <Text style={s.rideTo}>🎯 {rideReq.drop_location}</Text>
                 </View>
+                {rideReq.distance && <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 2, flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: '#666', fontSize: 12 }}>📏 Distance: {rideReq.distance} km</Text><Text style={{ color: '#e94560', fontSize: 12, fontWeight: '600' }}>💰 Net: ₹{Math.round(rideReq.fare * 0.85)}</Text></View>}
                 <CountdownBar seconds={20} onTimeout={rejectRide} />
                 <View style={[s.rideActions, { marginTop: 12 }]}>
                   <Bouncy style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></Bouncy>
-                  <Bouncy style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></Bouncy>
+                  <Bouncy style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '⏳' : '✓ Accept'}</Text></Bouncy>
                 </View>
               </View>
             </SlideIn>
@@ -1682,7 +1700,7 @@ export default function App() {
           {result && !activeRide && !rideReq ? <Text style={s.result}>{result}</Text> : null}
         </ScrollView>
       </View>
-      <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} /></View>
+      <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} /></View>
     </View>
   );
 
@@ -1690,18 +1708,26 @@ export default function App() {
   if (activeTab === 'earnings') return (
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.greeting}>💰 Earnings</Text></View>
-      {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
+      {(rideReq || hourlyRideReq) && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{hourlyRideReq ? '⏱️ Hourly Ride!' : '🔔 Nayi Ride!'} ₹{(rideReq || hourlyRideReq)?.fare || (hourlyRideReq)?.base_fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1, padding: 16 }}>
-        <View style={s.earningsHero}><CountUp value={earnings} style={s.earningsAmount} /><Text style={s.earningsLabel}>Aaj ki total kamai</Text></View>
+        <View style={s.earningsHero}>
+          <Text style={{ color: '#aaa', fontSize: 11, letterSpacing: 2, marginBottom: 6 }}>AAJ KI KAMAI</Text>
+          <CountUp value={earnings} style={s.earningsAmount} />
+          <Text style={s.earningsLabel}>Total earned today</Text>
+        </View>
         <View style={s.earningsCard}>
           <Row k="Total Rides" v={rides.toString()} />
           <Row k="Average per ride" v={'₹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
-          <Row k="Platform fee (15%)" v={'₹' + (earnings * 0.15).toFixed(0)} />
-          <Row k="Net Earnings" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
+          <Row k="Platform fee" v={'₹' + (earnings * 0.13).toFixed(0)} />
+          <Row k="Net Earnings" v={'₹' + (earnings * 0.87).toFixed(0)} bold last />
+        </View>
+        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 16 }}>
+          <Text style={{ fontSize: 13, color: '#2e7d32', fontWeight: '600', marginBottom: 4 }}>💡 Tip: Hourly bookings pe 12% commission hai</Text>
+          <Text style={{ fontSize: 12, color: '#4CAF50' }}>Standard rides: 15% · Hourly rides: 12%</Text>
         </View>
         <TouchableOpacity style={s.payoutBtn}><Text style={s.payoutTxt}>💸 Payout Request Karo</Text></TouchableOpacity>
       </ScrollView>
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
     </View>
   );
 
@@ -1729,7 +1755,7 @@ export default function App() {
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
-      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} />
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
     </View>
   );
 }
@@ -1743,16 +1769,36 @@ function Row({ k, v, bold, last }: any) {
   );
 }
 
-function BottomNav({ activeTab, setActiveTab, rideReq }: any) {
+const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+};
+
+function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
+  const tabs = [
+    { t: 'home',     icon: '🏠', lbl: 'Home'    },
+    { t: 'earnings', icon: '💰', lbl: 'Kamai'   },
+    { t: 'profile',  icon: '👤', lbl: 'Profile' },
+  ];
+  const hasBadge = rideReq || hourlyRideReq;
   return (
     <View style={s.nav}>
-      {[['home','🏠','Home'],['earnings','💰','Earnings'],['profile','👤','Profile']].map(([t,icon,lbl]) => (
-        <Bouncy key={t} style={s.navItem} onPress={() => setActiveTab(t)}>
-          <Text style={s.navIcon}>{icon}</Text>
-          <Text style={[s.navLbl, activeTab===t && s.navActive]}>{lbl}</Text>
-          {t === 'home' && rideReq && <View style={{ position: 'absolute', top: 4, right: 24, width: 8, height: 8, borderRadius: 4, backgroundColor: '#e94560' }} />}
-        </Bouncy>
-      ))}
+      {tabs.map(({ t, icon, lbl }) => {
+        const active = activeTab === t;
+        return (
+          <TouchableOpacity key={t} style={s.navItem} onPress={() => setActiveTab(t)} activeOpacity={0.65}>
+            <View style={{ position: 'relative', alignItems: 'center' }}>
+              <Text style={[s.navIcon, active && s.navIconActive]}>{icon}</Text>
+              {t === 'home' && hasBadge && <View style={s.navDot} />}
+            </View>
+            <Text style={[s.navLbl, active && s.navActive]}>{lbl}</Text>
+            {active && <View style={s.navLine} />}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -1786,11 +1832,11 @@ const s = StyleSheet.create({
   greeting:        { color:'#fff', fontSize:18, fontWeight:'bold' },
   subTxt:          { color:'#aaa', fontSize:12, marginTop:2 },
   notifBanner:     { backgroundColor:'#e94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
-  statsRow:        { flexDirection:'row', gap:10, marginBottom:14 },
-  statCard:        { flex:1, backgroundColor:'#fff', borderRadius:14, padding:14, alignItems:'center', elevation:2 },
-  statIcon:        { fontSize:24 },
-  statValue:       { fontSize:20, fontWeight:'bold', color:'#1a1a2e', marginTop:4 },
-  statLabel:       { fontSize:11, color:'#999', marginTop:2 },
+  statsRow:        { flexDirection:'row', gap:10, marginBottom:16 },
+  statCard:        { flex:1, backgroundColor:'#fff', borderRadius:16, padding:16, alignItems:'center', elevation:3, shadowColor:'#000', shadowOpacity:0.06, shadowRadius:8 },
+  statIcon:        { fontSize:22 },
+  statValue:       { fontSize:22, fontWeight:'bold', color:'#1a1a2e', marginTop:4 },
+  statLabel:       { fontSize:10, color:'#999', marginTop:3, letterSpacing:0.3 },
   targetCard:      { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:14, elevation:2 },
   statusCard:      { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:16, elevation:2 },
   statusText:      { fontSize:14, color:'#333', textAlign:'center' },
@@ -1813,10 +1859,10 @@ const s = StyleSheet.create({
   rangeWarn:       { backgroundColor:'#fff3e0', borderRadius:10, padding:12, marginBottom:10, borderWidth:1, borderColor:'#ffe0b2' },
   cancelBtn:       { padding:12, alignItems:'center' },
   cancelTxt:       { color:'#e94560', fontWeight:'600' },
-  rideCard:        { backgroundColor:'#fff', borderRadius:16, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#e94560' },
-  rideHeader:      { flexDirection:'row', justifyContent:'space-between', marginBottom:12 },
+  rideCard:        { backgroundColor:'#fff', borderRadius:20, padding:18, marginBottom:16, elevation:8, borderWidth:0, shadowColor:'#e94560', shadowOpacity:0.15, shadowRadius:16 },
+  rideHeader:      { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:10 },
   rideTitle:       { fontSize:16, fontWeight:'bold', color:'#1a1a2e' },
-  rideFare:        { fontSize:20, fontWeight:'bold', color:'#e94560' },
+  rideFare:        { fontSize:22, fontWeight:'bold', color:'#e94560' },
   rideDetails:     { backgroundColor:'#f9f9f9', borderRadius:10, padding:12, marginBottom:4 },
   rideFrom:        { fontSize:14, color:'#4CAF50', fontWeight:'600' },
   rideDivider:     { fontSize:16, textAlign:'center', color:'#999', marginVertical:4 },
@@ -1827,14 +1873,17 @@ const s = StyleSheet.create({
   acceptBtn:       { flex:2, padding:14, borderRadius:10, backgroundColor:'#4CAF50', alignItems:'center' },
   acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:15 },
   result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
-  nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#eee', paddingBottom:12 },
-  navItem:         { flex:1, alignItems:'center', paddingTop:10 },
-  navIcon:         { fontSize:22 },
-  navLbl:          { fontSize:11, color:'#999', marginTop:2 },
+  nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0', paddingBottom:16, paddingTop:8, elevation:16, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:12 },
+  navItem:         { flex:1, alignItems:'center', justifyContent:'center', paddingTop:2 },
+  navIcon:         { fontSize:22, color:'#ccc' },
+  navIconActive:   { color:'#e94560' },
+  navLbl:          { fontSize:10, color:'#bbb', marginTop:3, letterSpacing:0.3 },
   navActive:       { color:'#e94560', fontWeight:'bold' },
-  earningsHero:    { backgroundColor:'#1a1a2e', borderRadius:16, padding:30, alignItems:'center', marginBottom:16 },
-  earningsAmount:  { color:'#fff', fontSize:40, fontWeight:'bold' },
-  earningsLabel:   { color:'#aaa', fontSize:14, marginTop:4 },
+  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#e94560', borderWidth:1.5, borderColor:'#fff' },
+  navLine:         { width:20, height:3, borderRadius:2, backgroundColor:'#e94560', marginTop:4 },
+  earningsHero:    { backgroundColor:'#1a1a2e', borderRadius:20, padding:32, alignItems:'center', marginBottom:16, elevation:6, shadowColor:'#1a1a2e', shadowOpacity:0.3, shadowRadius:16 },
+  earningsAmount:  { color:'#fff', fontSize:44, fontWeight:'bold', letterSpacing:1 },
+  earningsLabel:   { color:'#aaa', fontSize:13, marginTop:6, letterSpacing:0.5 },
   earningsCard:    { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:16, elevation:2 },
   earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#f0f0f0' },
   earningsKey:     { fontSize:14, color:'#666' },
