@@ -341,7 +341,9 @@ export default function App() {
   const [unreadChat, setUnreadChat] = useState(0);
   const lastChatCount = useRef(0);
 
-  // ── Wallet / Earnings Detail State ───────────
+  // ── Wallet / Earnings + Bonus State ──────────
+  const [bonusData, setBonusData] = useState<any>({ rides_today: 0, available_bonuses: [], claimed_tiers: [], next_target: null });
+  const [bonusClaiming, setBonusClaiming] = useState(false);
   const [driverWallet, setDriverWallet] = useState<any>({ balance: 0, total_earned: 0, total_withdrawn: 0 });
   const [driverRideHistory, setDriverRideHistory] = useState<any[]>([]);
   const [driverHourlyHistory, setDriverHourlyHistory] = useState<any[]>([]);
@@ -405,6 +407,19 @@ export default function App() {
       } catch (_e) {}
     })();
   }, []);
+  // ── Initial GPS (for pickup distance before going online) ─
+  useEffect(() => {
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status === 'granted') {
+          const loc = await Location.getLastKnownPositionAsync() || await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+          if (loc) setDriverGps({ lat: loc.coords.latitude, lng: loc.coords.longitude });
+        }
+      } catch (_e) {}
+    })();
+  }, []);
+
   // ── Notification Handler ──────────────────────
   useEffect(() => {
     Notifications.setNotificationHandler({
@@ -493,6 +508,20 @@ export default function App() {
       else setResult('❌ ' + (d.error || 'Error'));
     } catch (_e) { setResult('❌ Server error'); }
     setUpiSaving(false);
+  };
+
+  const loadBonusToday = async (ph: string) => {
+    try { const r = await fetch(`${API}/api/driver/bonus-today?phone=${ph}`); const d = await r.json(); setBonusData(d); } catch (_e) {}
+  };
+  const claimBonus = async (tier: number) => {
+    setBonusClaiming(true);
+    try {
+      const res = await fetch(`${API}/api/driver/bonus-claim`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, tier }) });
+      const d = await res.json();
+      if (d.success) { setResult('✅ ' + d.message); loadBonusToday(phone); loadDriverWallet(phone); }
+      else setResult('❌ ' + (d.error || 'Error'));
+    } catch (_e) { setResult('❌ Server error'); }
+    setBonusClaiming(false);
   };
 
   const loadDriverWallet = async (ph: string) => {
@@ -808,25 +837,32 @@ export default function App() {
 
   const completeTrip = async () => {
     setLoading(true);
+    // Capture before any async/state changes
+    const rideId = activeRide?.id;
+    const rideFare = String(activeRide?.fare || '0');
+    const ridePMethod = activeRide?.payment_method || '';
     try {
       const res = await fetch(`${API}/api/rides/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: activeRide.id })
+        body: JSON.stringify({ ride_id: rideId })
       });
-      const data = await res.json();
-      if (data.success) {
-        setPaymentRideId(activeRide.id);
-        setPaymentFare(String(activeRide.fare || '0'));
+      let data: any = {};
+      try { data = await res.json(); } catch (_e) {}
+      // Consider it success if HTTP 2xx OR data.success (backend might send 500 even if UPDATE went through)
+      if (res.ok || data.success) {
+        setPaymentRideId(rideId);
+        setPaymentFare(rideFare);
+        setPaymentMethod(ridePMethod);
         setPaymentWaiting(true);
-        const fare = parseFloat(activeRide.fare || 0);
-        setEarnings(e => e + fare);
+        setEarnings(e => e + parseFloat(rideFare));
         setRides(r => r + 1);
         setActiveRide(null);
       } else {
-        setResult('❌ ' + (data.message || 'Complete nahi hua, retry karo'));
+        setResult('❌ ' + (data.message || data.error || 'Complete nahi hua, retry karo'));
       }
     } catch (_e) {
-      setResult('❌ Network error — retry karo');
+      // Fetch itself failed (no network) — show error, don't navigate away
+      setResult('❌ Network error — check internet aur retry karo');
     }
     setLoading(false);
   };
@@ -1668,7 +1704,7 @@ export default function App() {
                   <View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                       <View style={{ backgroundColor: '#e94560', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⏱️ HOURLY</Text></View>
-                      <Text style={s.rideTitle}>{hourlyRideReq.package_hours === 8 ? 'Full Day' : `${hourlyRideReq.package_hours} Hours`}</Text>
+                      <Text style={s.rideTitle}>{hourlyRideReq.package_hours >= 24 ? `${hourlyRideReq.package_hours/24} Day${hourlyRideReq.package_hours > 24?'s':''}` : hourlyRideReq.package_hours === 8 ? 'Full Day (8h)' : `${hourlyRideReq.package_hours} Hours`}</Text>
                     </View>
                     <Text style={{ fontSize: 11, color: '#888' }}>{hourlyRideReq.km_included} km included · {hourlyRideReq.is_roundtrip ? '🔄 Round trip' : '➡️ One way'}</Text>
                   </View>
@@ -1679,10 +1715,16 @@ export default function App() {
                   {hourlyRideReq.drop_location && <><Text style={s.rideDivider}>↓</Text><Text style={s.rideTo}>🎯 {hourlyRideReq.drop_location}</Text></>}
                   {!hourlyRideReq.drop_location && <Text style={[s.rideTo, { color: '#999' }]}>📍 Drop: Flexible</Text>}
                 </View>
+                {hourlyRideReq.scheduled_at && (
+                  <View style={{ backgroundColor: '#e3f2fd', borderRadius: 8, padding: 8, marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 14 }}>📅</Text>
+                    <Text style={{ color: '#1565c0', fontSize: 12, fontWeight: '700' }}>SCHEDULED: {new Date(hourlyRideReq.scheduled_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                  </View>
+                )}
                 <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4 }}>
                   <Text style={{ color: '#2e7d32', fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
                 </View>
-                <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />
+                {!hourlyRideReq.scheduled_at && <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />}
                 <View style={[s.rideActions, { marginTop: 12 }]}>
                   <Bouncy style={s.rejectBtn} onPress={() => setHourlyRideReq(null)}><Text style={s.rejectTxt}>✕ Skip</Text></Bouncy>
                   <Bouncy style={s.acceptBtn} onPress={acceptHourlyRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></Bouncy>
@@ -1771,6 +1813,47 @@ export default function App() {
             <View style={s.statusCard}><Text style={s.statusText}>{isOnline ? '✅ Online hain — rides ka intezaar...' : '💤 Online ho jao rides lene ke liye'}</Text></View>
           )}
           {result && !activeRide && !rideReq ? <Text style={s.result}>{result}</Text> : null}
+
+          {/* Rules & Info */}
+          {!activeRide && !activeHourlyRide && (
+            <View style={{ marginTop: 10 }}>
+              <View style={{ backgroundColor: '#f8f9fa', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#e0e0e0' }}>
+                <Text style={{ color: '#1a1a2e', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>📋 Standard Rides — Rules & Fees</Text>
+                {[
+                  ['💰 Commission', '15% platform fee — baaki aapki net kamai'],
+                  ['🎯 Ride Accept', '20 second window — miss hone par auto-reject'],
+                  ['📍 Arrive', '"Pickup pe pahuncha" dabao tab tak wait karo'],
+                  ['🔐 OTP Start', 'Customer ka 4-digit OTP verify karke trip shuru'],
+                  ['✅ Complete', 'Trip complete dabao — payment auto process hogi'],
+                  ['❌ Cancel', 'Baar baar cancel karne par account suspend ho sakta hai'],
+                  ['⭐ Rating', 'Achi service do — 4.5+ rating maintain karo'],
+                  ['💳 Payment', 'Cash ya wallet — payment waiting screen pe dikhe'],
+                ].map(([icon, text], i) => (
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: 7 }}>
+                    <Text style={{ color: '#e94560', fontSize: 12, fontWeight: '700', width: 100 }}>{icon}</Text>
+                    <Text style={{ color: '#555', fontSize: 11, flex: 1, lineHeight: 16 }}>{text}</Text>
+                  </View>
+                ))}
+              </View>
+              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#2a2a4e' }}>
+                <Text style={{ color: '#e94560', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>⏱️ Hourly / Daily — Rules & Fees</Text>
+                {[
+                  ['💰 Commission', '12% (3% discount vs standard rides!)'],
+                  ['📦 Packages', '2h·4h·6h·8h same day | 1·2·3 din multi-day'],
+                  ['🛡️ Guarantee', 'Early end? Min 70% guaranteed milega'],
+                  ['🔐 OTP', 'Trip start ke liye customer OTP do'],
+                  ['📍 KM', 'Package KM included — extra distance pe extra charge'],
+                  ['✅ Complete', 'Actual KM darj karo — escrow release hogi'],
+                  ['🚫 Misuse', 'Package time personal kaam ke liye use mat karna'],
+                ].map(([icon, text], i) => (
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: 7 }}>
+                    <Text style={{ color: '#aaa', fontSize: 12, fontWeight: '700', width: 100 }}>{icon}</Text>
+                    <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 16 }}>{text}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
       </View>
       <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} /></View>
@@ -1779,7 +1862,7 @@ export default function App() {
 
   // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') {
-    if (!walletLoaded) loadDriverWallet(phone);
+    if (!walletLoaded) { loadDriverWallet(phone); loadBonusToday(phone); }
     const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
     return (
     <View style={s.screen}>
@@ -1866,6 +1949,61 @@ export default function App() {
                 style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, paddingVertical: 9, alignItems: 'center' }}>
                 <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
               </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* ── Daily Bonus Target Card ── */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, marginTop: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 20, marginRight: 8 }}>🎯</Text>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', flex: 1 }}>Daily Bonus Targets</Text>
+              <TouchableOpacity onPress={() => loadBonusToday(phone)} style={{ padding: 4 }}><Text style={{ fontSize: 16 }}>⟳</Text></TouchableOpacity>
+            </View>
+            {[{rides:5,bonus:30,tier:1},{rides:10,bonus:50,tier:2},{rides:15,bonus:100,tier:3}].map(t => {
+              const isClaimed = (bonusData?.claimed_tiers || []).includes(t.tier);
+              const isUnlocked = (bonusData?.rides_today || 0) >= t.rides;
+              const isAvail = (bonusData?.available_bonuses || []).some((b: any) => b.tier === t.tier);
+              return (
+                <View key={t.tier} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
+                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isClaimed ? '#e8f5e9' : isUnlocked ? '#fff3e0' : '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <Text style={{ fontSize: 16 }}>{isClaimed ? '✅' : isUnlocked ? '🔓' : '🔒'}</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{t.rides} rides today</Text>
+                    <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }}>Bonus: ₹{t.bonus} · ({bonusData?.rides_today || 0}/{t.rides})</Text>
+                  </View>
+                  {isAvail ? (
+                    <TouchableOpacity onPress={() => claimBonus(t.tier)}
+                      style={{ backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
+                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Claim ₹{t.bonus}</Text>
+                    </TouchableOpacity>
+                  ) : isClaimed ? (
+                    <Text style={{ fontSize: 12, color: '#4CAF50', fontWeight: '700' }}>Claimed!</Text>
+                  ) : (
+                    <Text style={{ fontSize: 11, color: '#bbb' }}>{t.rides - (bonusData?.rides_today || 0)} aur</Text>
+                  )}
+                </View>
+              );
+            })}
+            <Text style={{ fontSize: 11, color: '#888', marginTop: 10, textAlign: 'center' }}>Aaj ke rides se unlock hote hain — raat 12 baje reset</Text>
+          </View>
+
+          {/* ── How Hourly Works ── */}
+          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, marginTop: 10 }}>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>ℹ️ Hourly / Daily Booking — Rules</Text>
+            {[
+              ['⏱️ Package', '2h/4h/6h/Full Day / 1 Day / 2 Day / 3 Day available'],
+              ['💰 Commission', '12% hourly (vs 15% standard rides)'],
+              ['🛡️ Min Guarantee', 'Early end? Minimum 70% guaranteed'],
+              ['📍 KM Included', 'Package mein KM fix hai — extra per km extra charge'],
+              ['🔐 OTP Start', 'Customer OTP se trip shuru hoti hai'],
+              ['✅ Complete', 'Actual KM enter karo — extra charge auto-calculate'],
+              ['💳 Payment', 'Customer wallet se escrow hold, release on complete'],
+            ].map(([icon, text], i) => (
+              <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
+                <Text style={{ color: '#e94560', fontSize: 12, fontWeight: '700', width: 90 }}>{icon}</Text>
+                <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 16 }}>{text}</Text>
+              </View>
             ))}
           </View>
         </>)}
