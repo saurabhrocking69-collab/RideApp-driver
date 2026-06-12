@@ -1640,7 +1640,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ HOME TAB — Uber style ═══
   if (activeTab === 'home') return (
-    <View style={s.screen}>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Full map background */}
       <View style={s.mapFit}>
         <MapWebView
@@ -1665,7 +1665,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
       {/* Content */}
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 90 }}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 90 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
@@ -1782,9 +1782,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {activeRide.status === 'arrived' && (
                 <View>
                   <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                    <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
-                  </KeyboardAvoidingView>
+                  <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
                   <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
                 </View>
               )}
@@ -1904,9 +1902,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {activeHourlyRide.status === 'matched' && (
                 <View style={{ marginTop: 10 }}>
                   <Text style={{ fontSize: 12, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
-                  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                    <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
-                  </KeyboardAvoidingView>
+                  <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
                   <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
                   <TouchableOpacity style={s.navBtn} onPress={() => activeHourlyRide.pickup_lat ? undefined : undefined}>
                     <Text style={{ color: '#fff', fontWeight: '600' }} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>🗺️ Pickup Navigate Karo</Text>
@@ -1946,6 +1942,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10 }}>
                     <Text style={{ color: '#2e7d32', fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} min · Full milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
                   </View>
+
+                  {/* Return trip navigation — driver navigates back to original pickup */}
+                  {activeHourlyRide.is_roundtrip && (
+                    <TouchableOpacity
+                      style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 13, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                      onPress={() => {
+                        const lat = activeHourlyRide.pickup_lat;
+                        const lng = activeHourlyRide.pickup_lng;
+                        const addr = encodeURIComponent(activeHourlyRide.pickup || '');
+                        if (lat && lng) {
+                          Linking.openURL(`google.navigation:q=${lat},${lng}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${lat},${lng}`));
+                        } else {
+                          Linking.openURL(`google.navigation:q=${addr}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${addr}`));
+                        }
+                      }}>
+                      <Text style={{ fontSize: 22 }}>🔄</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontWeight: '700', color: '#1565c0', fontSize: 14 }}>Return — Pickup Navigate Karo</Text>
+                        <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>📍 {activeHourlyRide.pickup}</Text>
+                      </View>
+                      <Text style={{ color: '#1565c0', fontSize: 18 }}>›</Text>
+                    </TouchableOpacity>
+                  )}
 
                   {/* Extension request from customer */}
                   {!!activeHourlyRide.extend_requested_hours && (
@@ -2060,7 +2079,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </ScrollView>
       </View>
       <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} /></View>
-    </View>
+    </KeyboardAvoidingView>
   );
 
   // ═══ EARNINGS TAB ═══
