@@ -378,7 +378,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // Registration
   const [regStep, setRegStep]       = useState(0);
-  const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
+  const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_brand:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
   const [uploading, setUploading]   = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [loginOtp, setLoginOtp]     = useState('');
@@ -1233,11 +1233,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
       <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>🚗 Vehicle Type</Text><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
-        {[{ id:'bike', icon:'🏍️', label:'Bike' },{ id:'auto', icon:'🛺', label:'Auto' },{ id:'car', icon:'🚕', label:'Car / Taxi' },{ id:'eriksha', icon:'🛵', label:'E-Riksha' }].map(v => (
-          <TouchableOpacity key={v.id} style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive]} onPress={() => updateReg('vehicle_type', v.id)}>
+        {[
+          { id:'bike', icon:'🏍️', label:'Bike', sub:'' },
+          { id:'auto', icon:'🛺', label:'Auto', sub:'' },
+          { id:'car', icon:'🚕', label:'Car / Taxi', sub:'' },
+          { id:'eriksha', icon:'🛵', label:'E-Riksha', sub:'' },
+          { id:'ultra_luxury', icon:'💎', label:'Ultra Luxury', sub:'BMW · Mercedes · Audi · Land Rover · Lexus' },
+        ].map(v => (
+          <TouchableOpacity key={v.id}
+            style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive, v.id === 'ultra_luxury' && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : '#c9a227' }]}
+            onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); }}>
             <Text style={{ fontSize: 32, marginRight: 16 }}>{v.icon}</Text>
-            <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1a1a2e' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
-            {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20, marginLeft: 'auto' }}>✓</Text>}
+            <View style={{ flex: 1 }}>
+              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1a1a2e' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
+              {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : '#c9a227', marginTop: 2 }}>{v.sub}</Text> : null}
+            </View>
+            {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
           </TouchableOpacity>
         ))}
         <TouchableOpacity style={[s.btn, !regData.vehicle_type && { opacity: 0.5 }]} disabled={!regData.vehicle_type} onPress={() => { setResult(''); setRegStep(3); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
@@ -1269,25 +1280,54 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   );
 
   // ═══ REGISTRATION STEP 4 — Vehicle ═══
-  if (screen === 'login' && regStep === 4) return (
-    <View style={s.screen}>
-      <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 4 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-        <Text style={rs.bigTitle}>🚗 Vehicle Details</Text>
-        <Text style={rs.subTitle}>{regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' : 'Vehicle number aur front photo'}</Text>
-        <Text style={rs.fieldLabel}>Vehicle Number {regData.vehicle_type === 'eriksha' ? '(optional)' : ''}</Text>
-        <TextInput style={rs.input} placeholder="UP32 AB 1234" autoCapitalize="characters" value={regData.vehicle_no} onChangeText={(v) => updateReg('vehicle_no', v)} />
-        <Text style={rs.fieldLabel}>Vehicle Front Photo</Text><PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="🚗" />
-        <Text style={rs.fieldLabel}>RC Photo (optional)</Text><PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
-        {result ? <Text style={s.err}>{result}</Text> : null}
-        <TouchableOpacity
-          style={[s.btn, (() => { const needNum = regData.vehicle_type !== 'eriksha'; const ok = regData.vehicle_photo && (!needNum || regData.vehicle_no); return !ok ? { opacity: 0.5 } : {}; })()]}
-          disabled={(() => { const needNum = regData.vehicle_type !== 'eriksha'; const ok = regData.vehicle_photo && (!needNum || regData.vehicle_no); return !ok; })()}
-          onPress={() => { setResult(''); setRegStep(5); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
-        <View style={{ height: 30 }} />
-      </ScrollView>
-    </View>
-  );
+  if (screen === 'login' && regStep === 4) {
+    const needBrand = ['bike','car','ultra_luxury'].includes(regData.vehicle_type);
+    const needNum = !['eriksha'].includes(regData.vehicle_type);
+    const brandValid = !needBrand || !!regData.vehicle_brand;
+    const step4Ok = regData.vehicle_photo && (!needNum || regData.vehicle_no) && brandValid;
+    const LUXURY_BRANDS = ['BMW','Mercedes-Benz','Audi','Land Rover','Lexus'];
+    return (
+      <View style={s.screen}>
+        <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 4 of 5</Text><View style={{ width: 50 }} /></View>
+        <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+          <Text style={rs.bigTitle}>🚗 Vehicle Details</Text>
+          <Text style={rs.subTitle}>{regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' : regData.vehicle_type === 'ultra_luxury' ? '💎 Ultra Luxury: premium vehicle details' : 'Vehicle number aur front photo'}</Text>
+
+          {/* Brand — for bike, car, ultra_luxury */}
+          {needBrand && (
+            <>
+              <Text style={rs.fieldLabel}>Vehicle Company / Brand *</Text>
+              {regData.vehicle_type === 'ultra_luxury' ? (
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                    {LUXURY_BRANDS.map(b => (
+                      <TouchableOpacity key={b} onPress={() => updateReg('vehicle_brand', b)}
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: regData.vehicle_brand === b ? '#1a1a2e' : '#f5f5f5', borderWidth: 1, borderColor: regData.vehicle_brand === b ? '#c9a227' : '#e0e0e0' }}>
+                        <Text style={{ fontWeight: '700', color: regData.vehicle_brand === b ? '#c9a227' : '#333', fontSize: 13 }}>{b}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {regData.vehicle_brand ? <Text style={{ color: '#2e7d32', fontSize: 12, marginTop: 6 }}>✅ Selected: {regData.vehicle_brand}</Text> : <Text style={{ color: '#e65100', fontSize: 12, marginTop: 6 }}>Ek brand select karo</Text>}
+                </View>
+              ) : (
+                <TextInput style={[rs.input, { marginBottom: 14 }]} placeholder={regData.vehicle_type === 'bike' ? 'eg. Honda, Bajaj, Royal Enfield' : 'eg. Maruti, Hyundai, Tata'} value={regData.vehicle_brand} onChangeText={(v) => updateReg('vehicle_brand', v)} />
+              )}
+            </>
+          )}
+
+          <Text style={rs.fieldLabel}>Vehicle Number {needNum ? '' : '(optional)'}</Text>
+          <TextInput style={rs.input} placeholder="UP32 AB 1234" autoCapitalize="characters" value={regData.vehicle_no} onChangeText={(v) => updateReg('vehicle_no', v)} />
+          <Text style={rs.fieldLabel}>Vehicle Front Photo</Text><PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="🚗" />
+          <Text style={rs.fieldLabel}>RC Photo (optional)</Text><PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
+          {result ? <Text style={s.err}>{result}</Text> : null}
+          <TouchableOpacity style={[s.btn, !step4Ok && { opacity: 0.5 }]} disabled={!step4Ok} onPress={() => { setResult(''); setRegStep(5); }}>
+            <Text style={s.btnTxt}>Aage badho →</Text>
+          </TouchableOpacity>
+          <View style={{ height: 30 }} />
+        </ScrollView>
+      </View>
+    );
+  }
 
   // ═══ REGISTRATION STEP 5 — Aadhaar + Selfie ═══
   if (screen === 'login' && regStep === 5) return (
@@ -1313,53 +1353,74 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ REGISTRATION DONE ═══
   if (screen === 'login' && regStep === 99) return (
     <View style={s.screen}>
-      <View style={s.hero}><Text style={{ fontSize: 70 }}>🎉</Text><Text style={s.heroTitle}>Registration Done!</Text></View>
+      <View style={s.hero}>
+        <Text style={{ fontSize: 70 }}>🎉</Text>
+        <Text style={s.heroTitle}>Application Submit!</Text>
+        <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Spero Buddy Captain</Text>
+      </View>
       <View style={{ padding: 24, alignItems: 'center' }}>
-        <Text style={{ fontSize: 16, color: '#333', textAlign: 'center', lineHeight: 24 }}>Aapki application submit ho gayi! ✅{'\n\n'}Admin aapke documents verify karega.</Text>
-        <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 16, marginTop: 20, width: '100%' }}>
+        <Text style={{ fontSize: 16, color: '#333', textAlign: 'center', lineHeight: 26 }}>
+          Aapki Spero Buddy Captain application submit ho gayi! ✅{'\n\n'}Admin aapke sare documents — DL, Aadhaar, Vehicle aur Selfie — verify karega.
+        </Text>
+        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 16, marginTop: 16, width: '100%' }}>
+          <Text style={{ color: '#2e7d32', textAlign: 'center', fontWeight: '600', fontSize: 13 }}>✅ Verification hone ke baad app khud notify kar dega</Text>
+        </View>
+        <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 16, marginTop: 10, width: '100%' }}>
           <Text style={{ color: '#ef6c00', textAlign: 'center', fontWeight: '600' }}>⏳ Status: Verification Pending</Text>
         </View>
-        <TouchableOpacity style={[s.btn, { marginTop: 30, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}><Text style={s.btnTxt}>🏠 Login Screen pe jao</Text></TouchableOpacity>
+        <TouchableOpacity style={[s.btn, { marginTop: 24, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}>
+          <Text style={s.btnTxt}>🏠 Login Screen pe jao</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
 
   // ═══ VERIFICATION STATUS ═══
-  if (screen === 'login' && driverInfo && driverInfo.status !== 'approved') return (
-    <View style={s.screen}>
-      <View style={s.hero}>
-        <Text style={{ fontSize: 70 }}>{driverInfo.status === 'pending' ? '⏳' : driverInfo.status === 'suspended' ? '🚫' : '⚠️'}</Text>
-        <Text style={s.heroTitle}>{driverInfo.status === 'pending' ? 'Verification Pending' : driverInfo.status === 'suspended' ? 'Account Suspended' : 'Documents Reject'}</Text>
-      </View>
-      <View style={{ padding: 24 }}>
-        <View style={{ backgroundColor: driverInfo.status === 'pending' ? '#fff3e0' : '#ffebee', borderRadius: 14, padding: 20, marginBottom: 20 }}>
-          <Text style={{ fontSize: 15, lineHeight: 24, textAlign: 'center', color: driverInfo.status === 'pending' ? '#ef6c00' : '#c62828' }}>
-            {driverInfo.status === 'pending' && 'Aapke documents admin verify kar raha hai. Thodi der mein status update hoga.'}
-            {driverInfo.status === 'rejected' && 'Aapke documents mein kuch problem hai. Neeche message padho aur dobara upload karo.'}
-            {driverInfo.status === 'suspended' && 'Aapka account suspend kar diya gaya hai.'}
-          </Text>
+  if (screen === 'login' && driverInfo && driverInfo.status !== 'approved') {
+    const statusConfig: any = {
+      pending:   { icon: '⏳', title: 'Verification Pending',    bg: '#fff3e0', col: '#ef6c00', msg: 'Aapke documents admin verify kar raha hai. Thodi der mein status update hoga.' },
+      rejected:  { icon: '❌', title: 'Documents Reject Ho Gaye', bg: '#ffebee', col: '#c62828', msg: 'Aapke documents mein problem hai — neeche admin message padho aur resubmit karo.' },
+      resubmit:  { icon: '📋', title: 'Documents Resubmit Karein', bg: '#e3f2fd', col: '#1565c0', msg: 'Admin ne kuch documents dobara maange hain — neeche message padho aur upload karo.' },
+      suspended: { icon: '🚫', title: 'Account Suspended',        bg: '#ffebee', col: '#c62828', msg: 'Aapka account suspend kar diya gaya hai. Support se contact karo.' },
+    };
+    const cfg = statusConfig[driverInfo.status] || statusConfig.pending;
+    return (
+      <View style={s.screen}>
+        <View style={s.hero}>
+          <Text style={{ fontSize: 70 }}>{cfg.icon}</Text>
+          <Text style={s.heroTitle}>{cfg.title}</Text>
+          <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Spero Buddy Captain</Text>
         </View>
-        {driverInfo.admin_message ? (
-          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 20, borderWidth: 1, borderColor: '#e0e0e0' }}>
-            <Text style={{ fontSize: 13, color: '#888', marginBottom: 6 }}>📩 Admin ka message:</Text>
-            <Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500' }}>{driverInfo.admin_message}</Text>
+        <View style={{ padding: 24 }}>
+          <View style={{ backgroundColor: cfg.bg, borderRadius: 14, padding: 20, marginBottom: 20 }}>
+            <Text style={{ fontSize: 15, lineHeight: 24, textAlign: 'center', color: cfg.col }}>{cfg.msg}</Text>
           </View>
-        ) : null}
-        {(driverInfo.status === 'rejected' || driverInfo.status === 'suspended') && (
-          <TouchableOpacity style={s.btn} onPress={() => { setRegData((p: any) => ({ ...p, phone: driverInfo.phone })); setDriverInfo(null); setRegStep(1); }}><Text style={s.btnTxt}>📄 Documents Dobara Upload Karo</Text></TouchableOpacity>
-        )}
-        <TouchableOpacity style={[s.btn, { backgroundColor: '#1a1a2e' }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}><Text style={s.btnTxt}>← Wapas Login pe jao</Text></TouchableOpacity>
+          {driverInfo.admin_message ? (
+            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 20, borderWidth: 2, borderColor: cfg.col }}>
+              <Text style={{ fontSize: 13, color: '#888', marginBottom: 6, fontWeight: '600' }}>📩 Admin ka message:</Text>
+              <Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500', lineHeight: 22 }}>{driverInfo.admin_message}</Text>
+            </View>
+          ) : null}
+          {(driverInfo.status === 'rejected' || driverInfo.status === 'resubmit') && (
+            <TouchableOpacity style={s.btn} onPress={() => { setRegData((p: any) => ({ ...p, phone: driverInfo.phone })); setDriverInfo(null); setRegStep(2); }}>
+              <Text style={s.btnTxt}>📄 Documents Resubmit Karo</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[s.btn, { backgroundColor: '#1a1a2e', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
+            <Text style={s.btnTxt}>← Wapas Login pe jao</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  }
 
   // ═══ LOGIN ═══
   if (screen === 'login') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.hero}>
         <Text style={s.heroIcon}>🚖</Text>
-        <Text style={s.heroTitle}>RideApp Driver</Text>
-        <Text style={s.heroSub}>Spero Buddy Login</Text>
+        <Text style={s.heroTitle}>Spero Buddy</Text>
+        <Text style={s.heroSub}>Captain Login</Text>
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} keyboardShouldPersistTaps="handled">
         {!loginOtpSent ? (
@@ -1375,7 +1436,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
             </Bouncy>
             <Bouncy style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
-              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Naya Spero Buddy Banein</Text>
+              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Spero Buddy Captain Banein</Text>
             </Bouncy>
             {/* Test drivers */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
