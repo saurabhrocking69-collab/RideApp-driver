@@ -370,10 +370,11 @@ export default function App() {
   const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
   const [hourlyOtpInput, setHourlyOtpInput]     = useState('');
-  const [hourlyActualKm, setHourlyActualKm]     = useState('');
-  const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
+const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const hourlyTimerRef = useRef<any>(null);
   const [hEarlyEndLoading, setHEarlyEndLoading] = useState(false);
+  const [liveKm, setLiveKm]                     = useState(0);
+  const prevHourlyGpsRef = useRef<{lat:number,lng:number}|null>(null);
 
   // Registration
   const [regStep, setRegStep]       = useState(0);
@@ -633,6 +634,23 @@ export default function App() {
       return () => { if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current); };
     }
   }, [activeHourlyRide?.status, activeHourlyRide?.started_at]);
+
+  // Reset KM counter when new hourly ride starts
+  useEffect(() => {
+    setLiveKm(0);
+    prevHourlyGpsRef.current = null;
+  }, [activeHourlyRide?.id]);
+
+  // Accumulate GPS distance during active hourly ride
+  useEffect(() => {
+    if (activeHourlyRide?.status !== 'active' || !driverGps) return;
+    if (prevHourlyGpsRef.current) {
+      const dist = haversineKm(prevHourlyGpsRef.current.lat, prevHourlyGpsRef.current.lng, driverGps.lat, driverGps.lng);
+      // Filter noise (< 20m) and GPS jumps (> 2km in 5s = impossible)
+      if (dist > 0.02 && dist < 2.0) setLiveKm(k => k + dist);
+    }
+    prevHourlyGpsRef.current = driverGps;
+  }, [driverGps]);
 
   // ── Unread badge during ride ───────────────────
   useEffect(() => {
@@ -1018,13 +1036,20 @@ export default function App() {
     if (!activeHourlyRide) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, actual_km: parseInt(hourlyActualKm) || 0 }) });
+      const res = await fetch(`${API}/api/hourly/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, actual_km: Math.round(liveKm * 10) / 10 }) });
       const data = await res.json();
       if (data.success) {
-        if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
-        setTripSummary({ fare: data.total_fare, payment_method: 'wallet', earned: '₹' + parseFloat(data.driver_earning).toFixed(0), fee: '₹' + (data.total_fare - data.driver_earning).toFixed(0), isHourly: true, extraKmInfo: data.extra_km > 0 ? `+${data.extra_km} km extra — ₹${data.extra_km_charge}` : null });
-        setActiveHourlyRide(null); setHourlyActualKm(''); setHourlyTimerSec(0);
-        setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
+        if (data.pending_confirm) {
+          setActiveHourlyRide((p: any) => ({ ...p, pending_customer_confirm: true }));
+          setResult('');
+        } else {
+          if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
+          setTripSummary({ fare: data.total_fare, payment_method: 'wallet', earned: '₹' + parseFloat(data.driver_earning).toFixed(0), fee: '₹' + (data.total_fare - data.driver_earning).toFixed(0), isHourly: true, extraKmInfo: data.extra_km > 0 ? `+${data.extra_km} km extra — ₹${data.extra_km_charge}` : null });
+          setActiveHourlyRide(null); setHourlyTimerSec(0); setLiveKm(0);
+          setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
+        }
+      } else if (data.too_early) {
+        setResult(`🔒 ${data.message}`);
       } else setResult('❌ ' + (data.message || 'Complete nahi hua'));
     } catch (_e) { setResult('❌ Network error'); }
     setLoading(false);
@@ -1034,8 +1059,13 @@ export default function App() {
     if (!activeHourlyRide) return;
     setHEarlyEndLoading(true);
     try {
-      await fetch(`${API}/api/hourly/early-end-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, requested_by: 'driver' }) });
-      setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: 'driver' }));
+      const res = await fetch(`${API}/api/hourly/early-end-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, requested_by: 'driver' }) });
+      const data = await res.json();
+      if (data.success) {
+        setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: 'driver' }));
+      } else {
+        setResult(data.message || 'Request nahi ho saki');
+      }
     } catch (_e) {}
     setHEarlyEndLoading(false);
   };
@@ -1059,8 +1089,27 @@ export default function App() {
   const rejectHourlyEarlyEnd = async () => {
     if (!activeHourlyRide) return;
     try {
-      await fetch(`${API}/api/hourly/early-end-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
-      setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: null }));
+      const res = await fetch(`${API}/api/hourly/early-end-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const data = await res.json();
+      setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: null, early_end_reject_count: data.reject_count || (p.early_end_reject_count||0)+1, early_end_last_rejected_at: new Date().toISOString() }));
+    } catch (_e) {}
+  };
+
+  const acceptExtend = async () => {
+    if (!activeHourlyRide) return;
+    try {
+      const res = await fetch(`${API}/api/hourly/accept-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const data = await res.json();
+      if (data.success) setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
+      else setResult('❌ ' + data.message);
+    } catch (_e) { setResult('❌ Network error'); }
+  };
+
+  const rejectExtend = async () => {
+    if (!activeHourlyRide) return;
+    try {
+      await fetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
     } catch (_e) {}
   };
 
@@ -1867,19 +1916,69 @@ export default function App() {
 
               {activeHourlyRide.status === 'active' && (
                 <View style={{ marginTop: 10 }}>
-                  <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10 }}>
-                    <Text style={{ color: '#2e7d32', fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} minimum · Pura milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
+                  {/* KM + Time progress bars */}
+                  <View style={{ marginBottom: 10 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <Text style={{ fontSize: 12, color: '#666' }}>📍 {liveKm.toFixed(1)} / {activeHourlyRide.km_included} km</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: liveKm / (activeHourlyRide.km_included||1) > 0.9 ? '#e94560' : liveKm / (activeHourlyRide.km_included||1) > 0.8 ? '#ff9800' : '#2e7d32' }}>
+                        {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache
+                      </Text>
+                    </View>
+                    <View style={{ height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 8 }}>
+                      <View style={{ height: 6, borderRadius: 3, backgroundColor: liveKm / (activeHourlyRide.km_included||1) > 0.9 ? '#e94560' : liveKm / (activeHourlyRide.km_included||1) > 0.8 ? '#ff9800' : '#4CAF50', width: `${Math.min(100, (liveKm / (activeHourlyRide.km_included||1)) * 100)}%` as any }} />
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
+                      <Text style={{ fontSize: 12, color: '#666' }}>⏱️ {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')} elapsed</Text>
+                      <Text style={{ fontSize: 12, color: '#666' }}>
+                        {(() => { const rem = Math.max(0, parseFloat(activeHourlyRide.package_hours||0)*3600 - hourlyTimerSec); return rem > 0 ? `${String(Math.floor(rem/3600)).padStart(2,'0')}:${String(Math.floor((rem%3600)/60)).padStart(2,'0')} bache` : '⚠️ Time up!'; })()}
+                      </Text>
+                    </View>
+                    <View style={{ height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
+                      <View style={{ height: 6, borderRadius: 3, backgroundColor: '#1a1a2e', width: `${Math.min(100, (hourlyTimerSec / ((parseFloat(activeHourlyRide.package_hours||1))*3600)) * 100)}%` as any }} />
+                    </View>
+                    {liveKm / (activeHourlyRide.km_included||1) > 0.8 && (
+                      <View style={{ backgroundColor: '#fff3e0', borderRadius: 8, padding: 8 }}>
+                        <Text style={{ color: '#e65100', fontSize: 12, fontWeight: '700' }}>⚠️ {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache — extra charges lagengen!</Text>
+                      </View>
+                    )}
                   </View>
 
-                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 6 }}>Actual KM (optional, extra charge ke liye):</Text>
-                  <TextInput style={{ borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 8, padding: 10, fontSize: 16, backgroundColor: '#fff', marginBottom: 10 }} placeholder="Enter actual KM" keyboardType="numeric" value={hourlyActualKm} onChangeText={setHourlyActualKm} />
+                  <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10 }}>
+                    <Text style={{ color: '#2e7d32', fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} min · Full milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
+                  </View>
 
-                  <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeHourlyTrip} disabled={loading}>
-                    <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
-                  </Bouncy>
+                  {/* Extension request from customer */}
+                  {!!activeHourlyRide.extend_requested_hours && (
+                    <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14, marginBottom: 10 }}>
+                      <Text style={{ fontWeight: 'bold', color: '#1565c0', marginBottom: 4 }}>📅 Customer +{activeHourlyRide.extend_requested_hours}h Extend Chahta Hai</Text>
+                      <Text style={{ fontSize: 12, color: '#555', marginBottom: 10 }}>Agree karne se trip extend hogi — paise escrow mein hain</Text>
+                      <View style={{ flexDirection: 'row', gap: 10 }}>
+                        <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Accept</Text></Bouncy>
+                        <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectExtend}><Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                      </View>
+                    </View>
+                  )}
 
+                  {/* Pending customer confirmation OR complete button with 20-min lock */}
+                  {activeHourlyRide.pending_customer_confirm ? (
+                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center' }}>
+                      <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 4 }}>⏳ Customer Confirmation Ka Intezaar...</Text>
+                      <Text style={{ fontSize: 12, color: '#888' }}>10 min mein auto-confirm ho jayega</Text>
+                    </View>
+                  ) : hourlyTimerSec < 20 * 60 ? (
+                    <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10 }}>
+                      <Text style={{ color: '#999', fontWeight: '700', fontSize: 14 }}>🔒 Complete in {Math.ceil(20 - hourlyTimerSec/60)} min</Text>
+                      <Text style={{ color: '#bbb', fontSize: 11, marginTop: 3 }}>Minimum 20 minutes required</Text>
+                    </View>
+                  ) : (
+                    <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50', marginBottom: 10 }]} onPress={completeHourlyTrip} disabled={loading}>
+                      <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                    </Bouncy>
+                  )}
+
+                  {/* Early end section */}
                   {activeHourlyRide.early_end_requested_by === 'customer' && (
-                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginTop: 10 }}>
+                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14 }}>
                       <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
                       <Text style={{ color: '#666', fontSize: 12, marginBottom: 10 }}>70% minimum aapko milega guaranteed.</Text>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
@@ -1888,16 +1987,25 @@ export default function App() {
                       </View>
                     </View>
                   )}
-
-                  {!activeHourlyRide.early_end_requested_by && (
-                    <Bouncy style={[s.cancelBtn, { marginTop: 10, borderColor: '#e94560', borderWidth: 1 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
-                      <Text style={s.cancelTxt}>⏹️ Early End Request (mutual)</Text>
-                    </Bouncy>
-                  )}
                   {activeHourlyRide.early_end_requested_by === 'driver' && (
-                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginTop: 10, alignItems: 'center' }}>
+                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, alignItems: 'center' }}>
                       <Text style={{ color: '#e65100', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
                     </View>
+                  )}
+                  {!activeHourlyRide.early_end_requested_by && !activeHourlyRide.pending_customer_confirm && (
+                    (activeHourlyRide.early_end_reject_count || 0) >= 2 ? (
+                      <View style={{ backgroundColor: '#ffebee', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                        <Text style={{ color: '#c62828', fontSize: 12, fontWeight: '700' }}>🔒 2 baar reject — Support se contact karo</Text>
+                      </View>
+                    ) : activeHourlyRide.early_end_last_rejected_at && (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime()) < 15 * 60 * 1000 ? (
+                      <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                        <Text style={{ color: '#999', fontSize: 12 }}>⏳ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request kar sakte ho</Text>
+                      </View>
+                    ) : (
+                      <Bouncy style={[s.cancelBtn, { borderColor: '#e94560', borderWidth: 1 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
+                        <Text style={s.cancelTxt}>⏹️ Early End Request (mutual)</Text>
+                      </Bouncy>
+                    )
                   )}
                 </View>
               )}
