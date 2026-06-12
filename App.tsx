@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -354,6 +354,13 @@ export default function App() {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
 
+  // ── Surge + Admin Notif + Referral ───────────────
+  const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
+  const [adminNotif, setAdminNotif] = useState<any>(null);
+  const [adminNotifDismissed, setAdminNotifDismissed] = useState('');
+  const [referralInfo, setReferralInfo] = useState<any>(null);
+  const [referralLoaded, setReferralLoaded] = useState(false);
+
   // ── Driver UPI ───────────────────────────────
   const [driverUpiId, setDriverUpiId] = useState('');
   const [upiInput, setUpiInput] = useState('');
@@ -518,6 +525,14 @@ export default function App() {
   const loadBonusToday = async (ph: string) => {
     try { const r = await fetch(`${API}/api/driver/bonus-today?phone=${ph}`); const d = await r.json(); setBonusData(d); } catch (_e) {}
   };
+  const loadReferralInfo = async () => {
+    if (!phone) return;
+    try {
+      const r = await fetch(`${API}/api/referral/my-code?phone=${phone}`);
+      const d = await r.json();
+      if (d.code) { setReferralInfo(d); setReferralLoaded(true); }
+    } catch (_e) {}
+  };
   const claimBonus = async (tier: number) => {
     setBonusClaiming(true);
     try {
@@ -645,6 +660,34 @@ export default function App() {
       } catch (_e) {}
     })();
   }, [screen, phone]);
+
+  // ── Surge + Admin Notifications polling ───────────────
+  useEffect(() => {
+    if (screen !== 'home' || !phone) return;
+    const fetchSurge = async () => {
+      try {
+        const r = await fetch(`${API}/api/hourly/fares`);
+        const d = await r.json();
+        setSurgeMultiplier(parseFloat(d.surge) || 1.0);
+      } catch (_e) {}
+    };
+    const fetchNotif = async () => {
+      try {
+        const r = await fetch(`${API}/api/notifications/latest?phone=${phone}`);
+        const d = await r.json();
+        if (d.notification) setAdminNotif(d.notification);
+      } catch (_e) {}
+    };
+    fetchSurge();
+    fetchNotif();
+    const iv = setInterval(fetchNotif, 30000);
+    return () => clearInterval(iv);
+  }, [screen, phone]);
+
+  // ── Load referral info when profile tab opens ─────────
+  useEffect(() => {
+    if (activeTab === 'profile' && !referralLoaded && phone) loadReferralInfo();
+  }, [activeTab, phone]);
 
   // ── Navigate ───────────────────────────────────
   const navigateTo = (location: string, lat?: number, lng?: number) => {
@@ -788,7 +831,7 @@ export default function App() {
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
     try { await fetch(`${API}/api/driver/toggle-online`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, is_online: val }) }); } catch (_e) {}
-    if (val) { setResult('🟢 Online hain — rides aayengi!'); startPolling(phone); }
+    if (val) { setResult('🟢 Online hain — rides aayengi!'); startPolling(phone); loadDriverOffers(); }
     else { setResult('🔴 Offline hain'); stopPolling(); }
   };
 
@@ -1580,6 +1623,31 @@ export default function App() {
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
 
+          {/* Surge Active Banner */}
+          {surgeMultiplier > 1.0 && !activeRide && (
+            <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={{ fontSize: 20 }}>⚡</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: '#e65100' }}>Surge Active: {surgeMultiplier}x — Rides pe zyada kamai!</Text>
+                <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Abhi sabhi ride fares {surgeMultiplier}x hain</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Admin Notification Banner */}
+          {adminNotif && adminNotif.created_at !== adminNotifDismissed && (
+            <View style={{ borderRadius: 14, marginBottom: 10, backgroundColor: '#e3f2fd', borderWidth: 1.5, borderColor: '#1565c0', padding: 12, flexDirection: 'row', alignItems: 'center' }}>
+              <Text style={{ fontSize: 22, marginRight: 10 }}>📩</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '800', fontSize: 12, color: '#1565c0', marginBottom: 2 }}>RideApp Admin</Text>
+                <Text style={{ fontSize: 12, color: '#1a1a2e' }}>{adminNotif.body || adminNotif.title}</Text>
+              </View>
+              <TouchableOpacity onPress={() => setAdminNotifDismissed(adminNotif.created_at)} style={{ padding: 6 }}>
+                <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Driver-targeted marketing banners */}
           {driverOffers.filter(o => !offerDismissed.has(o.id)).map((offer: any) => (
             <View key={offer.id} style={{ borderRadius: 14, marginBottom: 10, backgroundColor: offer.type === 'incentive' ? '#e8f5e9' : '#fff3e0', borderWidth: 1.5, borderColor: offer.type === 'incentive' ? '#2e7d32' : '#e65100', overflow: 'hidden' }}>
@@ -1701,7 +1769,13 @@ export default function App() {
                     </View>
                   )}
                 </View>
-                <View style={s.rideHeader}><Text style={s.rideTitle}>{rideReq.ride_type === 'car' ? '🚕' : rideReq.ride_type === 'bike' ? '🏍️' : rideReq.ride_type === 'eriksha' ? '🛵' : '🛺'} {rideReq.passenger_name || 'Passenger'}</Text><Text style={s.rideFare}>₹{rideReq.fare}</Text></View>
+                <View style={s.rideHeader}>
+                  <Text style={s.rideTitle}>{rideReq.ride_type === 'car' ? '🚕' : rideReq.ride_type === 'bike' ? '🏍️' : rideReq.ride_type === 'eriksha' ? '🛵' : '🛺'} {rideReq.passenger_name || 'Passenger'}</Text>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={s.rideFare}>₹{rideReq.fare}</Text>
+                    {surgeMultiplier > 1.0 && <View style={{ backgroundColor: '#fff3e0', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, marginTop: 2 }}><Text style={{ color: '#e65100', fontSize: 10, fontWeight: '800' }}>⚡ {surgeMultiplier}x SURGE</Text></View>}
+                  </View>
+                </View>
                 <View style={s.rideDetails}>
                   <Text style={s.rideFrom}>📍 {rideReq.pickup}</Text>
                   <Text style={s.rideDivider}>↓</Text>
@@ -2118,6 +2192,41 @@ export default function App() {
             </View>
           ) : null}
           {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? '#4CAF50' : '#e94560', marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
+        </View>
+
+        {/* Referral Section */}
+        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>🎁 Refer & Earn</Text>
+          <Text style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Dosto ko refer karo — dono ko ₹50 wallet bonus milega</Text>
+          {referralInfo ? (
+            <View>
+              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Aapka Referral Code</Text>
+                <Text style={{ color: '#FFD700', fontSize: 24, fontWeight: '900', letterSpacing: 4 }}>{referralInfo.code}</Text>
+              </View>
+              <View style={{ flexDirection: 'row', marginBottom: 10 }}>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#1a1a2e' }}>{referralInfo.total_referrals}</Text>
+                  <Text style={{ fontSize: 10, color: '#999' }}>Referrals</Text>
+                </View>
+                <View style={{ flex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#4CAF50' }}>₹{referralInfo.total_earned}</Text>
+                  <Text style={{ fontSize: 10, color: '#999' }}>Earned</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 12, alignItems: 'center' }}
+                onPress={() => Share.share({ message: `RideApp pe join karo! Mera referral code use karo: ${referralInfo.code}\nDono ko ₹50 wallet bonus milega! 🎁`, title: 'RideApp Referral' })}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>📤 Code Share Karo</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }}
+              onPress={loadReferralInfo}>
+              <Text style={{ color: '#666', fontSize: 13 }}>🔑 Code Generate Karo</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {[['📋','Documents','License, RC'],['🏦','Bank Details','Payout account'],['📞','Support','24x7 help'],['⚙️','Settings','Preferences']].map(([icon,title,sub],i) => (
