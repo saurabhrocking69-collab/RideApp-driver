@@ -388,6 +388,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [loginCanResend, setLoginCanResend] = useState(false);
   const loginOtpRefs = useRef<any[]>([]);
   const [driverInfo, setDriverInfo] = useState<any>(null);
+  const [devOtp, setDevOtp]         = useState('');
 
   const DRIVERS = [
     { phone: '8888888888', name: 'Raju',   vehicle: 'UP32AB1234', type: '🛺 Auto' },
@@ -410,7 +411,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             if (data.success) {
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
-              if (data.driver.status === 'approved') { setScreen('home'); loadUpiId(savedPhone); }
+              if (data.driver.status === 'approved') { setScreen('home'); loadUpiId(savedPhone); registerFCM(savedPhone); }
             } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
           } catch (_e) { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
         }
@@ -743,6 +744,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
       const otpData = await otpRes.json();
       if (otpData.error) { setResult('❌ ' + otpData.error); setLoading(false); return; }
+      if (otpData.otp) setDevOtp(otpData.otp);
       setLoginOtpSent(true);
       setLoginResendTimer(60); setLoginCanResend(false);
       setResult('');
@@ -1164,7 +1166,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) });
                   const data = await res.json();
                   if (data.error) { setResult('❌ ' + data.error); }
-                  else { setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
+                  else { if (data.otp) setDevOtp(data.otp); setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
                 } catch (_e) { setResult('❌ Server error'); }
                 setLoading(false);
               }}>
@@ -1191,6 +1193,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 />
               ))}
             </View>
+            {/* Test OTP banner */}
+            {devOtp ? (
+              <TouchableOpacity
+                onPress={() => {
+                  const digits = devOtp.split('');
+                  setLoginOtpDigits(digits);
+                  setLoginOtp(devOtp);
+                }}
+                style={{ backgroundColor: '#1e3a5f', borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#7dd3fc', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
+                </View>
+                <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
+              </TouchableOpacity>
+            ) : null}
             {result ? <Text style={s.err}>{result}</Text> : null}
             <TouchableOpacity style={[s.btn, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.5 }]}
               disabled={loading || loginOtpDigits.join('').length < 6}
@@ -1200,7 +1219,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 try {
                   const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
                   const data = await res.json();
-                  if (data.token) { setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setRegStep(2); }
+                  if (data.token) { setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
                   else setResult('❌ ' + (data.error || 'Galat OTP'));
                 } catch (_e) { setResult('❌ Server error'); }
                 setLoading(false);
@@ -1473,7 +1492,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ fontSize: 12, color: '#e65100', flex: 1 }}>SMS aane par OTP copy karo — 6 boxes mein paste ho jaayega!</Text>
             </View>
             {/* 6 OTP Boxes */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
               {loginOtpDigits.map((digit, i) => (
                 <TextInput
                   key={i}
@@ -1485,6 +1504,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 />
               ))}
             </View>
+            {/* Test OTP banner */}
+            {devOtp ? (
+              <TouchableOpacity
+                onPress={() => { const d = devOtp.split(''); setLoginOtpDigits(d); setLoginOtp(devOtp); }}
+                style={{ backgroundColor: '#1e3a5f', borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#7dd3fc', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
+                </View>
+                <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
+              </TouchableOpacity>
+            ) : null}
             {result ? <Text style={s.err}>{result}</Text> : null}
             <Bouncy style={[s.btn, { marginBottom: 12 }, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.6 }]} disabled={loading || loginOtpDigits.join('').length < 6} onPress={() => verifyLoginOtp()}>
               <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify Karo'}</Text>
