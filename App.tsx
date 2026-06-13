@@ -1050,7 +1050,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           setActiveHourlyRide(null); setHourlyTimerSec(0); setLiveKm(0);
           setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
         }
-      } else if (data.too_early) {
+      } else if (data.too_early || data.time_locked) {
         setResult(`🔒 ${data.message}`);
       } else setResult('❌ ' + (data.message || 'Complete nahi hua'));
     } catch (_e) { setResult('❌ Network error'); }
@@ -2250,54 +2250,81 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     </View>
                   )}
 
-                  {/* Pending customer confirmation OR complete button with 20-min lock */}
-                  {activeHourlyRide.pending_customer_confirm ? (
-                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center' }}>
-                      <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 4 }}>⏳ Customer Confirmation Ka Intezaar...</Text>
-                      <Text style={{ fontSize: 12, color: '#888' }}>10 min mein auto-confirm ho jayega</Text>
-                    </View>
-                  ) : hourlyTimerSec < 20 * 60 ? (
-                    <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10 }}>
-                      <Text style={{ color: '#999', fontWeight: '700', fontSize: 14 }}>🔒 Complete in {Math.ceil(20 - hourlyTimerSec/60)} min</Text>
-                      <Text style={{ color: '#bbb', fontSize: 11, marginTop: 3 }}>Minimum 20 minutes required</Text>
-                    </View>
-                  ) : (
-                    <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50', marginBottom: 10 }]} onPress={completeHourlyTrip} disabled={loading}>
-                      <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
-                    </Bouncy>
-                  )}
+                  {/* Complete / Time-Lock / Early End — unified block */}
+                  {(() => {
+                    const totalSec = parseFloat(activeHourlyRide.package_hours || 0) * 3600;
+                    const remSec = Math.max(0, totalSec - hourlyTimerSec);
+                    const remTotalMin = Math.ceil(remSec / 60);
+                    const remH = Math.floor(remTotalMin / 60);
+                    const remM = remTotalMin % 60;
+                    const remStr = remH > 0 ? `${remH}h ${remM > 0 ? remM + 'm' : ''}` : `${remTotalMin}m`;
 
-                  {/* Early end section */}
-                  {activeHourlyRide.early_end_requested_by === 'customer' && (
-                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14 }}>
-                      <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
-                      <Text style={{ color: '#666', fontSize: 12, marginBottom: 10 }}>70% minimum aapko milega guaranteed.</Text>
-                      <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Agree</Text></Bouncy>
-                        <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                    // Early end section — reusable inside each state
+                    const EarlyEndSection = () => (
+                      activeHourlyRide.early_end_requested_by === 'customer' ? (
+                        <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginTop: 10 }}>
+                          <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
+                          <Text style={{ color: '#666', fontSize: 12, marginBottom: 10 }}>Agree karne par actual time ke hisaab se proportional payment milegi.</Text>
+                          <View style={{ flexDirection: 'row', gap: 10 }}>
+                            <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Agree</Text></Bouncy>
+                            <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                          </View>
+                        </View>
+                      ) : activeHourlyRide.early_end_requested_by === 'driver' ? (
+                        <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8 }}>
+                          <Text style={{ color: '#e65100', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
+                        </View>
+                      ) : (activeHourlyRide.early_end_reject_count || 0) >= 2 ? (
+                        <View style={{ backgroundColor: '#ffebee', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8 }}>
+                          <Text style={{ color: '#c62828', fontSize: 12, fontWeight: '700' }}>🔒 2 baar reject — Support se contact karo</Text>
+                        </View>
+                      ) : activeHourlyRide.early_end_last_rejected_at && (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime()) < 15 * 60 * 1000 ? (
+                        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8 }}>
+                          <Text style={{ color: '#999', fontSize: 12 }}>⏳ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request</Text>
+                        </View>
+                      ) : (
+                        <Bouncy style={[s.cancelBtn, { borderColor: '#ff9800', borderWidth: 1, marginTop: 8 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
+                          <Text style={[s.cancelTxt, { color: '#ff9800' }]}>⏹️ Early End Request (mutual agreement)</Text>
+                        </Bouncy>
+                      )
+                    );
+
+                    // State 1: Legacy pending customer confirm
+                    if (activeHourlyRide.pending_customer_confirm) return (
+                      <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center' }}>
+                        <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 4 }}>⏳ Customer Confirmation Ka Intezaar...</Text>
+                        <Text style={{ fontSize: 12, color: '#888' }}>10 min mein auto-confirm ho jayega</Text>
                       </View>
-                    </View>
-                  )}
-                  {activeHourlyRide.early_end_requested_by === 'driver' && (
-                    <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                      <Text style={{ color: '#e65100', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
-                    </View>
-                  )}
-                  {!activeHourlyRide.early_end_requested_by && !activeHourlyRide.pending_customer_confirm && (
-                    (activeHourlyRide.early_end_reject_count || 0) >= 2 ? (
-                      <View style={{ backgroundColor: '#ffebee', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                        <Text style={{ color: '#c62828', fontSize: 12, fontWeight: '700' }}>🔒 2 baar reject — Support se contact karo</Text>
+                    );
+
+                    // State 2: 20-min startup lock
+                    if (hourlyTimerSec < 20 * 60) return (
+                      <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10 }}>
+                        <Text style={{ color: '#999', fontWeight: '700', fontSize: 14 }}>🔒 Startup: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
+                        <Text style={{ color: '#bbb', fontSize: 11, marginTop: 3 }}>Trip start ke baad 20 min ka lock</Text>
                       </View>
-                    ) : activeHourlyRide.early_end_last_rejected_at && (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime()) < 15 * 60 * 1000 ? (
-                      <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center' }}>
-                        <Text style={{ color: '#999', fontSize: 12 }}>⏳ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request kar sakte ho</Text>
+                    );
+
+                    // State 3: Package time still remaining — locked, show early end option
+                    if (remSec > 0) return (
+                      <View style={{ marginBottom: 10 }}>
+                        <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#90caf9' }}>
+                          <Text style={{ color: '#1565c0', fontWeight: '800', fontSize: 18, marginBottom: 4 }}>⏰ {remStr} Baaki</Text>
+                          <Text style={{ color: '#1565c0', fontSize: 12, textAlign: 'center', lineHeight: 18 }}>
+                            Package time poori hone par hi{'\n'}Complete button aayega
+                          </Text>
+                        </View>
+                        <EarlyEndSection />
                       </View>
-                    ) : (
-                      <Bouncy style={[s.cancelBtn, { borderColor: '#e94560', borderWidth: 1 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
-                        <Text style={s.cancelTxt}>⏹️ Early End Request (mutual)</Text>
+                    );
+
+                    // State 4: Time complete — show complete button
+                    return (
+                      <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50', marginBottom: 10 }]} onPress={completeHourlyTrip} disabled={loading}>
+                        <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
                       </Bouncy>
-                    )
-                  )}
+                    );
+                  })()}
                 </View>
               )}
             </View>
@@ -2332,16 +2359,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#2a2a4e' }}>
                 <Text style={{ color: '#e94560', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>⏱️ Hourly / Daily — Rules & Fees</Text>
                 {[
-                  ['💰 Commission', '12% (3% discount vs standard rides!)'],
+                  ['💰 Commission', '12% platform fee — standard rides se 3% kam!'],
                   ['📦 Packages', '2h·4h·6h·8h same day | 1·2·3 din multi-day'],
-                  ['🛡️ Guarantee', 'Early end? Min 70% guaranteed milega'],
-                  ['🔐 OTP', 'Trip start ke liye customer OTP do'],
-                  ['📍 KM', 'Package KM included — extra distance pe extra charge'],
-                  ['✅ Complete', 'Actual KM darj karo — escrow release hogi'],
-                  ['🚫 Misuse', 'Package time personal kaam ke liye use mat karna'],
+                  ['🔐 OTP Start', 'Customer ka OTP verify karo — tab timer shuroo'],
+                  ['⏰ Time Lock', 'Complete button tab tak nahi aayega jab tak poora package time khatam nahi — koi shortcut nahi'],
+                  ['🤝 Early End', 'Agar dono agree karein to mutual termination — "Early End Request" se hoga, direct complete nahi'],
+                  ['🔄 Extension', 'Customer time extend kar sakta hai — aapko notification aayega, accept/reject karein'],
+                  ['🗓️ Schedule', 'Scheduled rides 75 min window mein dikhti hain — accept karo, time pe jaao'],
+                  ['📍 Extra KM', 'Package KM se zyada chale to customer se extra charge lega system automatically'],
+                  ['🛡️ Escrow', 'Payment safely hold hota hai — trip complete ya early end pe aapko milega'],
+                  ['🚫 Misuse', 'Package time sirf customer ke kaam ke liye — personal use billing fraud hai'],
                 ].map(([icon, text], i) => (
-                  <View key={i} style={{ flexDirection: 'row', marginBottom: 7 }}>
-                    <Text style={{ color: '#aaa', fontSize: 12, fontWeight: '700', width: 100 }}>{icon}</Text>
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
+                    <Text style={{ color: '#e94560', fontSize: 11, fontWeight: '700', width: 105 }}>{icon}</Text>
                     <Text style={{ color: '#ccc', fontSize: 11, flex: 1, lineHeight: 16 }}>{text}</Text>
                   </View>
                 ))}
@@ -2415,7 +2445,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
           <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 14, marginBottom: 14 }}>
             <Text style={{ fontSize: 13, color: '#2e7d32', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
-            <Text style={{ fontSize: 12, color: '#4CAF50', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}70% minimum guaranteed on early end</Text>
+            <Text style={{ fontSize: 12, color: '#4CAF50', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
           </View>
           {/* Payout */}
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14 }}>
