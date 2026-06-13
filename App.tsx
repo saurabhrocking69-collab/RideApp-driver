@@ -2062,7 +2062,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   {/* Extension request from customer */}
                   {!!activeHourlyRide.extend_requested_hours && (
                     <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14, marginBottom: 10 }}>
-                      <Text style={{ fontWeight: 'bold', color: '#1565c0', marginBottom: 4 }}>📅 Customer +{activeHourlyRide.extend_requested_hours}h Extend Chahta Hai</Text>
+                      {(() => {
+                        const dec = parseFloat(activeHourlyRide.extend_requested_hours);
+                        const hrs = Math.floor(dec);
+                        const mins = Math.round((dec - hrs) * 60);
+                        const label = hrs > 0 && mins > 0 ? `${hrs}h ${mins}m` : hrs > 0 ? `${hrs}h` : `${mins} min`;
+                        return <Text style={{ fontWeight: 'bold', color: '#1565c0', marginBottom: 4 }}>📅 Customer +{label} Extend Chahta Hai</Text>;
+                      })()}
                       <Text style={{ fontSize: 12, color: '#555', marginBottom: 10 }}>Agree karne se trip extend hogi — paise escrow mein hain</Text>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
                         <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Accept</Text></Bouncy>
