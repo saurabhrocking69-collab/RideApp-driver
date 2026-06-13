@@ -378,7 +378,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // Registration
   const [regStep, setRegStep]       = useState(0);
-  const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_brand:'', vehicle_no:'', dl_name:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
+  const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_brand:'', vehicle_model:'', vehicle_no:'', dl_name:'', dl_number:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
   const [uploading, setUploading]   = useState('');
   const [loginPhone, setLoginPhone] = useState('');
   const [loginOtp, setLoginOtp]     = useState('');
@@ -1148,6 +1148,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Text style={rs.regTitle}>Step 1 of 5</Text>
         <View style={{ width: 50 }} />
       </View>
+      <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '20%' }} /></View>
       <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         {!loginOtpSent ? (
           <View>
@@ -1250,6 +1251,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (screen === 'login' && regStep === 2) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
+      <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '40%' }} /></View>
       <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>🚗 Vehicle Type</Text><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
         {[
@@ -1261,7 +1263,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ].map(v => (
           <TouchableOpacity key={v.id}
             style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive, v.id === 'ultra_luxury' && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : '#c9a227' }]}
-            onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); }}>
+            onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); updateReg('vehicle_model', ''); }}>
             <Text style={{ fontSize: 32, marginRight: 16 }}>{v.icon}</Text>
             <View style={{ flex: 1 }}>
               <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1a1a2e' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
@@ -1276,70 +1278,59 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   );
 
   // ═══ REGISTRATION STEP 3 — DL ═══
-  if (screen === 'login' && regStep === 3) return (
-    <View style={s.screen}>
-      <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(2)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 3 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-        <Text style={rs.bigTitle}>📄 Driving License</Text><Text style={rs.subTitle}>DL ki photo aur naam</Text>
-        <View style={rs.adviceBox}>
-          <Text style={rs.adviceTitle}>📸 Photo Tips:</Text>
-          <Text style={rs.adviceText}>• DL ka front side clear photo lo</Text>
-          <Text style={rs.adviceText}>• Achhi roshni mein photo lo</Text>
-          <Text style={[rs.adviceText, { marginTop: 6, fontWeight: '600', color: '#c62828' }]}>⚠️ Har ride pe DL saath rakhna zaruri hai!</Text>
-        </View>
-        <Text style={rs.fieldLabel}>DL pe likha naam</Text>
-        <TextInput style={rs.input} placeholder="Pura naam jaisa DL pe hai" value={regData.dl_name} onChangeText={(v) => updateReg('dl_name', v)} />
-        <Text style={rs.fieldLabel}>DL Photo (front side)</Text>
-        <PhotoBox field="dl_photo" label="DL Photo" icon="📄" />
-        {result ? <Text style={s.err}>{result}</Text> : null}
-        <TouchableOpacity style={[s.btn, (!regData.dl_name || !regData.dl_photo) && { opacity: 0.5 }]} disabled={!regData.dl_name || !regData.dl_photo} onPress={() => { setResult(''); setRegStep(4); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
-        <View style={{ height: 30 }} />
-      </ScrollView>
-    </View>
-  );
-
-  // ═══ REGISTRATION STEP 4 — Vehicle ═══
-  if (screen === 'login' && regStep === 4) {
-    const needBrand = ['bike','car','ultra_luxury'].includes(regData.vehicle_type);
-    const needNum = !['eriksha'].includes(regData.vehicle_type);
-    const brandValid = !needBrand || !!regData.vehicle_brand;
-    const step4Ok = regData.vehicle_photo && (!needNum || regData.vehicle_no) && brandValid;
-    const LUXURY_BRANDS = ['BMW','Mercedes-Benz','Audi','Land Rover','Lexus'];
+  if (screen === 'login' && regStep === 3) {
+    const dlCleaned = regData.dl_number.replace(/\s/g, '').toUpperCase();
+    const dlValid = dlCleaned.length === 0 || /^[A-Z]{2}[0-9]{13}$/.test(dlCleaned);
+    const step3Ok = !!regData.dl_name.trim() && dlCleaned.length === 15 && dlValid && !!regData.dl_photo;
     return (
       <View style={s.screen}>
-        <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 4 of 5</Text><View style={{ width: 50 }} /></View>
+        <View style={rs.regHeader}>
+          <TouchableOpacity onPress={() => setRegStep(2)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
+          <Text style={rs.regTitle}>Step 3 of 5</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '60%' }} /></View>
         <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-          <Text style={rs.bigTitle}>🚗 Vehicle Details</Text>
-          <Text style={rs.subTitle}>{regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' : regData.vehicle_type === 'ultra_luxury' ? '💎 Ultra Luxury: premium vehicle details' : 'Vehicle number aur front photo'}</Text>
+          <Text style={rs.bigTitle}>📄 Driving License</Text>
+          <Text style={rs.subTitle}>DL ki details — naam, number aur photo</Text>
 
-          {/* Brand — for bike, car, ultra_luxury */}
-          {needBrand && (
-            <>
-              <Text style={rs.fieldLabel}>Vehicle Company / Brand *</Text>
-              {regData.vehicle_type === 'ultra_luxury' ? (
-                <View style={{ marginBottom: 14 }}>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {LUXURY_BRANDS.map(b => (
-                      <TouchableOpacity key={b} onPress={() => updateReg('vehicle_brand', b)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: regData.vehicle_brand === b ? '#1a1a2e' : '#f5f5f5', borderWidth: 1, borderColor: regData.vehicle_brand === b ? '#c9a227' : '#e0e0e0' }}>
-                        <Text style={{ fontWeight: '700', color: regData.vehicle_brand === b ? '#c9a227' : '#333', fontSize: 13 }}>{b}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                  {regData.vehicle_brand ? <Text style={{ color: '#2e7d32', fontSize: 12, marginTop: 6 }}>✅ Selected: {regData.vehicle_brand}</Text> : <Text style={{ color: '#e65100', fontSize: 12, marginTop: 6 }}>Ek brand select karo</Text>}
-                </View>
-              ) : (
-                <TextInput style={[rs.input, { marginBottom: 14 }]} placeholder={regData.vehicle_type === 'bike' ? 'eg. Honda, Bajaj, Royal Enfield' : 'eg. Maruti, Hyundai, Tata'} value={regData.vehicle_brand} onChangeText={(v) => updateReg('vehicle_brand', v)} />
-              )}
-            </>
-          )}
+          <View style={rs.adviceBox}>
+            <Text style={rs.adviceTitle}>📸 DL Photo Tips:</Text>
+            <Text style={rs.adviceText}>• DL ka front side — clear aur bright photo lo</Text>
+            <Text style={rs.adviceText}>• Sab kuch readable ho — naam, number, expiry</Text>
+            <Text style={[rs.adviceText, { marginTop: 6, fontWeight: '700', color: '#c62828' }]}>⚠️ Expired DL mat submit karo — reject ho jayega</Text>
+          </View>
 
-          <Text style={rs.fieldLabel}>Vehicle Number {needNum ? '' : '(optional)'}</Text>
-          <TextInput style={rs.input} placeholder="UP32 AB 1234" autoCapitalize="characters" value={regData.vehicle_no} onChangeText={(v) => updateReg('vehicle_no', v)} />
-          <Text style={rs.fieldLabel}>Vehicle Front Photo</Text><PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="🚗" />
-          <Text style={rs.fieldLabel}>RC Photo (optional)</Text><PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
+          <Text style={rs.fieldLabel}>DL pe likha naam *</Text>
+          <TextInput style={rs.input} placeholder="Full name jaise DL pe hai" value={regData.dl_name} onChangeText={(v) => updateReg('dl_name', v)} />
+
+          <Text style={rs.fieldLabel}>DL Number *</Text>
+          <TextInput
+            style={[rs.input, { letterSpacing: 1 }]}
+            placeholder="UP14 2021 0012345"
+            autoCapitalize="characters"
+            maxLength={17}
+            value={regData.dl_number}
+            onChangeText={(v) => updateReg('dl_number', v.replace(/[^A-Z0-9\s]/gi, '').toUpperCase())}
+          />
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 }}>
+            {dlCleaned.length === 0 ? (
+              <Text style={{ fontSize: 11, color: '#888' }}>Format: XX00 YYYY XXXXXXX (2 letter + 13 digits)</Text>
+            ) : dlValid && dlCleaned.length === 15 ? (
+              <Text style={{ fontSize: 11, color: '#2e7d32', fontWeight: '700' }}>✅ DL number format sahi hai</Text>
+            ) : (
+              <Text style={{ fontSize: 11, color: '#e65100' }}>⚠️ {15 - dlCleaned.length} characters baaki — Format: UP14 2021 0012345</Text>
+            )}
+          </View>
+
+          <Text style={rs.fieldLabel}>DL Photo (front side clear) *</Text>
+          <PhotoBox field="dl_photo" label="DL Photo" icon="📄" />
+
           {result ? <Text style={s.err}>{result}</Text> : null}
-          <TouchableOpacity style={[s.btn, !step4Ok && { opacity: 0.5 }]} disabled={!step4Ok} onPress={() => { setResult(''); setRegStep(5); }}>
+          <TouchableOpacity
+            style={[s.btn, !step3Ok && { opacity: 0.5 }]}
+            disabled={!step3Ok}
+            onPress={() => { setResult(''); setRegStep(4); }}>
             <Text style={s.btnTxt}>Aage badho →</Text>
           </TouchableOpacity>
           <View style={{ height: 30 }} />
@@ -1348,26 +1339,208 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     );
   }
 
+  // ═══ REGISTRATION STEP 4 — Vehicle ═══
+  if (screen === 'login' && regStep === 4) {
+    const needBrand  = ['bike','car','ultra_luxury'].includes(regData.vehicle_type);
+    const needModel  = !['eriksha'].includes(regData.vehicle_type);
+    const needNum    = !['eriksha'].includes(regData.vehicle_type);
+    const brandValid = !needBrand || !!regData.vehicle_brand;
+    const modelValid = !needModel || !!regData.vehicle_model.trim();
+    const vnCleaned  = regData.vehicle_no.replace(/\s/g, '').toUpperCase();
+    const vnValid    = !needNum || /^[A-Z]{2}[0-9]{2}[A-Z]{1,3}[0-9]{4}$/.test(vnCleaned);
+    const step4Ok    = !!regData.vehicle_photo && (!needNum || (!!regData.vehicle_no && vnValid)) && brandValid && modelValid;
+
+    const LUXURY_BRANDS = ['BMW','Mercedes-Benz','Audi','Land Rover','Lexus'];
+    const LUXURY_MODELS: any = {
+      'BMW':          ['3 Series','5 Series','7 Series','X1','X3','X5','X7'],
+      'Mercedes-Benz':['C Class','E Class','S Class','GLA','GLC','GLE','GLS'],
+      'Audi':         ['A4','A6','A8','Q3','Q5','Q7','Q8'],
+      'Land Rover':   ['Defender','Discovery','Evoque','Range Rover Sport','Range Rover'],
+      'Lexus':        ['ES 300h','NX','RX 350','UX 300e','LX'],
+    };
+    const modelPlaceholder: any = {
+      bike:  'eg. Activa 6G, Splendor Plus, Pulsar 150, Royal Enfield Classic',
+      car:   'eg. Swift Dzire, Creta, Nexon, City, Fortuner',
+      auto:  'eg. Bajaj RE, TVS King, Piaggio Ape',
+    };
+
+    return (
+      <View style={s.screen}>
+        <View style={rs.regHeader}>
+          <TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
+          <Text style={rs.regTitle}>Step 4 of 5</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '80%' }} /></View>
+        <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+          <Text style={rs.bigTitle}>{regData.vehicle_type === 'ultra_luxury' ? '💎' : '🚗'} Vehicle Details</Text>
+          <Text style={rs.subTitle}>
+            {regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' :
+             regData.vehicle_type === 'ultra_luxury' ? 'Premium vehicle — brand, model aur number' :
+             'Brand, model, number aur photos'}
+          </Text>
+
+          {/* ── Brand ── */}
+          {needBrand && (
+            <>
+              <Text style={rs.fieldLabel}>Vehicle Brand / Company *</Text>
+              {regData.vehicle_type === 'ultra_luxury' ? (
+                <View style={{ marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+                    {LUXURY_BRANDS.map(b => (
+                      <TouchableOpacity key={b}
+                        onPress={() => { updateReg('vehicle_brand', b); updateReg('vehicle_model', ''); }}
+                        style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: regData.vehicle_brand === b ? '#1a1a2e' : '#fff8e1', borderWidth: 2, borderColor: regData.vehicle_brand === b ? '#c9a227' : '#ffe082' }}>
+                        <Text style={{ fontWeight: '700', color: regData.vehicle_brand === b ? '#ffd700' : '#b8860b', fontSize: 13 }}>{b}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {regData.vehicle_brand
+                    ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>✅ {regData.vehicle_brand}</Text>
+                    : <Text style={{ color: '#e65100', fontSize: 12 }}>Ek brand select karo</Text>}
+                </View>
+              ) : (
+                <TextInput
+                  style={[rs.input, { marginBottom: 6 }]}
+                  placeholder={regData.vehicle_type === 'bike' ? 'eg. Honda, Bajaj, Royal Enfield, TVS' : 'eg. Maruti, Hyundai, Tata, Honda'}
+                  value={regData.vehicle_brand}
+                  onChangeText={(v) => updateReg('vehicle_brand', v)}
+                />
+              )}
+            </>
+          )}
+
+          {/* ── Model ── */}
+          {needModel && (
+            <>
+              <Text style={rs.fieldLabel}>Vehicle Model *</Text>
+              {regData.vehicle_type === 'ultra_luxury' && regData.vehicle_brand ? (
+                <View style={{ marginBottom: 6 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
+                    {(LUXURY_MODELS[regData.vehicle_brand] || []).map((m: string) => (
+                      <TouchableOpacity key={m} onPress={() => updateReg('vehicle_model', m)}
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: regData.vehicle_model === m ? '#1a1a2e' : '#f5f5f5', borderWidth: 1, borderColor: regData.vehicle_model === m ? '#e94560' : '#e0e0e0' }}>
+                        <Text style={{ fontWeight: '600', color: regData.vehicle_model === m ? '#fff' : '#333', fontSize: 13 }}>{m}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                  {regData.vehicle_model
+                    ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>✅ Model: {regData.vehicle_model}</Text>
+                    : <Text style={{ color: '#e65100', fontSize: 12 }}>{regData.vehicle_brand ? 'Model select karo' : 'Pehle brand select karo'}</Text>}
+                </View>
+              ) : regData.vehicle_type === 'ultra_luxury' ? (
+                <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 8 }}>
+                  <Text style={{ color: '#e65100', fontSize: 13 }}>Pehle upar brand select karo — fir model dikhega</Text>
+                </View>
+              ) : (
+                <>
+                  <TextInput
+                    style={[rs.input, { marginBottom: 4 }]}
+                    placeholder={modelPlaceholder[regData.vehicle_type] || 'Vehicle model likhao'}
+                    value={regData.vehicle_model}
+                    onChangeText={(v) => updateReg('vehicle_model', v)}
+                  />
+                  <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Model = brand ke baad ka specific name (eg. Hyundai → Creta)</Text>
+                </>
+              )}
+            </>
+          )}
+
+          {/* ── Vehicle Number ── */}
+          <Text style={rs.fieldLabel}>Vehicle Number {needNum ? '*' : '(optional)'}</Text>
+          <TextInput
+            style={rs.input}
+            placeholder="UP32 AB 1234"
+            autoCapitalize="characters"
+            value={regData.vehicle_no}
+            onChangeText={(v) => updateReg('vehicle_no', v.replace(/[^A-Z0-9\s]/gi, '').toUpperCase())}
+          />
+          {regData.vehicle_no ? (
+            <Text style={{ fontSize: 11, marginTop: 5, color: vnValid ? '#2e7d32' : '#e65100' }}>
+              {vnValid ? '✅ Format sahi — ' + vnCleaned : '⚠️ Format: UP32AB1234 (2 letter + 2 digit + letters + 4 digit)'}
+            </Text>
+          ) : null}
+
+          {/* ── Photos ── */}
+          <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Vehicle Front Photo *</Text>
+          <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Number plate clearly visible honi chahiye</Text>
+          <PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="🚗" />
+
+          <Text style={[rs.fieldLabel, { marginTop: 14 }]}>RC (Registration Certificate) Photo</Text>
+          <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Optional — lekin jaldi verify hoga agar doge</Text>
+          <PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
+
+          {result ? <Text style={s.err}>{result}</Text> : null}
+          <TouchableOpacity style={[s.btn, !step4Ok && { opacity: 0.5 }]} disabled={!step4Ok} onPress={() => { setResult(''); setRegStep(5); }}>
+            <Text style={s.btnTxt}>Aage badho →</Text>
+          </TouchableOpacity>
+          <View style={{ height: 40 }} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   // ═══ REGISTRATION STEP 5 — Aadhaar + Selfie ═══
-  if (screen === 'login' && regStep === 5) return (
-    <View style={s.screen}>
-      <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(4)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 5 of 5</Text><View style={{ width: 50 }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-        <Text style={rs.bigTitle}>🪪 Aadhaar & Photo</Text><Text style={rs.subTitle}>Last step!</Text>
-        <Text style={rs.fieldLabel}>Aadhaar Number</Text>
-        <TextInput style={rs.input} placeholder="12 digit Aadhaar" keyboardType="numeric" maxLength={12} value={regData.aadhaar_number} onChangeText={(v) => updateReg('aadhaar_number', v)} />
-        <Text style={rs.fieldLabel}>Aadhaar Photo</Text><PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="🪪" />
-        <Text style={rs.fieldLabel}>Apni Selfie / Face Photo</Text>
-        <Text style={{ fontSize: 11, color: '#c62828', marginBottom: 8 }}>🔒 Security: Sirf live selfie le sakte ho, gallery se nahi</Text>
-        <PhotoBox field="face_photo" label="Face Photo" icon="🤳" cameraOnly />
-        {result ? <Text style={s.err}>{result}</Text> : null}
-        <TouchableOpacity style={[s.btn, (!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo) && { opacity: 0.5 }]} disabled={!regData.aadhaar_number || !regData.aadhaar_photo || !regData.face_photo || loading} onPress={submitRegistration}>
-          <Text style={s.btnTxt}>{loading ? 'Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
-        </TouchableOpacity>
-        <View style={{ height: 60 }} />
-      </ScrollView>
-    </View>
-  );
+  if (screen === 'login' && regStep === 5) {
+    const aadhaarDigits = regData.aadhaar_number.replace(/\D/g, '');
+    const aadhaarOk = aadhaarDigits.length === 12;
+    const step5Ok = aadhaarOk && !!regData.aadhaar_photo && !!regData.face_photo;
+    return (
+      <View style={s.screen}>
+        <View style={rs.regHeader}>
+          <TouchableOpacity onPress={() => setRegStep(4)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
+          <Text style={rs.regTitle}>Step 5 of 5</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '100%' }} /></View>
+        <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+          <Text style={rs.bigTitle}>🪪 Aadhaar & Selfie</Text>
+          <Text style={rs.subTitle}>Last step — aur aap ho jayenge!</Text>
+
+          <View style={[rs.adviceBox, { backgroundColor: '#e8f5e9' }]}>
+            <Text style={[rs.adviceTitle, { color: '#2e7d32' }]}>🔒 Privacy Note:</Text>
+            <Text style={[rs.adviceText, { color: '#388e3c' }]}>• Aapka Aadhaar sirf verification ke liye hai</Text>
+            <Text style={[rs.adviceText, { color: '#388e3c' }]}>• Documents securely store kiye jaate hain</Text>
+          </View>
+
+          <Text style={rs.fieldLabel}>Aadhaar Number *</Text>
+          <TextInput
+            style={[rs.input, { letterSpacing: 4 }]}
+            placeholder="1234 5678 9012"
+            keyboardType="numeric"
+            maxLength={14}
+            value={aadhaarDigits.replace(/(\d{4})(\d{0,4})(\d{0,4})/, (_, a, b, c) => [a, b, c].filter(Boolean).join(' '))}
+            onChangeText={(v) => updateReg('aadhaar_number', v.replace(/\D/g, '').slice(0, 12))}
+          />
+          {aadhaarDigits.length > 0 && (
+            <Text style={{ fontSize: 11, marginTop: 5, color: aadhaarOk ? '#2e7d32' : '#e65100' }}>
+              {aadhaarOk ? '✅ 12 digit Aadhaar sahi hai' : `⚠️ ${12 - aadhaarDigits.length} digit aur chahiye`}
+            </Text>
+          )}
+
+          <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Aadhaar Photo *</Text>
+          <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Front side — naam aur number clearly visible ho</Text>
+          <PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="🪪" />
+
+          <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Live Selfie *</Text>
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>🔒</Text>
+            <Text style={{ fontSize: 11, color: '#e65100', flex: 1 }}>Sirf live camera se selfie — gallery se upload nahi hoga. Saaf light mein, seedha chehra.</Text>
+          </View>
+          <PhotoBox field="face_photo" label="Live Selfie" icon="🤳" cameraOnly />
+
+          {result ? <Text style={s.err}>{result}</Text> : null}
+          <TouchableOpacity
+            style={[s.btn, !step5Ok && { opacity: 0.5 }, { marginTop: 20 }]}
+            disabled={!step5Ok || loading}
+            onPress={submitRegistration}>
+            <Text style={s.btnTxt}>{loading ? '⏳ Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
+          </TouchableOpacity>
+          <View style={{ height: 60 }} />
+        </ScrollView>
+      </View>
+    );
+  }
 
   // ═══ REGISTRATION DONE ═══
   if (screen === 'login' && regStep === 99) return (
