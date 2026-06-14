@@ -1613,11 +1613,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={s.hero}>
         <Text style={{ fontSize: 70 }}>🎉</Text>
         <Text style={s.heroTitle}>Application Submit!</Text>
-        <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Spero Buddy Captain</Text>
+        <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Sppero Buddy Captain</Text>
       </View>
       <View style={{ padding: 24, alignItems: 'center' }}>
         <Text style={{ fontSize: 16, color: '#333', textAlign: 'center', lineHeight: 26 }}>
-          Aapki Spero Buddy Captain application submit ho gayi! ✅{'\n\n'}Admin aapke sare documents — DL, Aadhaar, Vehicle aur Selfie — verify karega.
+          Aapki Sppero Buddy Captain application submit ho gayi! ✅{'\n\n'}Admin aapke sare documents — DL, Aadhaar, Vehicle aur Selfie — verify karega.
         </Text>
         <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 16, marginTop: 16, width: '100%' }}>
           <Text style={{ color: '#2e7d32', textAlign: 'center', fontWeight: '600', fontSize: 13 }}>✅ Verification hone ke baad app khud notify kar dega</Text>
@@ -1646,7 +1646,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={s.hero}>
           <Text style={{ fontSize: 70 }}>{cfg.icon}</Text>
           <Text style={s.heroTitle}>{cfg.title}</Text>
-          <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Spero Buddy Captain</Text>
+          <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Sppero Buddy Captain</Text>
         </View>
         <View style={{ padding: 24 }}>
           <View style={{ backgroundColor: cfg.bg, borderRadius: 14, padding: 20, marginBottom: 20 }}>
@@ -1676,7 +1676,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <View style={s.hero}>
         <Text style={s.heroIcon}>🚖</Text>
-        <Text style={s.heroTitle}>Spero Buddy</Text>
+        <Text style={s.heroTitle}>Sppero Buddy</Text>
         <Text style={s.heroSub}>Captain Login</Text>
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} keyboardShouldPersistTaps="handled">
@@ -1693,7 +1693,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
             </Bouncy>
             <Bouncy style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
-              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Spero Buddy Captain Banein</Text>
+              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
             </Bouncy>
             {/* Test drivers */}
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
@@ -1826,7 +1826,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
         {/* ── My UPI QR — customer scan kar sakta hai ── */}
         {driverUpiId ? (() => {
-          const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=RideApp%20Trip`;
+          const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=Sppero%20Trip`;
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(upiLink)}`;
           return (
             <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 3, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}>
@@ -2048,7 +2048,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ borderRadius: 14, marginBottom: 10, backgroundColor: '#e3f2fd', borderWidth: 1.5, borderColor: '#1565c0', padding: 12, flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: 22, marginRight: 10 }}>📩</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 12, color: '#1565c0', marginBottom: 2 }}>RideApp Admin</Text>
+                <Text style={{ fontWeight: '800', fontSize: 12, color: '#1565c0', marginBottom: 2 }}>Sppero Admin</Text>
                 <Text style={{ fontSize: 12, color: '#1a1a2e' }}>{adminNotif.body || adminNotif.title}</Text>
               </View>
               <TouchableOpacity onPress={() => setAdminNotifDismissed(adminNotif.created_at)} style={{ padding: 6 }}>
@@ -2739,7 +2739,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
               <TouchableOpacity
                 style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 12, alignItems: 'center' }}
-                onPress={() => Share.share({ message: `RideApp pe join karo! Mera referral code use karo: ${referralInfo.code}\nDono ko ₹50 wallet bonus milega! 🎁`, title: 'RideApp Referral' })}>
+                onPress={() => Share.share({ message: `Sppero Buddy pe join karo! Mera referral code use karo: ${referralInfo.code}\nDono ko ₹50 wallet bonus milega! 🎁`, title: 'Sppero Buddy Referral' })}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>📤 Code Share Karo</Text>
               </TouchableOpacity>
             </View>
