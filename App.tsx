@@ -1314,10 +1314,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           { id:'auto', icon:'🛺', label:'Auto', sub:'' },
           { id:'car', icon:'🚕', label:'Car / Taxi', sub:'' },
           { id:'eriksha', icon:'🛵', label:'E-Riksha', sub:'' },
-          { id:'ultra_luxury', icon:'💎', label:'Ultra Luxury', sub:'BMW · Mercedes · Audi · Land Rover · Lexus' },
+          { id:'luxury', icon:'💎', label:'Ultra Luxury', sub:'BMW · Mercedes · Audi · Land Rover · Lexus' },
         ].map(v => (
           <TouchableOpacity key={v.id}
-            style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive, v.id === 'ultra_luxury' && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : '#c9a227' }]}
+            style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive, v.id === 'luxury' && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : '#c9a227' }]}
             onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); updateReg('vehicle_model', ''); }}>
             <Text style={{ fontSize: 32, marginRight: 16 }}>{v.icon}</Text>
             <View style={{ flex: 1 }}>
@@ -1396,7 +1396,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ REGISTRATION STEP 4 — Vehicle ═══
   if (screen === 'login' && regStep === 4) {
-    const needBrand  = ['bike','car','ultra_luxury'].includes(regData.vehicle_type);
+    const needBrand  = ['bike','car','luxury'].includes(regData.vehicle_type);
     const needModel  = !['eriksha'].includes(regData.vehicle_type);
     const needNum    = !['eriksha'].includes(regData.vehicle_type);
     const brandValid = !needBrand || !!regData.vehicle_brand;
@@ -1428,10 +1428,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '80%' }} /></View>
         <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-          <Text style={rs.bigTitle}>{regData.vehicle_type === 'ultra_luxury' ? '💎' : '🚗'} Vehicle Details</Text>
+          <Text style={rs.bigTitle}>{regData.vehicle_type === 'luxury' ? '💎' : '🚗'} Vehicle Details</Text>
           <Text style={rs.subTitle}>
             {regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' :
-             regData.vehicle_type === 'ultra_luxury' ? 'Premium vehicle — brand, model aur number' :
+             regData.vehicle_type === 'luxury' ? 'Premium vehicle — brand, model aur number' :
              'Brand, model, number aur photos'}
           </Text>
 
@@ -1439,7 +1439,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {needBrand && (
             <>
               <Text style={rs.fieldLabel}>Vehicle Brand / Company *</Text>
-              {regData.vehicle_type === 'ultra_luxury' ? (
+              {regData.vehicle_type === 'luxury' ? (
                 <View style={{ marginBottom: 6 }}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
                     {LUXURY_BRANDS.map(b => (
@@ -1469,7 +1469,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {needModel && (
             <>
               <Text style={rs.fieldLabel}>Vehicle Model *</Text>
-              {regData.vehicle_type === 'ultra_luxury' && regData.vehicle_brand ? (
+              {regData.vehicle_type === 'luxury' && regData.vehicle_brand ? (
                 <View style={{ marginBottom: 6 }}>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
                     {(LUXURY_MODELS[regData.vehicle_brand] || []).map((m: string) => (
@@ -1483,7 +1483,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>✅ Model: {regData.vehicle_model}</Text>
                     : <Text style={{ color: '#e65100', fontSize: 12 }}>{regData.vehicle_brand ? 'Model select karo' : 'Pehle brand select karo'}</Text>}
                 </View>
-              ) : regData.vehicle_type === 'ultra_luxury' ? (
+              ) : regData.vehicle_type === 'luxury' ? (
                 <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 8 }}>
                   <Text style={{ color: '#e65100', fontSize: 13 }}>Pehle upar brand select karo — fir model dikhega</Text>
                 </View>
