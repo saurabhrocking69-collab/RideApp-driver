@@ -299,10 +299,14 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
   );
 };
 
-type Screen = 'login' | 'home';
+type Screen = 'splash' | 'login' | 'home';
 
 export default function App() {
-  const [screen, setScreen]         = useState<Screen>('login');
+  const [screen, setScreen]         = useState<Screen>('splash');
+  const splashLogo  = useRef(new Animated.Value(0)).current;
+  const splashScale = useRef(new Animated.Value(0.3)).current;
+  const splashTag   = useRef(new Animated.Value(0)).current;
+  const splashFade  = useRef(new Animated.Value(1)).current;
   const dstore = useDriverStore();
   // Store watcher — guaranteed UI update
   useEffect(() => {
@@ -402,9 +406,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   ];
   const selectedDriver = DRIVERS.find(d => d.phone === phone);
 
-  // ── Auto login ─────────────────────────────────
+  // ── Splash + Auto login ────────────────────────
   useEffect(() => {
-    (async () => {
+    // Logo spring pop-in
+    Animated.parallel([
+      Animated.spring(splashScale, { toValue: 1, friction: 5, tension: 55, useNativeDriver: true }),
+      Animated.timing(splashLogo,  { toValue: 1, duration: 480, useNativeDriver: true }),
+    ]).start();
+    // Tagline slides up after logo settles
+    setTimeout(() => {
+      Animated.timing(splashTag, { toValue: 1, duration: 380, useNativeDriver: true }).start();
+    }, 620);
+    // After 2.6s — check session then fade out
+    const timer = setTimeout(async () => {
+      let navTo: Screen = 'login';
       try {
         const savedPhone = await AsyncStorage.getItem('driverPhone');
         const savedInfo  = await AsyncStorage.getItem('driverInfo');
@@ -416,12 +431,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             if (data.success) {
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
-              if (data.driver.status === 'approved') { setScreen('home'); loadUpiId(savedPhone); registerFCM(savedPhone); }
-            } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
-          } catch (_e) { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); setScreen('home'); }
+              if (data.driver.status === 'approved') { navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); }
+            } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); navTo = 'home'; }
+          } catch (_e) { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); navTo = 'home'; }
         }
       } catch (_e) {}
-    })();
+      Animated.timing(splashFade, { toValue: 0, duration: 320, useNativeDriver: true }).start(() => setScreen(navTo));
+    }, 2600);
+    return () => clearTimeout(timer);
   }, []);
   // ── Initial GPS (for pickup distance before going online) ─
   useEffect(() => {
@@ -484,6 +501,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Android Back Button ───────────────────────
   useEffect(() => {
     const backAction = () => {
+      if (screen === 'splash') return true; // Block back on splash
       if (screen === 'login' && regStep === 0) return false; // App exit
       if (screen === 'login' && regStep > 0) {
         if (regStep === 99) { setRegStep(0); return true; }
@@ -1201,6 +1219,66 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
       )}
     </View>
+  );
+
+  // ═══ SPLASH SCREEN ═══
+  if (screen === 'splash') return (
+    <Animated.View style={{ flex: 1, backgroundColor: '#080E18', alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
+      {/* Green glow circle top-right */}
+      <View style={{ position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(76,175,80,0.08)' }} />
+      {/* Red accent circle bottom-left */}
+      <View style={{ position: 'absolute', bottom: -100, left: -100, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(233,69,96,0.06)' }} />
+      {/* Center glow ring */}
+      <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, borderWidth: 1, borderColor: 'rgba(76,175,80,0.12)' }} />
+
+      {/* Logo box — spring animated */}
+      <Animated.View style={{
+        width: 114, height: 114, borderRadius: 30, backgroundColor: '#0F1923',
+        borderWidth: 2, borderColor: '#4CAF50',
+        alignItems: 'center', justifyContent: 'center',
+        elevation: 20,
+        shadowColor: '#4CAF50', shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 22,
+        opacity: splashLogo,
+        transform: [{ scale: splashScale }],
+      }}>
+        <Text style={{ fontSize: 52 }}>🚗</Text>
+      </Animated.View>
+
+      {/* Brand name */}
+      <Animated.View style={{ alignItems: 'center', marginTop: 22, opacity: splashLogo }}>
+        <Text style={{ color: '#ffffff', fontSize: 40, fontWeight: '900', letterSpacing: 0.5 }}>
+          Sppero <Text style={{ color: '#4CAF50' }}>Buddy</Text>
+        </Text>
+        <View style={{ width: 48, height: 2, backgroundColor: '#4CAF50', borderRadius: 1, marginTop: 8, opacity: 0.7 }} />
+      </Animated.View>
+
+      {/* Tagline — slides up */}
+      <Animated.View style={{
+        opacity: splashTag,
+        transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
+        alignItems: 'center', marginTop: 12,
+      }}>
+        <Text style={{ color: '#6B7280', fontSize: 14, letterSpacing: 0.6 }}>Lucknow ka best earning partner</Text>
+      </Animated.View>
+
+      {/* Captain badge */}
+      <Animated.View style={{
+        opacity: splashTag,
+        marginTop: 32,
+        backgroundColor: 'rgba(76,175,80,0.1)',
+        borderRadius: 20, borderWidth: 1, borderColor: 'rgba(76,175,80,0.3)',
+        paddingHorizontal: 18, paddingVertical: 8,
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+      }}>
+        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50' }} />
+        <Text style={{ color: '#4CAF50', fontSize: 12, fontWeight: '700', letterSpacing: 1.2 }}>CAPTAIN PORTAL</Text>
+      </Animated.View>
+
+      {/* Animated dots at bottom */}
+      <View style={{ position: 'absolute', bottom: 54, alignItems: 'center' }}>
+        <FloatingDots color="#4CAF50" />
+      </View>
+    </Animated.View>
   );
 
   // ═══ REGISTRATION STEP 1 — Phone + OTP ═══
