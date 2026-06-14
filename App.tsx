@@ -932,12 +932,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
     setLoading(false);
   };
-  const rejectRide = () => {
+  const rejectRide = async () => {
+    const req = rideReq;
     setRideReq(null);
     useDriverStore.getState().clearAll();
-    // Polling dobara start karo taaki nayi rides aati rahein
     if (isOnline) startPolling(phone);
     setResult('❌ Ride reject ki');
+    // Tell server to advance queue to next driver immediately
+    if (req?.id) {
+      try {
+        await fetch(`${API}/api/rides/reject-offer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ride_id: req.id, driver_phone: phone }),
+        });
+      } catch (_e) {}
+    }
   };
 
   const markArrived = async () => {
@@ -2179,7 +2189,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={s.rideTo}>🎯 {rideReq.drop_location}</Text>
                 </View>
                 {rideReq.distance && <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 2, flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: '#666', fontSize: 12 }}>📏 Distance: {rideReq.distance} km</Text><Text style={{ color: '#e94560', fontSize: 12, fontWeight: '600' }}>💰 Net: ₹{Math.round(rideReq.fare * 0.85)}</Text></View>}
-                <CountdownBar seconds={20} onTimeout={rejectRide} />
+                <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />
                 <View style={[s.rideActions, { marginTop: 12 }]}>
                   <Bouncy style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></Bouncy>
                   <Bouncy style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '⏳' : '✓ Accept'}</Text></Bouncy>
