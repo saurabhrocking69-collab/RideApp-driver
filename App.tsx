@@ -354,6 +354,11 @@ export default function App() {
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
 
+  // Ride extension
+  const [extRequest, setExtRequest]       = useState<any>(null); // pending extension from customer
+  const [extRespSec, setExtRespSec]       = useState(60);
+  const [extAccLoading, setExtAccLoading] = useState(false);
+
   // ── Surge + Admin Notif + Referral ───────────────
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
   const [adminNotif, setAdminNotif] = useState<any>(null);
@@ -625,6 +630,56 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }, 4000);
     return () => { stopped = true; clearInterval(iv); };
   }, [isOnline, phone, activeRide?.id]);
+
+  // Extension request polling — active for 15 min after trip summary shown
+  useEffect(() => {
+    if (!tripSummary || !phone || tripSummary.isHourly) return;
+    let stopped = false;
+    const iv = setInterval(async () => {
+      if (stopped) return;
+      try {
+        const d = await fetch(`${API}/api/rides/extension-pending?phone=${phone}`).then(r => r.json());
+        if (d.extension) {
+          setExtRequest(d.extension);
+          setExtRespSec(d.extension.seconds_left ?? 60);
+        } else if (!d.extension && extRequest?.status !== 'accepted') {
+          setExtRequest(null);
+        }
+      } catch (_e) {}
+    }, 2500);
+    return () => { stopped = true; clearInterval(iv); };
+  }, [tripSummary, phone]);
+
+  // Extension response countdown
+  useEffect(() => {
+    if (!extRequest) return;
+    setExtRespSec(extRequest.seconds_left ?? 60);
+    const iv = setInterval(() => setExtRespSec(s => { if (s <= 1) { clearInterval(iv); setExtRequest(null); return 0; } return s - 1; }), 1000);
+    return () => clearInterval(iv);
+  }, [extRequest?.id]);
+
+  const acceptExtension = async () => {
+    if (!extRequest) return;
+    setExtAccLoading(true);
+    try {
+      const res = await fetch(`${API}/api/rides/extension-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extRequest.id }) });
+      const data = await res.json();
+      if (data.success) {
+        // Fetch new ride and go active
+        const rideRes = await fetch(`${API}/api/rides/status/${data.new_ride_id}`).then(r => r.json());
+        const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extRequest.new_drop, fare: extRequest.estimated_fare, status: 'matched', payment_method: 'wallet' };
+        setActiveRide({ ...newRide, id: data.new_ride_id });
+        setExtRequest(null); setTripSummary(null);
+      } else { setResult('❌ ' + (data.error || 'Accept nahi hua')); }
+    } catch (_e) { setResult('❌ Network error'); }
+    setExtAccLoading(false);
+  };
+
+  const rejectExtension = async () => {
+    if (!extRequest) return;
+    try { await fetch(`${API}/api/rides/extension-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extRequest.id }) }); } catch (_e) {}
+    setExtRequest(null);
+  };
 
   // Hourly trip timer
   useEffect(() => {
@@ -1875,7 +1930,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           ))}
         </View>
-        <Bouncy style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => setTripSummary(null)}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
+        {/* Ride Extension Request — same customer wants another trip */}
+        {extRequest && (
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#ff9800' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ fontSize: 28, marginRight: 10 }}>🔄</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#bf360c', fontWeight: '800', fontSize: 15 }}>Ride Extension Request!</Text>
+                <Text style={{ color: '#e65100', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} — same customer</Text>
+              </View>
+              <View style={{ backgroundColor: '#e94560', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{extRespSec}</Text>
+              </View>
+            </View>
+            <View style={{ backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
+              <Text style={{ color: '#888', fontSize: 11 }}>Naya destination</Text>
+              <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 14, marginTop: 2 }}>{extRequest.new_drop}</Text>
+              <Text style={{ color: '#4CAF50', fontWeight: 'bold', fontSize: 18, marginTop: 6 }}>₹{Math.round(extRequest.estimated_fare)}</Text>
+              <Text style={{ color: '#888', fontSize: 11 }}>Estimated fare</Text>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={acceptExtension} disabled={extAccLoading}>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{extAccLoading ? '...' : '✅ Accept'}</Text>
+              </Bouncy>
+              <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={rejectExtension}>
+                <Text style={{ color: '#555', fontWeight: 'bold', fontSize: 15 }}>✗ Reject</Text>
+              </Bouncy>
+            </View>
+          </View>
+        )}
+        <Bouncy style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
       </ScrollView>
     </ScreenIn>
   );
