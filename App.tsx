@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -480,9 +480,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }),
     });
 
-    const sub1 = Notifications.addNotificationReceivedListener(_n => {});
+    // Foreground: FCM arrives while app is open → immediate poll
+    const sub1 = Notifications.addNotificationReceivedListener(n => {
+      const data = n.request.content.data as any;
+      if (data?.type === 'new_ride') {
+        Vibration.vibrate([0, 200, 100, 200]);
+        useDriverStore.getState().triggerPoll?.();
+      }
+    });
 
-    // Notification tap → bring driver to home so they see the ride request
+    // Tap: notification tapped (background/killed) → open home + poll
     const handleDriverNotifTap = (response: any) => {
       const data = response?.notification?.request?.content?.data as any;
       if (data?.type === 'new_ride') {
@@ -493,9 +500,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleDriverNotifTap(r); });
 
+    // AppState: app comes back to foreground → immediate poll + socket reconnect
+    const appStateSub = AppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') {
+        useDriverStore.getState().triggerPoll?.();
+        const sock = (globalThis as any).__driverSocket;
+        if (sock && !sock.connected) sock.connect();
+      }
+    });
+
     return () => {
       sub1.remove();
       sub2.remove();
+      appStateSub.remove();
     };
   }, []);
   // ── FCM Token Register ────────────────────────
@@ -971,15 +988,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       loadDriverOffers();
       // Connect socket for instant ride assignment (no need to wait for next poll)
       if (!socketRef.current?.connected) {
-        const s = io(API, { transports: ['websocket'], autoConnect: true });
+        const s = io(API, {
+          transports: ['websocket', 'polling'],
+          reconnection: true,
+          reconnectionAttempts: 20,
+          reconnectionDelay: 2000,
+        });
         s.on('connect', () => {
           s.emit('driverJoin', { phone });
-          s.on('newRideAssigned', () => {
-            // Trigger an immediate poll instead of waiting 4s
-            useDriverStore.getState().triggerPoll?.();
-          });
+        });
+        s.on('newRideAssigned', () => {
+          useDriverStore.getState().triggerPoll?.();
+        });
+        s.on('connect_error', () => {
+          // polling fallback handles it — no action needed
         });
         socketRef.current = s;
+        (globalThis as any).__driverSocket = s;
       }
     } else {
       setResult('🔴 Offline hain');
