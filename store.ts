@@ -9,7 +9,6 @@ type DriverState = {
   activeRide: any;
   pendingRide: any;
   suspended: boolean;
-  commissionBlocked: boolean;
   pendingCommission: number;
   _pollTimer: any;
   _lastRideId: string | null;
@@ -25,7 +24,6 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   activeRide: null,
   pendingRide: null,
   suspended: false,
-  commissionBlocked: false,
   pendingCommission: 0,
   _pollTimer: null,
   _lastRideId: null,
@@ -52,16 +50,15 @@ export const useDriverStore = create<DriverState>((set, get) => ({
 
         const pd = await apiGet(`/api/driver/pending-ride?phone=${phone}`);
         if (!pd._error) {
-          if (pd.suspended) { set({ suspended: true, commissionBlocked: false, pendingRide: null }); busy = false; return; }
-          if (pd.commission_blocked) { set({ commissionBlocked: true, pendingCommission: pd.pending_commission || 0, suspended: false, pendingRide: null }); busy = false; return; }
-          set({ commissionBlocked: false });
+          if (pd.suspended) { set({ suspended: true, pendingRide: null }); busy = false; return; }
+          set({ suspended: false });
           if (pd.ride) {
             const lastId = get()._lastRideId;
             if (lastId !== pd.ride.id) {
               set({ _lastRideId: pd.ride.id });
               if (onNewRide) onNewRide();
             }
-            set({ pendingRide: pd.ride, suspended: false });
+            set({ pendingRide: pd.ride });
           } else {
             set({ pendingRide: null });
           }
@@ -83,11 +80,11 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   stopPolling: () => {
     const t = get()._pollTimer;
     if (t) clearInterval(t);
-    set({ _pollTimer: null, pendingRide: null, activeRide: null, _pollFn: null, commissionBlocked: false, pendingCommission: 0 });
+    set({ _pollTimer: null, pendingRide: null, activeRide: null, _pollFn: null, pendingCommission: 0 });
   },
 
   clearAll: () => {
     get().stopPolling();
-    set({ activeRide: null, pendingRide: null, suspended: false, commissionBlocked: false, pendingCommission: 0, _lastRideId: null, _pollFn: null });
+    set({ activeRide: null, pendingRide: null, suspended: false, pendingCommission: 0, _lastRideId: null, _pollFn: null });
   },
 }));
