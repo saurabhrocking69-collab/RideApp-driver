@@ -34,9 +34,9 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: 1
 
-      - name: Fix Razorpay JitPack dynamic version (pin standard-core)
+      - name: Pin Razorpay standard-core to avoid JitPack metadata timeout
         run: |
-          printf '\nconfigurations.all {\n    resolutionStrategy {\n        force "com.razorpay:standard-core:1.6.41"\n    }\n}\n' >> android/app/build.gradle
+          cat .github/scripts/razorpay-patch.gradle >> android/build.gradle
           echo "systemProp.org.gradle.internal.http.connectionTimeout=120000" >> android/gradle.properties
           echo "systemProp.org.gradle.internal.http.socketTimeout=120000" >> android/gradle.properties
 

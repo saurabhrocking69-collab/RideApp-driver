@@ -1,0 +1,10 @@
+
+allprojects {
+    configurations.all {
+        resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+            if (details.requested.group == 'com.razorpay' && details.requested.name == 'standard-core') {
+                details.useVersion '1.6.41'
+            }
+        }
+    }
+}
