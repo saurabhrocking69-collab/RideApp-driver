@@ -40,7 +40,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
       if (busy) return;
       busy = true;
       try {
-        const ad = await apiGet(`/api/driver/active-ride?phone=${phone}`);
+        const ad = await apiGet(`/api/driver/active-ride?phone=${phone}`, 0, 5000);
         if (!ad._error && ad.ride) {
           set({ activeRide: ad.ride, pendingRide: null });
           busy = false;
@@ -48,7 +48,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
         }
         set({ activeRide: null });
 
-        const pd = await apiGet(`/api/driver/pending-ride?phone=${phone}`);
+        const pd = await apiGet(`/api/driver/pending-ride?phone=${phone}`, 0, 5000);
         if (!pd._error) {
           if (pd.suspended) { set({ suspended: true, pendingRide: null }); busy = false; return; }
           set({ suspended: false });

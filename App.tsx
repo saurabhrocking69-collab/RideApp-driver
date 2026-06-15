@@ -981,12 +981,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Online toggle ──────────────────────────────
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
-    try { await fetch(`${API}/api/driver/toggle-online`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, is_online: val }) }); } catch (_e) {}
     if (val) {
+      // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
       startPolling(phone);
       loadDriverOffers();
-      // Connect socket for instant ride assignment (no need to wait for next poll)
       if (!socketRef.current?.connected) {
         const s = io(API, {
           transports: ['websocket', 'polling'],
@@ -994,23 +993,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           reconnectionAttempts: 20,
           reconnectionDelay: 2000,
         });
-        s.on('connect', () => {
-          s.emit('driverJoin', { phone });
-        });
-        s.on('newRideAssigned', () => {
-          useDriverStore.getState().triggerPoll?.();
-        });
-        s.on('connect_error', () => {
-          // polling fallback handles it — no action needed
-        });
+        s.on('connect', () => { s.emit('driverJoin', { phone }); });
+        s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); });
         socketRef.current = s;
         (globalThis as any).__driverSocket = s;
       }
+      // Tell server we're online — retry aggressively in background
+      (async () => {
+        for (let i = 0; i < 8; i++) {
+          const r = await apiPost('/api/driver/toggle-online', { phone, is_online: true });
+          if (!r._error) return;
+          await new Promise(res => setTimeout(res, 2000));
+        }
+      })();
     } else {
       setResult('🔴 Offline hain');
       stopPolling();
       socketRef.current?.disconnect();
       socketRef.current = null;
+      // Offline update — fire and forget with retry
+      (async () => {
+        for (let i = 0; i < 5; i++) {
+          const r = await apiPost('/api/driver/toggle-online', { phone, is_online: false });
+          if (!r._error) return;
+          await new Promise(res => setTimeout(res, 2000));
+        }
+      })();
     }
   };
 

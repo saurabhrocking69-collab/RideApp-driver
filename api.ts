@@ -19,16 +19,15 @@ const fetchWithTimeout = async (url: string, options: any = {}, timeout = 10000)
   }
 };
 
-// ─── Smart API call: timeout + 2 retries + JSON parse ───
-// Kabhi hang nahi hoga — max 10s + retry, phir error return
-export const apiGet = async (path: string, retries = 2): Promise<any> => {
+// ─── Smart API call: timeout + retries + JSON parse ───
+export const apiGet = async (path: string, retries = 2, timeoutMs = 10000): Promise<any> => {
   for (let i = 0; i <= retries; i++) {
     try {
-      const res = await fetchWithTimeout(`${API}${path}`, {}, 10000);
+      const res = await fetchWithTimeout(`${API}${path}`, {}, timeoutMs);
       return await res.json();
     } catch (err) {
       if (i === retries) return { _error: true, message: 'Network error' };
-      await new Promise(r => setTimeout(r, 800)); // 800ms gap, phir retry
+      await new Promise(r => setTimeout(r, 600));
     }
   }
   return { _error: true, message: 'Network error' };
