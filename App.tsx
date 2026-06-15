@@ -10,6 +10,7 @@ import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
+import { io, Socket } from 'socket.io-client';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
@@ -316,6 +317,7 @@ export default function App() {
     });
     return unsub;
   }, []);
+  const socketRef = useRef<Socket | null>(null);
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
@@ -924,8 +926,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
     try { await fetch(`${API}/api/driver/toggle-online`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, is_online: val }) }); } catch (_e) {}
-    if (val) { setResult('🟢 Online hain — rides aayengi!'); startPolling(phone); loadDriverOffers(); }
-    else { setResult('🔴 Offline hain'); stopPolling(); }
+    if (val) {
+      setResult('🟢 Online hain — rides aayengi!');
+      startPolling(phone);
+      loadDriverOffers();
+      // Connect socket for instant ride assignment (no need to wait for next poll)
+      if (!socketRef.current?.connected) {
+        const s = io(API, { transports: ['websocket'], autoConnect: true });
+        s.on('connect', () => {
+          s.emit('driverJoin', { phone });
+          s.on('newRideAssigned', () => {
+            // Trigger an immediate poll instead of waiting 4s
+            useDriverStore.getState().triggerPoll?.();
+          });
+        });
+        socketRef.current = s;
+      }
+    } else {
+      setResult('🔴 Offline hain');
+      stopPolling();
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+    }
   };
 
   // ── Ride actions ───────────────────────────────
