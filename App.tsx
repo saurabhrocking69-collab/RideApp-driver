@@ -433,7 +433,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             if (data.success) {
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
-              if (data.driver.status === 'approved') { navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); }
+              if (data.driver.status === 'approved') {
+              navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone);
+              // Restore active ride into store so home screen shows it immediately
+              try {
+                const ar = await fetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
+                if (ar.ride) useDriverStore.setState({ activeRide: ar.ride });
+              } catch (_e) {}
+            }
             } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); navTo = 'home'; }
           } catch (_e) { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); navTo = 'home'; }
         }
@@ -467,13 +474,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }),
     });
 
-    const sub1 = Notifications.addNotificationReceivedListener(notification => {
-      console.log('📱 Driver notification:', notification);
-    });
+    const sub1 = Notifications.addNotificationReceivedListener(_n => {});
 
-    const sub2 = Notifications.addNotificationResponseReceivedListener(response => {
-      console.log('👆 Driver notification tapped:', response);
-    });
+    // Notification tap → bring driver to home so they see the ride request
+    const handleDriverNotifTap = (response: any) => {
+      const data = response?.notification?.request?.content?.data as any;
+      if (data?.type === 'new_ride') {
+        setScreen('home'); setActiveTab('home');
+        useDriverStore.getState().triggerPoll?.();
+      }
+    };
+    const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
+    Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleDriverNotifTap(r); });
 
     return () => {
       sub1.remove();
