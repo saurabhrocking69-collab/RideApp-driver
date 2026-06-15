@@ -11,6 +11,7 @@ import * as Notifications from 'expo-notifications';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
+import RazorpayCheckout from 'react-native-razorpay';
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
@@ -314,6 +315,9 @@ export default function App() {
     const unsub = useDriverStore.subscribe((state) => {
       setActiveRide(state.activeRide);
       setRideReq(state.pendingRide);
+      if (state.commissionBlocked) {
+        setCommissionData(prev => ({ ...prev, is_blocked: true, pending_commission: state.pendingCommission }));
+      }
     });
     return unsub;
   }, []);
@@ -359,6 +363,11 @@ export default function App() {
   const [payoutInput, setPayoutInput] = useState('');
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
+
+  // Commission debt
+  const [commissionData, setCommissionData] = useState<{ pending_commission: number; is_blocked: boolean; records: any[] }>({ pending_commission: 0, is_blocked: false, records: [] });
+  const [commPayLoading, setCommPayLoading] = useState(false);
+  const [commResult, setCommResult] = useState('');
 
   // Ride extension
   const [extRequest, setExtRequest]       = useState<any>(null); // pending extension from customer
@@ -583,6 +592,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setBonusClaiming(false);
   };
 
+  const loadCommissionStatus = async (ph: string) => {
+    try {
+      const r = await fetch(`${API}/api/driver/commission-status?phone=${ph}`);
+      const d = await r.json();
+      setCommissionData({ pending_commission: d.pending_commission || 0, is_blocked: d.is_blocked || false, records: d.records || [] });
+    } catch (_e) {}
+  };
+
   const loadDriverWallet = async (ph: string) => {
     try {
       const r = await fetch(`${API}/api/wallet/driver/detail?phone=${ph}`);
@@ -601,8 +618,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await fetch(`${API}/api/driver/payout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
-      if (d.success) { setResult('✅ Payout request bhej di!'); setPayoutInput(''); loadDriverWallet(phone); }
-      else setResult('❌ ' + (d.message || d.error || 'Error'));
+      if (d.success) {
+        const msg = d.commission_deducted > 0
+          ? `✅ Payout done! ₹${d.commission_deducted.toFixed(0)} commission deduct hua, ₹${d.actual_payout.toFixed(0)} aapko mila.`
+          : '✅ Payout request bhej di!';
+        setResult(msg);
+        setPayoutInput('');
+        loadDriverWallet(phone);
+        loadCommissionStatus(phone);
+      } else setResult('❌ ' + (d.message || d.error || 'Error'));
     } catch (_e) { setResult('❌ Server error'); }
     setPayoutLoading(false);
   };
@@ -2144,6 +2168,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
 
+          {/* Commission Blocked Banner */}
+          {commissionData.is_blocked && !activeRide && (
+            <TouchableOpacity onPress={() => setActiveTab('earnings')}
+              style={{ backgroundColor: '#bf360c', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text style={{ fontSize: 22 }}>🚫</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontWeight: '900', fontSize: 13, color: '#fff' }}>Rides Blocked — Commission Due ₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>Cash rides ki platform fee pending hai. Wallet tab mein pay karo.</Text>
+              </View>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 12 }}>Pay →</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Surge Active Banner */}
           {surgeMultiplier > 1.0 && !activeRide && (
             <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -2592,7 +2629,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') {
-    if (!walletLoaded) { loadDriverWallet(phone); loadBonusToday(phone); }
+    if (!walletLoaded) { loadDriverWallet(phone); loadBonusToday(phone); loadCommissionStatus(phone); }
     const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
     return (
     <View style={s.screen}>
@@ -2653,6 +2690,66 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 13, color: '#2e7d32', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
             <Text style={{ fontSize: 12, color: '#4CAF50', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
           </View>
+          {/* Commission Debt Card */}
+          {commissionData.pending_commission > 0 && (
+            <View style={{ backgroundColor: commissionData.is_blocked ? '#fff3e0' : '#fff8e1', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1.5, borderColor: commissionData.is_blocked ? '#e65100' : '#f9a825' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 18, marginRight: 8 }}>{commissionData.is_blocked ? '🚫' : '⚠️'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: commissionData.is_blocked ? '#bf360c' : '#e65100' }}>
+                    {commissionData.is_blocked ? 'Rides Blocked — Commission Due' : 'Pending Commission'}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Cash rides ki platform fee pending hai</Text>
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#bf360c' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
+              </View>
+              {commissionData.is_blocked && (
+                <Text style={{ fontSize: 11, color: '#bf360c', marginBottom: 10 }}>Pending commission ₹300 se zyada ho gaya. Pay karo rides resume karne ke liye.</Text>
+              )}
+              <TouchableOpacity
+                disabled={commPayLoading}
+                onPress={async () => {
+                  setCommPayLoading(true); setCommResult('');
+                  try {
+                    const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+                    const d = await r.json();
+                    if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                    RazorpayCheckout.open({
+                      key: d.key_id,
+                      amount: d.amount,
+                      currency: d.currency || 'INR',
+                      order_id: d.order_id,
+                      name: 'Sppero',
+                      description: 'Platform Commission Payment',
+                      prefill: { contact: phone },
+                      theme: { color: '#e65100' },
+                    }).then(async (payment: any) => {
+                      const vr = await fetch(`${API}/api/driver/commission-pay-verify`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          phone,
+                          razorpay_order_id: payment.razorpay_order_id,
+                          razorpay_payment_id: payment.razorpay_payment_id,
+                          razorpay_signature: payment.razorpay_signature,
+                        }),
+                      });
+                      const vd = await vr.json();
+                      if (vd.success) { setCommResult('✅ Commission paid! Rides ab resume ho gayi.'); loadCommissionStatus(phone); }
+                      else setCommResult('❌ Verification failed: ' + (vd.error || ''));
+                      setCommPayLoading(false);
+                    }).catch((_e: any) => {
+                      setCommResult('Payment cancelled ya failed');
+                      setCommPayLoading(false);
+                    });
+                  } catch (_e) { setCommResult('❌ Server error'); setCommPayLoading(false); }
+                }}
+                style={{ backgroundColor: commPayLoading ? '#ccc' : '#e65100', borderRadius: 10, paddingVertical: 11, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
+              </TouchableOpacity>
+              {commResult ? <Text style={{ color: commResult.includes('✅') ? '#4CAF50' : '#bf360c', marginTop: 8, fontSize: 12, fontWeight: '600' }}>{commResult}</Text> : null}
+            </View>
+          )}
+
           {/* Payout */}
           <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14 }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>💸 Payout Request</Text>
