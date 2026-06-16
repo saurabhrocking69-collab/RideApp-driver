@@ -154,12 +154,14 @@ const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () 
   const [left, setLeft] = useState(seconds);
   const anim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
+    setLeft(seconds);
+    anim.setValue(1);
     Animated.timing(anim, { toValue: 0, duration: seconds * 1000, useNativeDriver: false }).start();
     const t = setInterval(() => {
       setLeft((l: number) => { if (l <= 1) { clearInterval(t); onTimeout?.(); return 0; } return l - 1; });
     }, 1000);
     return () => clearInterval(t);
-  }, []);
+  }, [seconds]);
   return (
     <View style={{ marginTop: 10 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -407,12 +409,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [driverInfo, setDriverInfo] = useState<any>(null);
   const [devOtp, setDevOtp]         = useState('');
 
-  const DRIVERS = [
-    { phone: '8888888888', name: 'Raju',   vehicle: 'UP32AB1234', type: '🛺 Auto' },
-    { phone: '7777777777', name: 'Amit',   vehicle: 'UP32CD5678', type: '🏍️ Bike' },
-    { phone: '6666666666', name: 'Suresh', vehicle: 'UP32EF9012', type: '🚕 Taxi' },
-  ];
-  const selectedDriver = DRIVERS.find(d => d.phone === phone);
 
   // ── Splash + Auto login ────────────────────────
   useEffect(() => {
@@ -1064,7 +1060,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const markArrived = async () => {
     setLoading(true);
-    const data = await apiCall('/api/rides/arrived', { ride_id: activeRide.id });
+    const data = await apiCall('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else setActiveRide({ ...activeRide, status: 'arrived' });
     setLoading(false);
@@ -1073,7 +1069,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const startTrip = async () => {
     if (otpInput.length !== 4) { setResult('❌ 4 digit OTP daalo'); return; }
     setLoading(true);
-    const data = await apiCall('/api/rides/start', { ride_id: activeRide.id, otp: otpInput });
+    const data = await apiCall('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
     else setResult('❌ ' + (data.message || 'Galat OTP!'));
@@ -1089,7 +1085,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await fetch(`${API}/api/rides/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: rideId })
+        body: JSON.stringify({ ride_id: rideId, driver_phone: phone })
       });
       let data: any = {};
       try { data = await res.json(); } catch (_e) {}
@@ -1867,25 +1863,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Bouncy style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
               <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
             </Bouncy>
-            {/* Test drivers */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 12 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
-              <Text style={{ color: '#999', marginHorizontal: 12, fontSize: 12 }}>TEST DRIVERS</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
-            </View>
-            {DRIVERS.map((d, i) => (
-              <TouchableOpacity key={i} style={[s.driverItem, phone === d.phone && s.driverItemActive]} onPress={() => setPhone(d.phone)}>
-                <Text style={s.driverItemIcon}>{d.type.split(' ')[0]}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.driverItemName, phone === d.phone && { color: '#fff' }]}>{d.name}</Text>
-                  <Text style={[s.driverItemVehicle, phone === d.phone && { color: '#ddd' }]}>{d.vehicle} · {d.type}</Text>
-                </View>
-                {phone === d.phone && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
-              </TouchableOpacity>
-            ))}
-            <Bouncy style={[s.btn, !phone && { opacity: 0.5 }]} onPress={() => { if (phone) { setScreen('home'); registerFCM(phone); } }} disabled={!phone}>
-              <Text style={s.btnTxt}>Test Login 🧪</Text>
-            </Bouncy>
           </View>
         ) : (
           // ── OTP Input ──
@@ -2191,7 +2168,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {isOnline && <PulseView><View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#4CAF50', marginRight: 7 }} /></PulseView>}
             <Text style={s.greeting}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
           </View>
-          <Text style={s.subTxt}>{driverInfo?.name || selectedDriver?.name} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
+          <Text style={s.subTxt}>{driverInfo?.name || phone} · {driverInfo?.vehicle_no || ''}</Text>
         </View>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
@@ -3034,10 +3011,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1, padding: 16 }}>
         <View style={s.profileHero}>
-          <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || selectedDriver?.name || 'D')[0].toUpperCase()}</Text></View>
-          <Text style={s.profileName}>{driverInfo?.name || selectedDriver?.name}</Text>
+          <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || 'D')[0].toUpperCase()}</Text></View>
+          <Text style={s.profileName}>{driverInfo?.name || phone}</Text>
           <Text style={s.profilePhone}>+91 {phone}</Text>
-          <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || selectedDriver?.type} · {driverInfo?.vehicle_no || selectedDriver?.vehicle}</Text>
+          <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} · {driverInfo?.vehicle_no || ''}</Text>
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
         {/* UPI ID Section */}
