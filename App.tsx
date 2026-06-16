@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
@@ -344,11 +344,16 @@ export default function App() {
   const [dropInRange, setDropInRange] = useState(false);
   const [rangeDist, setRangeDist]   = useState(0);
   const [target, setTarget]         = useState<any>(null);
-  const [chatMsgs, setChatMsgs]     = useState<any[]>([]);
-  const [chatInput, setChatInput]   = useState('');
-  const [showChat, setShowChat]     = useState(false);
-  const [unreadChat, setUnreadChat] = useState(0);
-  const lastChatCount = useRef(0);
+  const [chatMsgs, setChatMsgs]         = useState<any[]>([]);
+  const [chatInput, setChatInput]       = useState('');
+  const [showChat, setShowChat]         = useState(false);
+  const [unreadChat, setUnreadChat]     = useState(0);
+  const lastChatCount                   = useRef(0);
+  // Hourly chat
+  const [showHourlyChat, setShowHourlyChat] = useState(false);
+  const [hourlyChatMsgs, setHourlyChatMsgs] = useState<any[]>([]);
+  const [hourlyChatInput, setHourlyChatInput] = useState('');
+  const lastHourlyChat                  = useRef(0);
 
   // ── Wallet / Earnings + Bonus State ──────────
   const [bonusData, setBonusData] = useState<any>({ rides_today: 0, available_bonuses: [], claimed_tiers: [], next_target: null });
@@ -481,7 +486,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const sub1 = Notifications.addNotificationReceivedListener(n => {
       const data = n.request.content.data as any;
       if (data?.type === 'new_ride') {
-        Vibration.vibrate([0, 200, 100, 200]);
+        Vibration.vibrate([0, 500, 150, 500, 150, 800]);
         useDriverStore.getState().triggerPoll?.();
       }
     });
@@ -555,7 +560,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const startPolling = (dp: string) => {
     // Store ka single polling engine — overlap guard ke saath
     useDriverStore.getState().startPolling(dp, () => {
-      Vibration.vibrate([0, 200, 100, 200]);
+      Vibration.vibrate([0, 500, 150, 500, 150, 800]);
+      setActiveTab('home'); // auto-bring driver to home tab on new ride
     });
   };
   const stopPolling = () => {
@@ -679,6 +685,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const iv = setInterval(load, 2500);
     return () => clearInterval(iv);
   }, [showChat, activeRide?.id]);
+
+  // ── Hourly chat polling ──────────────────────
+  useEffect(() => {
+    if (!showHourlyChat || !activeHourlyRide?.id) return;
+    const load = async () => {
+      try {
+        const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
+        const d = await r.json();
+        setHourlyChatMsgs(d.messages || []);
+        lastHourlyChat.current = (d.messages || []).length;
+      } catch (_e) {}
+    };
+    load();
+    const iv = setInterval(load, 2500);
+    return () => clearInterval(iv);
+  }, [showHourlyChat, activeHourlyRide?.id]);
+
+  const sendHourlyChat = async () => {
+    if (!hourlyChatInput.trim() || !activeHourlyRide?.id) return;
+    const msg = hourlyChatInput;
+    setHourlyChatInput('');
+    try {
+      await fetch(`${API}/api/hourly/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, sender: 'driver', message: msg }) });
+      const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
+      const d = await r.json();
+      setHourlyChatMsgs(d.messages || []);
+    } catch (_e) {}
+  };
 
   // ── Hourly ride polling ───────────────────────
   useEffect(() => {
@@ -2157,6 +2191,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </KeyboardAvoidingView>
   );
 
+  if (showHourlyChat) return (
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={() => setShowHourlyChat(false)} style={{ width: 36 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.greeting}>💬 Customer (Hourly)</Text>
+        <View style={{ width: 36 }} />
+      </View>
+      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
+        {hourlyChatMsgs.length === 0 ? (
+          <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi — pehla message bhejo!</Text>
+        ) : hourlyChatMsgs.map((m, i) => (
+          <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
+            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#1a1a2e', fontSize: 14 }}>{m.message}</Text>
+          </View>
+        ))}
+      </ScrollView>
+      <View style={cs.inputRow}>
+        <TextInput style={cs.input} placeholder="Customer ko message karo..." value={hourlyChatInput} onChangeText={setHourlyChatInput} onSubmitEditing={sendHourlyChat} />
+        <TouchableOpacity style={cs.send} onPress={sendHourlyChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+      </View>
+    </KeyboardAvoidingView>
+  );
+
   // ═══ HOME TAB — Uber style ═══
   if (activeTab === 'home') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -2333,42 +2390,77 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
 
-          {rideReq && !activeRide && (
-            <SlideIn>
-              <View style={s.rideCard}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-                  <View style={{ backgroundColor: '#fff3e0', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, marginRight: 8 }}>
-                    <Text style={{ color: '#e65100', fontSize: 11, fontWeight: '700' }}>🔔 NEW RIDE</Text>
+          {/* ─── FULL-SCREEN RIDE REQUEST MODAL ─── */}
+          <Modal visible={!!rideReq && !activeRide} animationType="slide" transparent={false} statusBarTranslucent>
+            <View style={{ flex: 1, backgroundColor: '#0d0d1a', justifyContent: 'center', padding: 20 }}>
+              {/* Header */}
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <View style={{ backgroundColor: '#e94560', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 10 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 2 }}>🔔 NAYI RIDE REQUEST</Text>
+                </View>
+                <Text style={{ fontSize: 64 }}>
+                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : '🛺'}
+                </Text>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 6 }}>
+                  {rideReq?.passenger_name || 'Passenger'}
+                </Text>
+                {surgeMultiplier > 1.0 && (
+                  <View style={{ backgroundColor: '#ff9800', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 5, marginTop: 6 }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>⚡ {surgeMultiplier}x SURGE</Text>
                   </View>
-                  {driverGps && rideReq.pickup_lat && (
-                    <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ color: '#2e7d32', fontSize: 11, fontWeight: '600' }}>
-                        📍 {haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km door
-                      </Text>
+                )}
+              </View>
+
+              {/* Fare */}
+              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 18, padding: 20, marginBottom: 16, alignItems: 'center' }}>
+                <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 4 }}>Aapki Kamai</Text>
+                <Text style={{ color: '#4CAF50', fontSize: 48, fontWeight: '900' }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                <Text style={{ color: '#666', fontSize: 13 }}>Total fare: ₹{rideReq?.fare}</Text>
+              </View>
+
+              {/* Route info */}
+              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 18, padding: 16, marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                  {driverGps && rideReq?.pickup_lat && (
+                    <View style={{ backgroundColor: '#1565c0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>📍 Pickup se</Text>
+                      <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km</Text>
+                    </View>
+                  )}
+                  {rideReq?.distance && (
+                    <View style={{ backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, flex: 1, alignItems: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>🛣️ Trip</Text>
+                      <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{rideReq.distance} km</Text>
                     </View>
                   )}
                 </View>
-                <View style={s.rideHeader}>
-                  <Text style={s.rideTitle}>{rideReq.ride_type === 'car' ? '🚕' : rideReq.ride_type === 'bike' ? '🏍️' : rideReq.ride_type === 'eriksha' ? '🛵' : '🛺'} {rideReq.passenger_name || 'Passenger'}</Text>
-                  <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={s.rideFare}>₹{rideReq.fare}</Text>
-                    {surgeMultiplier > 1.0 && <View style={{ backgroundColor: '#fff3e0', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2, marginTop: 2 }}><Text style={{ color: '#e65100', fontSize: 10, fontWeight: '800' }}>⚡ {surgeMultiplier}x SURGE</Text></View>}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ width: 12, alignItems: 'center', paddingTop: 4 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50' }} />
+                    <View style={{ width: 2, height: 28, backgroundColor: '#444', marginTop: 3 }} />
+                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#e94560' }} />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ color: '#ccc', fontSize: 15, marginBottom: 8 }}>{rideReq?.pickup}</Text>
+                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>{rideReq?.drop_location}</Text>
                   </View>
                 </View>
-                <View style={s.rideDetails}>
-                  <Text style={s.rideFrom}>📍 {rideReq.pickup}</Text>
-                  <Text style={s.rideDivider}>↓</Text>
-                  <Text style={s.rideTo}>🎯 {rideReq.drop_location}</Text>
-                </View>
-                {rideReq.distance && <View style={{ backgroundColor: '#f5f5f5', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 2, flexDirection: 'row', justifyContent: 'space-between' }}><Text style={{ color: '#666', fontSize: 12 }}>📏 Distance: {rideReq.distance} km</Text><Text style={{ color: '#e94560', fontSize: 12, fontWeight: '600' }}>💰 Net: ₹{Math.round(rideReq.fare * 0.85)}</Text></View>}
-                <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />
-                <View style={[s.rideActions, { marginTop: 12 }]}>
-                  <Bouncy style={s.rejectBtn} onPress={rejectRide}><Text style={s.rejectTxt}>✕ Reject</Text></Bouncy>
-                  <Bouncy style={s.acceptBtn} onPress={acceptRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '⏳' : '✓ Accept'}</Text></Bouncy>
-                </View>
               </View>
-            </SlideIn>
-          )}
+
+              {/* Countdown */}
+              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />}
+
+              {/* Accept / Reject */}
+              <View style={{ flexDirection: 'row', gap: 14, marginTop: 20 }}>
+                <Bouncy style={{ flex: 1, backgroundColor: '#2a2a3e', borderRadius: 18, padding: 20, alignItems: 'center', borderWidth: 2, borderColor: '#444' }} onPress={rejectRide}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕ Reject</Text>
+                </Bouncy>
+                <Bouncy style={{ flex: 2, backgroundColor: '#e94560', borderRadius: 18, padding: 20, alignItems: 'center', elevation: 6 }} onPress={acceptRide} disabled={loading}>
+                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>{loading ? '⏳...' : '✓ ACCEPT'}</Text>
+                </Bouncy>
+              </View>
+            </View>
+          </Modal>
 
           {/* ─── HOURLY RIDE REQUEST ─── */}
           {hourlyRideReq && !activeRide && !activeHourlyRide && (
@@ -2430,6 +2522,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={s.tripFrom}>📍 {activeHourlyRide.pickup}</Text>
                 {activeHourlyRide.drop_location && <><Text style={s.tripArrow}>↓</Text><Text style={s.tripTo}>🎯 {activeHourlyRide.drop_location}</Text></>}
               </View>
+
+              {/* Chat button */}
+              <TouchableOpacity
+                style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                onPress={() => { setShowHourlyChat(true); setHourlyChatMsgs([]); }}
+              >
+                <Text style={{ fontSize: 18 }}>💬</Text>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Customer se Chat Karo</Text>
+              </TouchableOpacity>
 
               {activeHourlyRide.status === 'matched' && (
                 <View style={{ marginTop: 10 }}>
