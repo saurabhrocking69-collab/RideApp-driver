@@ -472,6 +472,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Notification Handler ──────────────────────
   useEffect(() => {
+    if (Platform.OS === 'android') {
+      Notifications.setNotificationChannelAsync('ride_requests', {
+        name: 'Ride Requests',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
+        vibrationPattern: [0, 500, 150, 500, 150, 800],
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: true,
+      });
+    }
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
@@ -558,10 +569,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
-    // Store ka single polling engine — overlap guard ke saath
     useDriverStore.getState().startPolling(dp, () => {
       Vibration.vibrate([0, 500, 150, 500, 150, 800]);
-      setActiveTab('home'); // auto-bring driver to home tab on new ride
+      setActiveTab('home');
+      // Schedule local notification — triggers sound even in foreground/background
+      Notifications.scheduleNotificationAsync({
+        content: {
+          title: '🚖 Nayi Ride Request!',
+          body: 'Passenger aapka intezaar kar raha hai — jaldi dekho!',
+          sound: 'default',
+          data: { type: 'new_ride' },
+          ...(Platform.OS === 'android' ? { channelId: 'ride_requests' } : {}),
+        },
+        trigger: null, // immediate
+      }).catch(() => {});
     });
   };
   const stopPolling = () => {
@@ -2452,12 +2473,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {/* Accept / Reject */}
               <View style={{ flexDirection: 'row', gap: 14, marginTop: 20 }}>
-                <Bouncy style={{ flex: 1, backgroundColor: '#2a2a3e', borderRadius: 18, padding: 20, alignItems: 'center', borderWidth: 2, borderColor: '#444' }} onPress={rejectRide}>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#2a2a3e', borderRadius: 18, padding: 20, alignItems: 'center', borderWidth: 2, borderColor: '#444' }} onPress={rejectRide}>
                   <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕ Reject</Text>
-                </Bouncy>
-                <Bouncy style={{ flex: 2, backgroundColor: '#e94560', borderRadius: 18, padding: 20, alignItems: 'center', elevation: 6 }} onPress={acceptRide} disabled={loading}>
+                </TouchableOpacity>
+                <TouchableOpacity style={{ flex: 2, backgroundColor: '#e94560', borderRadius: 18, padding: 20, alignItems: 'center', elevation: 6 }} onPress={acceptRide} disabled={loading}>
                   <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>{loading ? '⏳...' : '✓ ACCEPT'}</Text>
-                </Bouncy>
+                </TouchableOpacity>
               </View>
             </View>
           </Modal>
