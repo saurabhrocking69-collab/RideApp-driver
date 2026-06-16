@@ -372,6 +372,7 @@ export default function App() {
   const [extRequest, setExtRequest]       = useState<any>(null); // pending extension from customer
   const [extRespSec, setExtRespSec]       = useState(60);
   const [extAccLoading, setExtAccLoading] = useState(false);
+  const [hExtendLoading, setHExtendLoading] = useState(false);
 
   // ── Surge + Admin Notif + Referral ───────────────
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
@@ -1271,21 +1272,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const acceptExtend = async () => {
-    if (!activeHourlyRide) return;
+    if (!activeHourlyRide || hExtendLoading) return;
+    setHExtendLoading(true);
     try {
       const res = await fetch(`${API}/api/hourly/accept-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       const data = await res.json();
-      if (data.success) setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
-      else setResult('❌ ' + data.message);
-    } catch (_e) { setResult('❌ Network error'); }
+      if (data.success) {
+        setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
+        setResult('✅ Extension accept ho gaya!');
+        setTimeout(() => setResult(''), 3000);
+      } else {
+        setResult('❌ ' + (data.message || data.error || 'Accept nahi hua'));
+      }
+    } catch (_e) { setResult('❌ Network error — dobara try karo'); }
+    setHExtendLoading(false);
   };
 
   const rejectExtend = async () => {
-    if (!activeHourlyRide) return;
+    if (!activeHourlyRide || hExtendLoading) return;
+    setHExtendLoading(true);
     try {
       await fetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
-    } catch (_e) {}
+    } catch (_e) { setResult('❌ Network error'); }
+    setHExtendLoading(false);
   };
 
   // ── PhotoBox ───────────────────────────────────
@@ -2500,8 +2510,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       })()}
                       <Text style={{ fontSize: 12, color: '#555', marginBottom: 10 }}>Agree karne se trip extend hogi — paise escrow mein hain</Text>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Accept</Text></Bouncy>
-                        <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectExtend}><Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                        <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#aaa' : '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
+                          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{hExtendLoading ? '⏳ ...' : '✅ Accept'}</Text>
+                        </Bouncy>
+                        <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#e0e0e0' : '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectExtend} disabled={hExtendLoading}>
+                          <Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text>
+                        </Bouncy>
                       </View>
                     </View>
                   )}
