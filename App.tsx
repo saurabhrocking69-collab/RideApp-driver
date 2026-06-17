@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Image,
+  View, Text, TouchableOpacity, StyleSheet, Image, Alert,
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal
 } from 'react-native';
 import * as Location from 'expo-location';
@@ -340,9 +340,6 @@ export default function App() {
   const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
-  const [pickupInRange, setPickupInRange] = useState(false);
-  const [dropInRange, setDropInRange] = useState(false);
-  const [rangeDist, setRangeDist]   = useState(0);
   const [target, setTarget]         = useState<any>(null);
   const [chatMsgs, setChatMsgs]         = useState<any[]>([]);
   const [chatInput, setChatInput]       = useState('');
@@ -353,7 +350,6 @@ export default function App() {
   const [showHourlyChat, setShowHourlyChat] = useState(false);
   const [hourlyChatMsgs, setHourlyChatMsgs] = useState<any[]>([]);
   const [hourlyChatInput, setHourlyChatInput] = useState('');
-  const lastHourlyChat                  = useRef(0);
 
   // ── Wallet / Earnings + Bonus State ──────────
   const [bonusData, setBonusData] = useState<any>({ rides_today: 0, available_bonuses: [], claimed_tiers: [], next_target: null });
@@ -545,7 +541,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
     try {
-      // if (!Device.isDevice) return;
       const { status: existing } = await Notifications.getPermissionsAsync();
       let finalStatus = existing;
       if (existing !== 'granted') {
@@ -689,8 +684,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setPayoutLoading(false);
   };
 
-  // (Store sync ab subscribe se hota hai — upar dekho)
-
   // ── Location tracking + GPS range check ────────
   useEffect(() => {
     if (!isOnline) return;
@@ -728,8 +721,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
         const d = await r.json();
         setHourlyChatMsgs(d.messages || []);
-        lastHourlyChat.current = (d.messages || []).length;
-        setHChatUnread(0);
       } catch (_e) {}
     };
     load();
@@ -1095,15 +1086,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   // ── Ride actions ───────────────────────────────
-  // Smart API call — timeout + retry, kabhi hang nahi
-  const apiCall = async (endpoint: string, body: any) => {
-    return apiPost(endpoint, body);
-  };
-
   const acceptRide = async () => {
     if (!rideReq) return;
     setLoading(true);
-    const data = await apiCall('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
+    const data = await apiPost('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
     if (data._error) {
       setResult('❌ ' + data.message);
     } else if (data.success) {
@@ -1136,7 +1122,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const markArrived = async () => {
     setLoading(true);
-    const data = await apiCall('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
+    const data = await apiPost('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else setActiveRide({ ...activeRide, status: 'arrived' });
     setLoading(false);
@@ -1145,7 +1131,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const startTrip = async () => {
     if (otpInput.length !== 4) { setResult('❌ 4 digit OTP daalo'); return; }
     setLoading(true);
-    const data = await apiCall('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
+    const data = await apiPost('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
     else setResult('❌ ' + (data.message || 'Galat OTP!'));
@@ -2429,7 +2415,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {activeRide.status === 'started' && (
                 <View>
-                  {/* GPS Range check disabled for testing */}
                   <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeTrip} disabled={loading}>
                     <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
                   </Bouncy>
@@ -3308,13 +3293,6 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
 const s = StyleSheet.create({
   screen:          { flex:1, backgroundColor:'#f5f5f5' },
   mapFit:          { height: 220, width: '100%', backgroundColor: '#e8eaed' },
-  mapFull:         { position:'absolute', top:0, left:0, right:0, bottom:0 },
-  topOverlay:      { position:'absolute', top:0, left:0, right:0, paddingTop:44, paddingHorizontal:14 },
-  topGlass:        { flexDirection:'row', alignItems:'center', backgroundColor:'rgba(255,255,255,0.95)', borderRadius:16, padding:12, elevation:6, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:8 },
-  greetingDark:    { color:'#1a1a2e', fontSize:15, fontWeight:'bold' },
-  subTxtDark:      { color:'#666', fontSize:11, marginTop:2 },
-  bottomSheet:     { position:'absolute', bottom:0, left:0, right:0, backgroundColor:'#fff', borderTopLeftRadius:24, borderTopRightRadius:24, padding:16, paddingTop:8, elevation:12, shadowColor:'#000', shadowOpacity:0.15, shadowRadius:12 },
-  sheetHandle:     { width:40, height:4, borderRadius:2, backgroundColor:'#ddd', alignSelf:'center', marginBottom:12 },
   navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
   chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#e94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
   hero:            { backgroundColor:'#1a1a2e', alignItems:'center', padding:50, paddingBottom:40 },
@@ -3323,10 +3301,6 @@ const s = StyleSheet.create({
   heroSub:         { color:'#aaa', fontSize:14, marginTop:6 },
   sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#1a1a2e', marginBottom:12 },
   driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:2, borderColor:'transparent' },
-  driverItemActive:{ backgroundColor:'#1a1a2e', borderColor:'#e94560' },
-  driverItemIcon:  { fontSize:28, marginRight:14 },
-  driverItemName:  { fontSize:16, fontWeight:'bold', color:'#1a1a2e' },
-  driverItemVehicle:{ fontSize:13, color:'#666', marginTop:2 },
   btn:             { backgroundColor:'#e94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:10 },
   btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
   err:             { textAlign:'center', color:'#e94560', marginVertical:10 },
@@ -3358,7 +3332,6 @@ const s = StyleSheet.create({
   tripBtn:         { backgroundColor:'#1a1a2e', borderRadius:10, padding:16, alignItems:'center', marginBottom:8 },
   tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:15 },
   navBtn:          { backgroundColor:'#2196F3', borderRadius:10, padding:12, alignItems:'center', marginBottom:10 },
-  rangeWarn:       { backgroundColor:'#fff3e0', borderRadius:10, padding:12, marginBottom:10, borderWidth:1, borderColor:'#ffe0b2' },
   cancelBtn:       { padding:12, alignItems:'center' },
   cancelTxt:       { color:'#e94560', fontWeight:'600' },
   rideCard:        { backgroundColor:'#fff', borderRadius:20, padding:18, marginBottom:16, elevation:8, borderWidth:0, shadowColor:'#e94560', shadowOpacity:0.15, shadowRadius:16 },
@@ -3383,15 +3356,10 @@ const s = StyleSheet.create({
   navActive:       { color:'#e94560', fontWeight:'bold' },
   navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#e94560', borderWidth:1.5, borderColor:'#fff' },
   navLine:         { width:20, height:3, borderRadius:2, backgroundColor:'#e94560', marginTop:4 },
-  earningsHero:    { backgroundColor:'#1a1a2e', borderRadius:20, padding:32, alignItems:'center', marginBottom:16, elevation:6, shadowColor:'#1a1a2e', shadowOpacity:0.3, shadowRadius:16 },
-  earningsAmount:  { color:'#fff', fontSize:44, fontWeight:'bold', letterSpacing:1 },
-  earningsLabel:   { color:'#aaa', fontSize:13, marginTop:6, letterSpacing:0.5 },
   earningsCard:    { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:16, elevation:2 },
   earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#f0f0f0' },
   earningsKey:     { fontSize:14, color:'#666' },
   earningsVal:     { fontSize:14, color:'#333', fontWeight:'500' },
-  payoutBtn:       { backgroundColor:'#4CAF50', borderRadius:12, padding:16, alignItems:'center', marginBottom:30 },
-  payoutTxt:       { color:'#fff', fontSize:16, fontWeight:'bold' },
   profileHero:     { backgroundColor:'#1a1a2e', borderRadius:16, padding:24, alignItems:'center', marginBottom:16 },
   profileAvatar:   { width:80, height:80, borderRadius:40, backgroundColor:'#e94560', alignItems:'center', justifyContent:'center', marginBottom:12 },
   profileName:     { color:'#fff', fontSize:22, fontWeight:'bold' },
