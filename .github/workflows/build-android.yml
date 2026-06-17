@@ -40,6 +40,18 @@ jobs:
           echo "systemProp.org.gradle.internal.http.connectionTimeout=120000" >> android/gradle.properties
           echo "systemProp.org.gradle.internal.http.socketTimeout=120000" >> android/gradle.properties
 
+      - name: Bundle JS into APK (standalone — no Metro needed)
+        run: |
+          mkdir -p android/app/src/main/assets
+          npx expo export:embed \
+            --platform android \
+            --dev false \
+            --entry-file index.ts \
+            --bundle-output android/app/src/main/assets/index.android.bundle \
+            --assets-dest android/app/src/main/res
+        env:
+          NODE_ENV: production
+
       - name: Build Debug APK
         run: |
           cd android
