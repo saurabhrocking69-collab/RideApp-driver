@@ -473,6 +473,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Notification Handler ──────────────────────
   useEffect(() => {
     if (Platform.OS === 'android') {
+      // Primary channel for ride assignments — MAX importance, bypass DND
       Notifications.setNotificationChannelAsync('ride_requests', {
         name: 'Ride Requests',
         importance: Notifications.AndroidImportance.MAX,
@@ -481,6 +482,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         bypassDnd: true,
+      });
+      // Fallback channel — Android 8+ drops notifications if channel doesn't exist
+      Notifications.setNotificationChannelAsync('default', {
+        name: 'General Notifications',
+        importance: Notifications.AndroidImportance.HIGH,
+        sound: 'default',
+        vibrationPattern: [0, 250, 250, 250],
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
     Notifications.setNotificationHandler({
@@ -1040,10 +1050,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       loadDriverOffers();
       if (!socketRef.current?.connected) {
         const s = io(API, {
-          transports: ['websocket', 'polling'],
+          transports: ['polling', 'websocket'], // polling first — passes through Jio/BSNL carrier NAT; upgrades to WebSocket when stable
           reconnection: true,
-          reconnectionAttempts: 20,
+          reconnectionAttempts: Infinity,
           reconnectionDelay: 2000,
+          reconnectionDelayMax: 10000,
+          timeout: 10000,
         });
         s.on('connect', () => { s.emit('driverJoin', { phone }); });
         s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); });
@@ -1236,7 +1248,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const msg = chatInput; setChatInput('');
     try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
-  const callCustomer = () => { if (activeRide?.passenger_phone) Linking.openURL(`tel:${activeRide.passenger_phone}`); };
+  const callCustomer = async () => {
+    if (!activeRide?.id) return;
+    try {
+      const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caller_role: 'driver', ride_id: activeRide.id }) });
+      const data = await r.json();
+      if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
+      if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
+      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
+    } catch (_e) { Alert.alert('Error', 'Network error'); }
+  };
 
   // ── Hourly ride functions ──────────────────────
   const acceptHourlyRide = async () => {
@@ -2350,7 +2371,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <View style={s.tripAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{activeRide.passenger_name?.[0] || 'P'}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.tripCustName}>{activeRide.passenger_name || 'Passenger'}</Text>
-                  <Text style={s.tripCustPhone}>📞 {activeRide.passenger_phone || 'N/A'}</Text>
+                  <Text style={s.tripCustPhone}>📞 {activeRide.passenger_phone_masked || '**********'}</Text>
                 </View>
                 <Text style={s.tripFare}>₹{activeRide.fare}</Text>
               </View>
