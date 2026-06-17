@@ -529,6 +529,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         useDriverStore.getState().triggerPoll?.();
         const sock = (globalThis as any).__driverSocket;
         if (sock && !sock.connected) sock.connect();
+        // Refresh wallet + commission so stale cache doesn't show
+        const ph = useDriverStore.getState().activeRide?.driver_phone
+          || (globalThis as any).__driverPhone;
+        if (ph) { loadDriverWallet(ph); loadCommissionHistory(ph); }
       }
     });
 
@@ -691,19 +695,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   useEffect(() => {
     if (!isOnline) return;
     let locInterval: any;
-    (async () => {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') return;
+    let mounted = true;
+    Location.requestForegroundPermissionsAsync().then(({ status }) => {
+      if (!mounted || status !== 'granted') return;
       locInterval = setInterval(async () => {
         try {
           const loc = await Location.getCurrentPositionAsync({});
           setDriverGps({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-          await fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude }) });
-          // GPS range check disabled for testing
+          fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude }) }).catch(() => {});
         } catch (_e) {}
       }, 5000);
-    })();
-    return () => clearInterval(locInterval);
+    });
+    return () => { mounted = false; clearInterval(locInterval); };
   }, [isOnline, activeRide?.id, activeRide?.status]);
 
   // ── Chat polling ───────────────────────────────
@@ -726,6 +729,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const d = await r.json();
         setHourlyChatMsgs(d.messages || []);
         lastHourlyChat.current = (d.messages || []).length;
+        setHChatUnread(0);
       } catch (_e) {}
     };
     load();
@@ -749,14 +753,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   useEffect(() => {
     if (!isOnline || !phone) return;
     let stopped = false;
+    let busy = false;
     const iv = setInterval(async () => {
-      if (stopped) return;
+      if (stopped || busy) return;
+      busy = true;
       try {
         const active = await fetch(`${API}/api/hourly/driver-active?phone=${phone}`).then(r => r.json());
         if (active.booking && !['completed','cancelled'].includes(active.booking.status)) {
           setActiveHourlyRide(active.booking);
           setHourlyRideReq(null);
-          return;
+          busy = false; return;
         }
         setActiveHourlyRide(null);
         if (!activeRide) {
@@ -765,6 +771,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           else setHourlyRideReq(null);
         }
       } catch (_e) {}
+      busy = false;
     }, 4000);
     return () => { stopped = true; clearInterval(iv); };
   }, [isOnline, phone, activeRide?.id]);
@@ -1046,6 +1053,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (val) {
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
+      (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
       startPolling(phone);
       loadDriverOffers();
       if (!socketRef.current?.connected) {
@@ -1166,6 +1174,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setEarnings(e => e + parseFloat(rideFare));
         setRides(r => r + 1);
         setActiveRide(null);
+        setOtpInput(''); setShowChat(false); setUnreadChat(0); setChatMsgs([]);
       } else {
         setResult('❌ ' + (data.message || data.error || 'Complete nahi hua, retry karo'));
       }
