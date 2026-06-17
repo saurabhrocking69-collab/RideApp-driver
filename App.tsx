@@ -1244,13 +1244,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
   const callCustomer = async () => {
-    if (!activeRide?.id) return;
+    const body: any = { caller_role: 'driver' };
+    if (activeRide?.id) body.ride_id = activeRide.id;
+    else if (activeHourlyRide?.id) body.booking_id = activeHourlyRide.id;
+    else return;
     try {
-      const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ caller_role: 'driver', ride_id: activeRide.id }) });
+      const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await r.json();
       if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
-      if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
-      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
+      if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
     } catch (_e) { Alert.alert('Error', 'Network error'); }
   };
 
@@ -2559,14 +2561,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {activeHourlyRide.drop_location && <><Text style={s.tripArrow}>↓</Text><Text style={s.tripTo}>🎯 {activeHourlyRide.drop_location}</Text></>}
               </View>
 
-              {/* Chat button */}
-              <TouchableOpacity
-                style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginTop: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-                onPress={() => { setShowHourlyChat(true); setHourlyChatMsgs([]); }}
-              >
-                <Text style={{ fontSize: 18 }}>💬</Text>
-                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Customer se Chat Karo</Text>
-              </TouchableOpacity>
+              {/* Chat + Call buttons */}
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  onPress={() => { setShowHourlyChat(true); setHourlyChatMsgs([]); }}
+                >
+                  <Text style={{ fontSize: 18 }}>💬</Text>
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Chat</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={{ flex: 1, backgroundColor: '#e3f2fd', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  onPress={callCustomer}
+                >
+                  <Text style={{ fontSize: 18 }}>📞</Text>
+                  <Text style={{ color: '#1565c0', fontWeight: '700', fontSize: 14 }}>Call</Text>
+                </TouchableOpacity>
+              </View>
 
               {activeHourlyRide.status === 'matched' && (
                 <View style={{ marginTop: 10 }}>
