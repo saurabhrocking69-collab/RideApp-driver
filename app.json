@@ -36,7 +36,29 @@
         "icon": "./assets/icon.png",
         "color": "#e94560",
         "defaultChannel": "ride_requests",
-        "mode": "production"
+        "mode": "production",
+        "channels": [
+          {
+            "name": "ride_requests",
+            "importance": 5,
+            "bypassDnd": true,
+            "sound": "default",
+            "vibrationPattern": [0, 500, 150, 500, 150, 800],
+            "lockscreenVisibility": 1
+          },
+          {
+            "name": "default",
+            "importance": 4,
+            "sound": "default",
+            "vibrationPattern": [0, 250, 250, 250],
+            "lockscreenVisibility": 1
+          },
+          {
+            "name": "driver_status",
+            "importance": 2,
+            "lockscreenVisibility": 1
+          }
+        ]
       }],
       ["expo-location", {
         "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye",

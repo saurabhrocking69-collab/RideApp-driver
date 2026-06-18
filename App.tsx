@@ -604,6 +604,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
   }, []);
   // ── FCM Token Register ────────────────────────
+  // Called on login AND on every app startup (session restore) AND when going online.
+  // Expo push tokens can rotate — always refreshing prevents stale-token silent failures.
   const registerFCM = async (userPhone: string) => {
     try {
       const { status: existing } = await Notifications.getPermissionsAsync();
@@ -613,14 +615,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         finalStatus = status;
       }
       if (finalStatus !== 'granted') return;
-      const token = (await Notifications.getExpoPushTokenAsync({
-        projectId: '8c13e622-0206-4e3f-ad33-8851c0f9353c'
-      })).data;
-      await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
-      console.log('✅ Driver FCM token saved');
-    } catch (e) {
-      console.log('FCM error:', e);
-    }
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: '8c13e622-0206-4e3f-ad33-8851c0f9353c',
+      });
+      const token = tokenData.data;
+      // Compare with cached token — only hit backend if it changed
+      const cached = await AsyncStorage.getItem('fcmToken').catch(() => null);
+      if (token !== cached) {
+        await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
+        await AsyncStorage.setItem('fcmToken', token).catch(() => {});
+      }
+    } catch (_e) {}
   };
   // ── Android Back Button ───────────────────────
   useEffect(() => {
@@ -1180,6 +1185,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           );
         }).catch(() => {});
       }
+
+      // Refresh FCM token every time driver goes online — prevents stale token failures
+      registerFCM(phone).catch(() => {});
 
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
