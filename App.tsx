@@ -321,6 +321,7 @@ export default function App() {
     return unsub;
   }, []);
   const socketRef = useRef<Socket | null>(null);
+  const onlineNotifIdRef = useRef<string | null>(null);
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
@@ -478,6 +479,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         bypassDnd: true,
+      });
+      // Low-importance persistent channel for "Driver Online" status bar notification
+      // This keeps process priority high → Android doesn't kill app on screen lock
+      Notifications.setNotificationChannelAsync('driver_status', {
+        name: 'Driver Online Status',
+        importance: Notifications.AndroidImportance.LOW,
+        sound: undefined,
+        enableVibrate: false,
+        showBadge: false,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
       // Fallback channel — Android 8+ drops notifications if channel doesn't exist
       Notifications.setNotificationChannelAsync('default', {
@@ -1042,6 +1053,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
     if (val) {
+      // Persistent "online" notification — raises process priority so Android
+      // doesn't kill the app on screen lock; ride requests still arrive
+      Notifications.scheduleNotificationAsync({
+        identifier: 'driver_online_status',
+        content: {
+          title: '🟢 Sppero Buddy — Online',
+          body: 'Ride requests receive ho rahi hain. Screen lock karo — notification aayegi.',
+          sticky: true,
+          autoDismiss: false,
+          data: { type: 'driver_status' },
+          ...(Platform.OS === 'android' ? { channelId: 'driver_status' } : {}),
+        },
+        trigger: null,
+      }).then(id => { onlineNotifIdRef.current = id; }).catch(() => {});
+
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
       (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
@@ -1071,6 +1097,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       })();
     } else {
       setResult('🔴 Offline hain');
+      // Dismiss the persistent online notification
+      if (onlineNotifIdRef.current) {
+        Notifications.dismissNotificationAsync(onlineNotifIdRef.current).catch(() => {});
+        onlineNotifIdRef.current = null;
+      }
       stopPolling();
       socketRef.current?.disconnect();
       socketRef.current = null;
