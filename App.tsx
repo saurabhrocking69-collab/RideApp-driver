@@ -1068,6 +1068,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         trigger: null,
       }).then(id => { onlineNotifIdRef.current = id; }).catch(() => {});
 
+      // Battery optimization prompt — once per install on Android
+      if (Platform.OS === 'android') {
+        AsyncStorage.getItem('batteryPromptShown').then(shown => {
+          if (shown) return;
+          AsyncStorage.setItem('batteryPromptShown', '1').catch(() => {});
+          Alert.alert(
+            '⚡ Ek Zaruri Setting',
+            'Lock screen pe ride requests aane ke liye:\n\n' +
+            '1. Neeche "Settings Kholein" tap karo\n' +
+            '2. "Battery" ya "Battery Optimization" dhundho\n' +
+            '3. Sppero Buddy select karo\n' +
+            '4. "Unrestricted" ya "Don\'t Optimize" choose karo\n\n' +
+            '(Xiaomi: Auto-start bhi ON karo)\n' +
+            '(Samsung: "Unrestricted" select karo)',
+            [
+              {
+                text: 'Settings Kholein',
+                onPress: () => Linking.openSettings(),
+              },
+              {
+                text: 'Baad Mein',
+                style: 'cancel',
+              },
+            ]
+          );
+        }).catch(() => {});
+      }
+
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
       (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
