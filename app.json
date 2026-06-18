@@ -24,7 +24,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.saurabhspero.rideappdriver",
-      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "READ_EXTERNAL_STORAGE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_CONNECTED_DEVICE"]
+      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "READ_EXTERNAL_STORAGE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION", "FOREGROUND_SERVICE_CONNECTED_DEVICE"]
     },
        "config": {
       "googleMaps": {
@@ -38,7 +38,12 @@
         "defaultChannel": "ride_requests",
         "mode": "production"
       }],
-      ["expo-location", { "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye" }],
+      ["expo-location", {
+        "locationAlwaysAndWhenInUsePermission": "Ride tracking ke liye location chahiye",
+        "locationAlwaysPermission": "Background mein bhi location chahiye taaki app minimize karne ke baad bhi aapki location update hoti rahe",
+        "isIosBackgroundLocationEnabled": true,
+        "isAndroidBackgroundLocationEnabled": true
+      }],
       ["expo-image-picker", { "photosPermission": "Documents upload karne ke liye gallery access chahiye" }]
     ],
     "web": {

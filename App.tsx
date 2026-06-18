@@ -4,6 +4,7 @@ import {
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal
 } from 'react-native';
 import * as Location from 'expo-location';
+import * as TaskManager from 'expo-task-manager';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
@@ -305,6 +306,56 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
 
 type Screen = 'splash' | 'login' | 'home';
 
+// ─── Background Location Task ────────────────────────────────────────────────
+// MUST be defined at module level, before any component mounts.
+// When app is minimized/screen locked, this task fires every ~5s and pings backend.
+const DRIVER_LOCATION_TASK = 'sppero-driver-bg-location';
+const _BG_API = 'https://rideapp-backend-production-5e1c.up.railway.app';
+
+TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
+  if (error || !data?.locations?.length) return;
+  const { latitude, longitude } = data.locations[0].coords;
+  try {
+    const phone = await AsyncStorage.getItem('driverPhone');
+    if (!phone) return;
+    fetch(`${_BG_API}/api/driver/update-location`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, lat: latitude, lng: longitude }),
+    }).catch(() => {});
+  } catch (_e) {}
+});
+
+async function startBgLocation(): Promise<boolean> {
+  try {
+    const { status: fg } = await Location.requestForegroundPermissionsAsync();
+    if (fg !== 'granted') return false;
+    const { status: bg } = await Location.requestBackgroundPermissionsAsync();
+    if (bg !== 'granted') return false;
+    const already = await Location.hasStartedLocationUpdatesAsync(DRIVER_LOCATION_TASK).catch(() => false);
+    if (already) return true;
+    await Location.startLocationUpdatesAsync(DRIVER_LOCATION_TASK, {
+      accuracy: Location.Accuracy.Balanced,
+      timeInterval: 5000,
+      distanceInterval: 20,
+      foregroundService: {
+        notificationTitle: '🟢 Sppero Buddy — Online',
+        notificationBody: 'Location active — ride requests aa rahi hain',
+        notificationColor: '#e94560',
+      },
+      pausesUpdatesAutomatically: false,
+    });
+    return true;
+  } catch (_e) { return false; }
+}
+
+async function stopBgLocation(): Promise<void> {
+  try {
+    const running = await Location.hasStartedLocationUpdatesAsync(DRIVER_LOCATION_TASK).catch(() => false);
+    if (running) await Location.stopLocationUpdatesAsync(DRIVER_LOCATION_TASK);
+  } catch (_e) {}
+}
+
 export default function App() {
   const [screen, setScreen]         = useState<Screen>('splash');
   const splashLogo  = useRef(new Animated.Value(0)).current;
@@ -427,6 +478,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }, 620);
     // After 2.6s — check session then fade out
     const timer = setTimeout(async () => {
+      // Clean up any stale background location task from previous session
+      stopBgLocation().catch(() => {});
       let navTo: Screen = 'login';
       try {
         const savedPhone = await AsyncStorage.getItem('driverPhone');
@@ -696,23 +749,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setPayoutLoading(false);
   };
 
-  // ── Location tracking + GPS range check ────────
+  // ── Location tracking (foreground: UI updates + backend ping) ──────────────
+  // Background task handles backend pings when app is minimized.
   useEffect(() => {
     if (!isOnline) return;
-    let locInterval: any;
+    let sub: Location.LocationSubscription | null = null;
     let mounted = true;
-    Location.requestForegroundPermissionsAsync().then(({ status }) => {
-      if (!mounted || status !== 'granted') return;
-      locInterval = setInterval(async () => {
-        try {
-          const loc = await Location.getCurrentPositionAsync({});
-          setDriverGps({ lat: loc.coords.latitude, lng: loc.coords.longitude });
-          fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, lat: loc.coords.latitude, lng: loc.coords.longitude }) }).catch(() => {});
-        } catch (_e) {}
-      }, 5000);
-    });
-    return () => { mounted = false; clearInterval(locInterval); };
-  }, [isOnline, activeRide?.id, activeRide?.status]);
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (!mounted || status !== 'granted') return;
+        sub = await Location.watchPositionAsync(
+          { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 20 },
+          ({ coords }) => {
+            if (!mounted) return;
+            setDriverGps({ lat: coords.latitude, lng: coords.longitude });
+            fetch(`${API}/api/driver/update-location`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ phone, lat: coords.latitude, lng: coords.longitude }),
+            }).catch(() => {});
+          }
+        );
+      } catch (_e) {}
+    })();
+    return () => { mounted = false; sub?.remove(); };
+  }, [isOnline, phone]);
 
   // ── Chat polling ───────────────────────────────
   useEffect(() => {
@@ -1058,20 +1120,44 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
     if (val) {
-      // Persistent "online" notification — raises process priority so Android
-      // doesn't kill the app on screen lock; ride requests still arrive
-      Notifications.scheduleNotificationAsync({
-        identifier: 'driver_online_status',
-        content: {
-          title: '🟢 Sppero Buddy — Online',
-          body: 'Ride requests receive ho rahi hain. Screen lock karo — notification aayegi.',
-          sticky: true,
-          autoDismiss: false,
-          data: { type: 'driver_status' },
-          ...(Platform.OS === 'android' ? { channelId: 'driver_status' } : {}),
-        },
-        trigger: null,
-      }).then(id => { onlineNotifIdRef.current = id; }).catch(() => {});
+      // Try to start background location tracking.
+      // If granted → foreground service notification is shown by the location task
+      //              (shows "🟢 Sppero Buddy — Online | Location active" in status bar)
+      // If denied  → fall back to a custom persistent notification for process priority
+      const bgStarted = await startBgLocation();
+      if (!bgStarted) {
+        Notifications.scheduleNotificationAsync({
+          identifier: 'driver_online_status',
+          content: {
+            title: '🟢 Sppero Buddy — Online',
+            body: 'Ride requests receive ho rahi hain. Screen lock karo — notification aayegi.',
+            sticky: true,
+            autoDismiss: false,
+            data: { type: 'driver_status' },
+            ...(Platform.OS === 'android' ? { channelId: 'driver_status' } : {}),
+          },
+          trigger: null,
+        }).then(id => { onlineNotifIdRef.current = id; }).catch(() => {});
+
+        // Guide user to grant background location — only on Android, once per install
+        if (Platform.OS === 'android') {
+          AsyncStorage.getItem('bgLocPromptShown').then(shown => {
+            if (shown) return;
+            AsyncStorage.setItem('bgLocPromptShown', '1').catch(() => {});
+            Alert.alert(
+              '📍 Background Location Allow Karo',
+              'App minimize karne ke baad bhi aapki location update hoti rahe, iske liye:\n\n' +
+              '1. "Settings Kholein" tap karo\n' +
+              '2. Location → "Allow all the time" select karo\n\n' +
+              'Isse customer aapko map pe live track kar sakenge.',
+              [
+                { text: 'Settings Kholein', onPress: () => Linking.openSettings() },
+                { text: 'Baad Mein', style: 'cancel' },
+              ]
+            );
+          }).catch(() => {});
+        }
+      }
 
       // Battery optimization prompt — once per install on Android
       if (Platform.OS === 'android') {
@@ -1088,14 +1174,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             '(Xiaomi: Auto-start bhi ON karo)\n' +
             '(Samsung: "Unrestricted" select karo)',
             [
-              {
-                text: 'Settings Kholein',
-                onPress: () => Linking.openSettings(),
-              },
-              {
-                text: 'Baad Mein',
-                style: 'cancel',
-              },
+              { text: 'Settings Kholein', onPress: () => Linking.openSettings() },
+              { text: 'Baad Mein', style: 'cancel' },
             ]
           );
         }).catch(() => {});
@@ -1130,7 +1210,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       })();
     } else {
       setResult('🔴 Offline hain');
-      // Dismiss the persistent online notification
+      // Stop background location task (also removes foreground service notification)
+      stopBgLocation().catch(() => {});
+      // Dismiss fallback notification if it was showing (permission-denied path)
       if (onlineNotifIdRef.current) {
         Notifications.dismissNotificationAsync(onlineNotifIdRef.current).catch(() => {});
         onlineNotifIdRef.current = null;
@@ -3370,7 +3452,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 20, color: '#ccc' }}>›</Text>
           </Bouncy>
         ))}
-        <Bouncy style={s.logoutBtn} onPress={async () => { await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
