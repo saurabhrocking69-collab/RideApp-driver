@@ -409,7 +409,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [loginResendTimer, setLoginResendTimer] = useState(60);
   const [loginCanResend, setLoginCanResend] = useState(false);
   const loginOtpRefs = useRef<any[]>([]);
-  const [driverInfo, setDriverInfo] = useState<any>(null);
+  const [driverInfo, setDriverInfo]       = useState<any>(null);
+  const [favouriteCount, setFavouriteCount] = useState<number | null>(null);
   const [devOtp, setDevOtp]         = useState('');
 
 
@@ -905,9 +906,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [screen, phone]);
 
-  // ── Load referral info when profile tab opens ─────────
+  // ── Load referral info + favourite count when profile tab opens ─────────
   useEffect(() => {
-    if (activeTab === 'profile' && !referralLoaded && phone) loadReferralInfo();
+    if (activeTab === 'profile' && phone) {
+      if (!referralLoaded) loadReferralInfo();
+      fetch(`${API}/api/favourites/driver-count?phone=${phone}`)
+        .then(r => r.json()).then(d => setFavouriteCount(d.count ?? 0)).catch(() => {});
+    }
   }, [activeTab, phone]);
 
   // ── Navigate ───────────────────────────────────
@@ -1631,19 +1636,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
         <Text style={rs.bigTitle}>🚗 Vehicle Type</Text><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
         {[
-          { id:'bike', icon:'🏍️', label:'Bike', sub:'' },
-          { id:'auto', icon:'🛺', label:'Auto', sub:'' },
-          { id:'car', icon:'🚕', label:'Car / Taxi', sub:'' },
-          { id:'eriksha', icon:'🛵', label:'E-Riksha', sub:'' },
-          { id:'luxury', icon:'💎', label:'Ultra Luxury', sub:'BMW · Mercedes · Audi · Land Rover · Lexus' },
+          { id:'bike',          icon:'🏍️', label:'Bike',          sub:'',                                      color: null },
+          { id:'auto',          icon:'🛺', label:'Auto',          sub:'',                                      color: null },
+          { id:'car',           icon:'🚕', label:'Car / Taxi',    sub:'',                                      color: null },
+          { id:'eriksha',       icon:'🛵', label:'E-Riksha',      sub:'',                                      color: null },
+          { id:'green_bike',    icon:'⚡', label:'Green Bike',    sub:'Electric Bike / Scooty — Eco Friendly', color: '#2e7d32' },
+          { id:'electric_auto', icon:'🌿', label:'Electric Auto', sub:'Electric 3-Wheeler — Zero Emission',    color: '#1565c0' },
+          { id:'luxury',        icon:'💎', label:'Ultra Luxury',  sub:'BMW · Mercedes · Audi · Land Rover · Lexus', color: '#c9a227' },
         ].map(v => (
           <TouchableOpacity key={v.id}
-            style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive, v.id === 'luxury' && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : '#c9a227' }]}
+            style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive,
+              v.color && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : v.color }]}
             onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); updateReg('vehicle_model', ''); }}>
             <Text style={{ fontSize: 32, marginRight: 16 }}>{v.icon}</Text>
             <View style={{ flex: 1 }}>
               <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1a1a2e' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
-              {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : '#c9a227', marginTop: 2 }}>{v.sub}</Text> : null}
+              {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#888'), marginTop: 2 }}>{v.sub}</Text> : null}
             </View>
             {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
           </TouchableOpacity>
@@ -1717,7 +1725,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ REGISTRATION STEP 4 — Vehicle ═══
   if (screen === 'login' && regStep === 4) {
-    const needBrand  = ['bike','car','luxury'].includes(regData.vehicle_type);
+    const needBrand  = ['bike','car','luxury','green_bike'].includes(regData.vehicle_type);
     const needModel  = !['eriksha'].includes(regData.vehicle_type);
     const needNum    = !['eriksha'].includes(regData.vehicle_type);
     const brandValid = !needBrand || !!regData.vehicle_brand;
@@ -1735,9 +1743,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       'Lexus':        ['ES 300h','NX','RX 350','UX 300e','LX'],
     };
     const modelPlaceholder: any = {
-      bike:  'eg. Activa 6G, Splendor Plus, Pulsar 150, Royal Enfield Classic',
-      car:   'eg. Swift Dzire, Creta, Nexon, City, Fortuner',
-      auto:  'eg. Bajaj RE, TVS King, Piaggio Ape',
+      bike:          'eg. Activa 6G, Splendor Plus, Pulsar 150, Royal Enfield Classic',
+      car:           'eg. Swift Dzire, Creta, Nexon, City, Fortuner',
+      auto:          'eg. Bajaj RE, TVS King, Piaggio Ape',
+      green_bike:    'eg. Ather 450X, Ola S1 Pro, TVS iQube, Bajaj Chetak, Hero Optima CX',
+      electric_auto: 'eg. Bajaj RE Electric, Piaggio Ape E-City, Mahindra Treo, Champion Electric',
     };
 
     return (
@@ -1749,10 +1759,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '80%' }} /></View>
         <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
-          <Text style={rs.bigTitle}>{regData.vehicle_type === 'luxury' ? '💎' : '🚗'} Vehicle Details</Text>
+          <Text style={rs.bigTitle}>
+            {regData.vehicle_type === 'luxury' ? '💎' : regData.vehicle_type === 'green_bike' ? '⚡' : regData.vehicle_type === 'electric_auto' ? '🌿' : '🚗'} Vehicle Details
+          </Text>
           <Text style={rs.subTitle}>
-            {regData.vehicle_type === 'eriksha' ? 'E-Riksha: photo zaruri, number optional' :
-             regData.vehicle_type === 'luxury' ? 'Premium vehicle — brand, model aur number' :
+            {regData.vehicle_type === 'eriksha'       ? 'E-Riksha: photo zaruri, number optional' :
+             regData.vehicle_type === 'luxury'        ? 'Premium vehicle — brand, model aur number' :
+             regData.vehicle_type === 'green_bike'    ? 'Electric Bike — brand, model, number aur photos' :
+             regData.vehicle_type === 'electric_auto' ? 'Electric Auto — model, number aur photos' :
              'Brand, model, number aur photos'}
           </Text>
 
@@ -1778,7 +1792,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               ) : (
                 <TextInput
                   style={[rs.input, { marginBottom: 6 }]}
-                  placeholder={regData.vehicle_type === 'bike' ? 'eg. Honda, Bajaj, Royal Enfield, TVS' : 'eg. Maruti, Hyundai, Tata, Honda'}
+                  placeholder={regData.vehicle_type === 'bike' ? 'eg. Honda, Bajaj, Royal Enfield, TVS' : regData.vehicle_type === 'green_bike' ? 'eg. Ather, Ola Electric, TVS, Bajaj, Hero' : 'eg. Maruti, Hyundai, Tata, Honda'}
                   value={regData.vehicle_brand}
                   onChangeText={(v) => updateReg('vehicle_brand', v)}
                 />
@@ -2493,11 +2507,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ flex: 1, backgroundColor: '#0d0d1a', justifyContent: 'center', padding: 20 }}>
               {/* Header */}
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
-                <View style={{ backgroundColor: '#e94560', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 10 }}>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 2 }}>🔔 NAYI RIDE REQUEST</Text>
+                {rideReq?.is_favourite_request && (
+                  <View style={{ backgroundColor: '#f0a500', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 7, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: '#1a1a2e', fontSize: 13, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
+                  </View>
+                )}
+                <View style={{ backgroundColor: rideReq?.is_favourite_request ? '#2e7d32' : '#e94560', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 10 }}>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 2 }}>{rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE REQUEST'}</Text>
                 </View>
                 <Text style={{ fontSize: 64 }}>
-                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : '🛺'}
+                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
                 </Text>
                 <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 6 }}>
                   {rideReq?.passenger_name || 'Passenger'}
@@ -3239,6 +3258,48 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} · {driverInfo?.vehicle_no || ''}</Text>
           <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
+        {/* ── Favourite Buddy Count Card ── */}
+        {(() => {
+          const n = favouriteCount ?? 0;
+          const loading = favouriteCount === null;
+          const msg =
+            n === 0 ? 'Abhi tak kisi ne favourite nahi banaya — achhi rides do!' :
+            n === 1 ? 'Ek customer ne aapko apna favourite driver banaya! 🙌' :
+            n <= 5  ? `${n} loyal customers hain aapke — great job! 🔥` :
+            n <= 20 ? `${n} customers aapke diwane hain! ⭐ Top Driver!` :
+                      `${n} customers! Aap ek legend hain! 🏆`;
+          const cardBg   = n >= 20 ? '#1a1a2e' : n >= 6 ? '#fff8e1' : n >= 1 ? '#e8f5e9' : '#f5f5f5';
+          const numColor = n >= 20 ? '#ffd700' : n >= 6 ? '#e65100' : n >= 1 ? '#2e7d32' : '#bbb';
+          const txtColor = n >= 20 ? '#fff' : '#1a1a2e';
+          const subColor = n >= 20 ? '#aaa' : '#666';
+          return (
+            <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 18, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>⭐</Text>
+                <Text style={{ fontWeight: '900', fontSize: 15, color: txtColor, letterSpacing: 0.3 }}>Favourite Sppero Buddy</Text>
+              </View>
+              {loading ? (
+                <Text style={{ color: subColor, fontSize: 13 }}>Loading...</Text>
+              ) : (
+                <>
+                  <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+                    <Text style={{ fontSize: 64, fontWeight: '900', color: numColor, lineHeight: 70 }}>{n}</Text>
+                    <Text style={{ fontSize: 13, color: subColor, marginTop: 4, textAlign: 'center' }}>{msg}</Text>
+                  </View>
+                  {n > 0 && (
+                    <View style={{ marginTop: 10, backgroundColor: n >= 20 ? 'rgba(255,215,0,0.12)' : 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
+                      <Text style={{ fontSize: 14, marginRight: 8 }}>💡</Text>
+                      <Text style={{ fontSize: 12, color: subColor, flex: 1 }}>
+                        Jab ye customers directly aapko request bhejengen, aapko ⭐ badge ke saath notification aayega!
+                      </Text>
+                    </View>
+                  )}
+                </>
+              )}
+            </View>
+          );
+        })()}
+
         {/* UPI ID Section */}
         <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>📱 Mera UPI ID</Text>
