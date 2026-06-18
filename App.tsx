@@ -1311,7 +1311,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await r.json();
       if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
-      if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
+      if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
+      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
     } catch (_e) { Alert.alert('Error', 'Network error'); }
   };
 
