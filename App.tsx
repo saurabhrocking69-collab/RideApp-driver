@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image, Alert,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
@@ -1689,7 +1689,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ REGISTRATION STEP 1 — Phone + OTP ═══
   if (screen === 'login' && regStep === 1) return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={rs.regHeader}>
         <TouchableOpacity onPress={() => { setRegStep(0); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); }}>
           <Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text>
@@ -1698,7 +1698,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ width: 50 }} />
       </View>
       <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '20%' }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {!loginOtpSent ? (
           <View>
             <Text style={rs.bigTitle}>📱 Phone Number</Text>
@@ -1801,7 +1801,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
       <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '40%' }} /></View>
-      <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <Text style={rs.bigTitle}>🚗 Vehicle Type</Text><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
         {[
           { id:'bike',          icon:'🏍️', label:'Bike',          sub:'',                                      color: null },
@@ -1835,14 +1835,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const dlValid = dlCleaned.length === 0 || /^[A-Z]{2}[0-9]{13}$/.test(dlCleaned);
     const step3Ok = !!regData.dl_name.trim() && dlCleaned.length === 15 && dlValid && !!regData.dl_photo;
     return (
-      <View style={s.screen}>
+      <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={rs.regHeader}>
           <TouchableOpacity onPress={() => setRegStep(2)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
           <Text style={rs.regTitle}>Step 3 of 5</Text>
           <View style={{ width: 50 }} />
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '60%' }} /></View>
-        <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={rs.bigTitle}>📄 Driving License</Text>
           <Text style={rs.subTitle}>DL ki details — naam, number aur photo</Text>
 
@@ -1885,9 +1885,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             onPress={() => { setResult(''); setRegStep(4); }}>
             <Text style={s.btnTxt}>Aage badho →</Text>
           </TouchableOpacity>
-          <View style={{ height: 30 }} />
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -1919,14 +1918,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
 
     return (
-      <View style={s.screen}>
+      <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={rs.regHeader}>
           <TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
           <Text style={rs.regTitle}>Step 4 of 5</Text>
           <View style={{ width: 50 }} />
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '80%' }} /></View>
-        <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={rs.bigTitle}>
             {regData.vehicle_type === 'luxury' ? '💎' : regData.vehicle_type === 'green_bike' ? '⚡' : regData.vehicle_type === 'electric_auto' ? '🌿' : '🚗'} Vehicle Details
           </Text>
@@ -2032,9 +2031,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <TouchableOpacity style={[s.btn, !step4Ok && { opacity: 0.5 }]} disabled={!step4Ok} onPress={() => { setResult(''); setRegStep(5); }}>
             <Text style={s.btnTxt}>Aage badho →</Text>
           </TouchableOpacity>
-          <View style={{ height: 40 }} />
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -2044,14 +2042,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const aadhaarOk = aadhaarDigits.length === 12;
     const step5Ok = aadhaarOk && !!regData.aadhaar_photo && !!regData.face_photo;
     return (
-      <View style={s.screen}>
+      <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={rs.regHeader}>
           <TouchableOpacity onPress={() => setRegStep(4)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
           <Text style={rs.regTitle}>Step 5 of 5</Text>
           <View style={{ width: 50 }} />
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '100%' }} /></View>
-        <ScrollView style={{ flex: 1, padding: 20 }} keyboardShouldPersistTaps="handled">
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <Text style={rs.bigTitle}>🪪 Aadhaar & Selfie</Text>
           <Text style={rs.subTitle}>Last step — aur aap ho jayenge!</Text>
 
@@ -2094,9 +2092,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             onPress={submitRegistration}>
             <Text style={s.btnTxt}>{loading ? '⏳ Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
           </TouchableOpacity>
-          <View style={{ height: 60 }} />
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -2166,13 +2163,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ LOGIN ═══
   if (screen === 'login') return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.hero}>
         <Text style={s.heroIcon}>🚖</Text>
         <Text style={s.heroTitle}>Sppero Buddy</Text>
         <Text style={s.heroSub}>Captain Login</Text>
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }} keyboardShouldPersistTaps="handled">
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {!loginOtpSent ? (
           // ── Phone Input ──
           <View>
@@ -2391,7 +2388,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <CountUp value={tripSummary.earned} style={{ color: '#4CAF50', fontSize: 36, fontWeight: 'bold', marginTop: 8 }} />
         <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Aapki kamai is trip se</Text>
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16 }}>
           <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
           {/* Payment method badge */}
@@ -2552,7 +2549,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
       {/* Content */}
       <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
-        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 90 }}>
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
@@ -3303,7 +3300,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return (
     <View style={s.screen}>
       {/* Dark header */}
-      <View style={{ backgroundColor: '#1a1a2e', paddingTop: 52, paddingBottom: 20, paddingHorizontal: 18 }}>
+      <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
           <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 }}>💰 Wallet & Earnings</Text>
           <TouchableOpacity onPress={() => loadDriverWallet(phone)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
@@ -3349,7 +3346,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ))}
       </View>
 
-      <ScrollView style={{ flex: 1, paddingHorizontal: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 30 }}>
+      <ScrollView style={{ flex: 1, paddingHorizontal: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
 
         {walletEarningsTab === 'summary' && (<>
           <View style={s.earningsCard}>
@@ -3665,7 +3662,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     <View style={s.screen}>
       <View style={s.topBar}><Text style={s.greeting}>👤 Profile</Text></View>
       {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
-      <ScrollView style={{ flex: 1, padding: 16 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         <View style={s.profileHero}>
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || 'D')[0].toUpperCase()}</Text></View>
           <Text style={s.profileName}>{driverInfo?.name || phone}</Text>
@@ -3847,7 +3844,7 @@ const s = StyleSheet.create({
   mapFit:          { height: 220, width: '100%', backgroundColor: '#e8eaed' },
   navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
   chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#e94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
-  hero:            { backgroundColor:'#1a1a2e', alignItems:'center', padding:50, paddingBottom:40 },
+  hero:            { backgroundColor:'#1a1a2e', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
   heroIcon:        { fontSize:60 },
   heroTitle:       { color:'#fff', fontSize:28, fontWeight:'bold', marginTop:10 },
   heroSub:         { color:'#aaa', fontSize:14, marginTop:6 },
@@ -3856,7 +3853,7 @@ const s = StyleSheet.create({
   btn:             { backgroundColor:'#e94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:10 },
   btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
   err:             { textAlign:'center', color:'#e94560', marginVertical:10 },
-  topBar:          { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop:48 },
+  topBar:          { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
   greeting:        { color:'#fff', fontSize:18, fontWeight:'bold' },
   subTxt:          { color:'#aaa', fontSize:12, marginTop:2 },
   notifBanner:     { backgroundColor:'#e94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
@@ -3900,7 +3897,7 @@ const s = StyleSheet.create({
   acceptBtn:       { flex:2, padding:14, borderRadius:10, backgroundColor:'#4CAF50', alignItems:'center' },
   acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:15 },
   result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
-  nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0', paddingBottom:16, paddingTop:8, elevation:16, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:12 },
+  nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:8, elevation:16, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:12 },
   navItem:         { flex:1, alignItems:'center', justifyContent:'center', paddingTop:2 },
   navIcon:         { fontSize:22, color:'#ccc' },
   navIconActive:   { color:'#e94560' },
@@ -3923,7 +3920,7 @@ const s = StyleSheet.create({
 });
 
 const rs = StyleSheet.create({
-  regHeader:   { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop:48 },
+  regHeader:   { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
   regTitle:    { color:'#fff', fontSize:16, fontWeight:'bold' },
   bigTitle:    { fontSize:26, fontWeight:'bold', color:'#1a1a2e', marginTop:10 },
   subTitle:    { fontSize:14, color:'#888', marginTop:6, marginBottom:10 },
