@@ -386,6 +386,15 @@ export default function App() {
   const [eta, setEta]               = useState('');
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings'>('');
+  const [custRatingStars, setCustRatingStars]   = useState(0);
+  const [custRatingDone, setCustRatingDone]     = useState(false);
+  const [bankAccount, setBankAccount]   = useState('');
+  const [bankIfsc, setBankIfsc]         = useState('');
+  const [bankHolder, setBankHolder]     = useState('');
+  const [bankSaving, setBankSaving]     = useState(false);
+  const [bankLoaded, setBankLoaded]     = useState(false);
+  const [bankMsg, setBankMsg]           = useState('');
   const [showDriverCancelModal, setShowDriverCancelModal] = useState(false);
   const [cancelReason, setCancelReason]         = useState('');
   const [paymentRideId, setPaymentRideId] = useState('');
@@ -1323,6 +1332,45 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult('❌ Network error — check internet aur retry karo');
     }
     setLoading(false);
+  };
+
+  // Reset customer rating when tripSummary clears
+  useEffect(() => { if (!tripSummary) { setCustRatingStars(0); setCustRatingDone(false); } }, [tripSummary]);
+
+  // Load bank details when bank sub-screen opens
+  useEffect(() => {
+    if (driverSubScreen === 'bank' && phone && !bankLoaded) {
+      fetch(`${API}/api/driver/bank?phone=${phone}`)
+        .then(r => r.json()).then(d => {
+          setBankAccount(d.bank_account || ''); setBankIfsc(d.bank_ifsc || ''); setBankHolder(d.bank_holder || '');
+          setBankLoaded(true);
+        }).catch(() => {});
+    }
+  }, [driverSubScreen, phone]);
+
+  const rateCustomer = async () => {
+    if (!custRatingStars || !paymentRideId) return;
+    try {
+      await fetch(`${API}/api/rides/rate-customer`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ride_id: paymentRideId, driver_phone: phone, rating: custRatingStars }),
+      });
+    } catch (_e) {}
+    setCustRatingDone(true);
+  };
+
+  const saveBank = async () => {
+    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('❌ Account number aur IFSC dono chahiye'); return; }
+    setBankSaving(true); setBankMsg('');
+    try {
+      const res = await fetch(`${API}/api/driver/bank`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder }),
+      });
+      const d = await res.json();
+      setBankMsg(d.success ? '✅ Bank details save ho gayi!' : '❌ ' + (d.error || 'Error'));
+    } catch (_e) { setBankMsg('❌ Network error'); }
+    setBankSaving(false);
   };
 
   // Payment status polling (driver wait kare)
@@ -2365,6 +2413,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           </View>
         )}
+        {/* Rate Customer */}
+        {!custRatingDone ? (
+          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 3, marginBottom: 16 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 2 }}>Customer ko Rate karo</Text>
+            <Text style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Yeh customer kaisa tha? (1–5 stars)</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+              {[1,2,3,4,5].map(star => (
+                <TouchableOpacity key={star} onPress={() => setCustRatingStars(star)}>
+                  <Text style={{ fontSize: 38, opacity: star <= custRatingStars ? 1 : 0.2 }}>⭐</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {custRatingStars > 0 && (
+              <TouchableOpacity onPress={rateCustomer}
+                style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 13, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Submit Rating</Text>
+              </TouchableOpacity>
+            )}
+            {custRatingStars === 0 && (
+              <TouchableOpacity onPress={() => setCustRatingDone(true)}>
+                <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginTop: 4 }}>Skip</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        ) : (
+          <View style={{ backgroundColor: '#e8f5e9', borderRadius: 16, padding: 16, marginBottom: 16, alignItems: 'center', flexDirection: 'row', gap: 10 }}>
+            <Text style={{ fontSize: 22 }}>✅</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#2e7d32' }}>Customer rating submit ho gaya!</Text>
+          </View>
+        )}
         <Bouncy style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
       </ScrollView>
     </ScreenIn>
@@ -2971,6 +3049,223 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </KeyboardAvoidingView>
   );
 
+  // ═══ DRIVER SUB-SCREENS (profile menu) ═══
+  if (driverSubScreen !== '') {
+    const back = () => setDrSubScreen('');
+    const SubHeader = ({ title }: { title: string }) => (
+      <View style={s.topBar}>
+        <TouchableOpacity onPress={back} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <Text style={s.greeting}>{title}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+    );
+
+    if (driverSubScreen === 'documents') return (
+      <View style={s.screen}>
+        <SubHeader title="📋 Documents" />
+        <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          {/* Verification status */}
+          <View style={{ backgroundColor: driverInfo?.verification_status === 'approved' ? '#e8f5e9' : '#fff3e0', borderRadius: 16, padding: 18, marginBottom: 16, alignItems: 'center', elevation: 2 }}>
+            <Text style={{ fontSize: 32, marginBottom: 8 }}>{driverInfo?.verification_status === 'approved' ? '✅' : '⏳'}</Text>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: '#1a1a2e' }}>
+              {driverInfo?.verification_status === 'approved' ? 'Verified Driver' : 'Verification Pending'}
+            </Text>
+            <Text style={{ fontSize: 12, color: '#666', marginTop: 4, textAlign: 'center' }}>
+              {driverInfo?.verification_status === 'approved'
+                ? 'Aapke sabhi documents verify ho chuke hain'
+                : 'Aapke documents review me hain — 24-48 ghante lagenge'}
+            </Text>
+          </View>
+
+          {/* Driver face photo */}
+          {driverInfo?.face_photo && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>📸 Profile Photo</Text>
+              <Image source={{ uri: driverInfo.face_photo }} style={{ width: '100%', height: 180, borderRadius: 12 }} resizeMode="cover" />
+            </View>
+          )}
+
+          {/* Vehicle details */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>🚗 Vehicle Info</Text>
+            {[
+              ['Type', (driverInfo?.vehicle_type || '—').replace('_', ' ').toUpperCase()],
+              ['Vehicle No', driverInfo?.vehicle_no || '—'],
+              ['Brand', driverInfo?.vehicle_brand || '—'],
+              ['Model', driverInfo?.vehicle_model || '—'],
+            ].map(([k, v], i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                <Text style={{ fontSize: 13, color: '#888' }}>{k}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{v}</Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 14 }}>
+            <Text style={{ fontSize: 13, color: '#1565c0', fontWeight: '600', marginBottom: 4 }}>📌 Documents Update karne ke liye</Text>
+            <Text style={{ fontSize: 12, color: '#1976d2' }}>Support se contact karo ya app re-registration karo naye documents ke saath.</Text>
+            <TouchableOpacity onPress={() => { back(); setDrSubScreen('support'); }}
+              style={{ backgroundColor: '#1565c0', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 10 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Contact Support</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+        <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+      </View>
+    );
+
+    if (driverSubScreen === 'bank') return (
+      <View style={s.screen}>
+        <SubHeader title="🏦 Bank Details" />
+        <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 14, marginBottom: 16 }}>
+            <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '700' }}>ℹ️ Payout Information</Text>
+            <Text style={{ fontSize: 12, color: '#bf360c', marginTop: 4 }}>
+              Bank details verified hone ke baad aapka weekly payout seedha account me aayega. NEFT/IMPS ke through — 1-2 working days.
+            </Text>
+          </View>
+
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 2 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>Bank Account Details</Text>
+
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Holder Name</Text>
+            <TextInput
+              style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
+              placeholder="Aapka pura naam"
+              placeholderTextColor="#ccc"
+              value={bankHolder}
+              onChangeText={setBankHolder}
+            />
+
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Number</Text>
+            <TextInput
+              style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
+              placeholder="1234567890"
+              placeholderTextColor="#ccc"
+              keyboardType="numeric"
+              value={bankAccount}
+              onChangeText={setBankAccount}
+            />
+
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>IFSC Code</Text>
+            <TextInput
+              style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 20 }}
+              placeholder="SBIN0001234"
+              placeholderTextColor="#ccc"
+              autoCapitalize="characters"
+              value={bankIfsc}
+              onChangeText={v => setBankIfsc(v.toUpperCase())}
+            />
+
+            <TouchableOpacity onPress={saveBank} disabled={bankSaving}
+              style={{ backgroundColor: bankSaving ? '#ccc' : '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : '💾 Save Bank Details'}</Text>
+            </TouchableOpacity>
+            {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? '#4CAF50' : '#e94560' }}>{bankMsg}</Text> : null}
+          </View>
+        </ScrollView>
+        <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+      </View>
+    );
+
+    if (driverSubScreen === 'support') return (
+      <View style={s.screen}>
+        <SubHeader title="📞 Support" />
+        <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center' }}>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>🎧</Text>
+            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Sppero Driver Support</Text>
+            <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
+          </View>
+          {[
+            { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
+            { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
+            { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:driver.support@sppero.com') },
+          ].map((item, i) => (
+            <TouchableOpacity key={i} onPress={item.action}
+              style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 2 }}>
+              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: item.color, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+                <Text style={{ fontSize: 24 }}>{item.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>{item.label}</Text>
+                <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{item.sub}</Text>
+              </View>
+              <Text style={{ fontSize: 20, color: '#ddd' }}>›</Text>
+            </TouchableOpacity>
+          ))}
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 8, marginBottom: 10 }}>Common Issues</Text>
+          {[
+            ['Payment nahi mila?', 'Trip complete ke baad 24 ghante wait karo. Agar nahi aaya toh support contact karo.'],
+            ['Account suspend hua?', 'Email pe reason bheja gaya hoga — support se baat karo appeal ke liye.'],
+            ['Rating kaise badhayein?', 'Time pe pickup, clean vehicle aur polite behaviour se rating naturally badhti hai.'],
+            ['Commission kab katega?', 'Har completed ride pe 15% commission automatically wallet se cut hota hai.'],
+          ].map(([q, a], i) => (
+            <View key={i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 1 }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e', marginBottom: 6 }}>❓ {q}</Text>
+              <Text style={{ fontSize: 12, color: '#666', lineHeight: 18 }}>{a}</Text>
+            </View>
+          ))}
+        </ScrollView>
+        <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+      </View>
+    );
+
+    if (driverSubScreen === 'settings') {
+      return (
+        <View style={s.screen}>
+          <SubHeader title="⚙️ Settings" />
+          <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>🔔 Notifications</Text>
+              {[
+                { label: 'Ride Requests', sub: 'Nayi ride ki notification', key: 'notif_rides', def: true },
+                { label: 'Wallet Updates', sub: 'Payment credit/debit alerts', key: 'notif_wallet', def: true },
+                { label: 'Promotional Offers', sub: 'Bonus aur offers', key: 'notif_promo', def: true },
+              ].map((item, i) => (
+                <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>{item.label}</Text>
+                    <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{item.sub}</Text>
+                  </View>
+                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Notifications settings OS settings se manage karo:\nSettings → Apps → Sppero Buddy → Notifications')} trackColor={{ false: '#ccc', true: '#e94560' }} thumbColor="#fff" />
+                </View>
+              ))}
+            </View>
+
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>📱 App Info</Text>
+              {[
+                ['App Version', '1.0.0'],
+                ['Driver ID', phone ? `DRV-${phone.slice(-4)}` : '—'],
+                ['Platform', 'Android'],
+              ].map(([k, v], i) => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                  <Text style={{ fontSize: 13, color: '#888' }}>{k}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{v}</Text>
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity
+              onPress={() => Alert.alert('Cache Clear', 'App cache clear ho gaya!')}
+              style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 1 }}>
+              <Text style={{ fontSize: 18, marginRight: 12 }}>🗑️</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>Clear Cache</Text>
+                <Text style={{ fontSize: 11, color: '#888' }}>App data clear karo</Text>
+              </View>
+              <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+            </TouchableOpacity>
+          </ScrollView>
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+        </View>
+      );
+    }
+
+    return null;
+  }
+
   // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') {
     if (!walletLoaded) { loadDriverWallet(phone); loadBonusToday(phone); loadCommissionHistory(phone); }
@@ -3453,8 +3748,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           )}
         </View>
 
-        {[['📋','Documents','License, RC'],['🏦','Bank Details','Payout account'],['📞','Support','24x7 help'],['⚙️','Settings','Preferences']].map(([icon,title,sub],i) => (
-          <Bouncy key={i} style={s.menuItem} onPress={() => {}}>
+        {([
+          ['📋', 'Documents', 'License, RC verification', 'documents'],
+          ['🏦', 'Bank Details', 'Payout account', 'bank'],
+          ['📞', 'Support', '24x7 help', 'support'],
+          ['⚙️', 'Settings', 'Preferences', 'settings'],
+        ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
+          <Bouncy key={key} style={s.menuItem} onPress={() => { setDrSubScreen(key as any); setBankMsg(''); }}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{sub}</Text></View>
             <Text style={{ fontSize: 20, color: '#ccc' }}>›</Text>
