@@ -10,6 +10,7 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
+import { Audio } from 'expo-av';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
@@ -378,6 +379,48 @@ async function stopBgLocation(): Promise<void> {
   } catch (_e) {}
 }
 
+// ─── Ride Alarm (Spotify-like looping audio) ──────────────────────────────────
+// Module-level so notification listeners and component effects share the same state.
+// The existing foreground location service keeps the process alive, so this audio
+// continues playing even when the driver minimizes the app (same mechanism Spotify uses).
+// Replace RIDE_ALARM_SOUND_URL with require('./assets/ride_alarm.mp3') after adding the file.
+const RIDE_ALARM_SOUND_URL = 'https://cdn.freecodecamp.org/testable-projects-fcc/audio/BeepSound.wav';
+let _alarmSound: any = null;
+let _alarmActive = false;
+let _alarmTimeout: ReturnType<typeof setTimeout> | null = null;
+
+async function stopRideAlarm() {
+  _alarmActive = false;
+  if (_alarmTimeout) { clearTimeout(_alarmTimeout); _alarmTimeout = null; }
+  if (_alarmSound) {
+    try { await _alarmSound.stopAsync(); } catch {}
+    try { await _alarmSound.unloadAsync(); } catch {}
+    _alarmSound = null;
+  }
+}
+
+async function startRideAlarm() {
+  if (_alarmActive) return;
+  _alarmActive = true;
+  try {
+    await Audio.setAudioModeAsync({
+      staysActiveInBackground: true,   // keeps audio alive when app minimized
+      shouldDuckAndroid: false,        // don't duck — this IS the priority sound
+      allowsRecordingIOS: false,
+      playsInSilentModeIOS: true,
+    });
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: RIDE_ALARM_SOUND_URL },
+      { isLooping: true, volume: 1.0 }
+    );
+    _alarmSound = sound;
+    await sound.playAsync();
+    _alarmTimeout = setTimeout(() => stopRideAlarm(), 40000); // auto-stop after 40s
+  } catch (_e) {
+    _alarmActive = false;
+  }
+}
+
 export default function App() {
   const [screen, setScreen]         = useState<Screen>('splash');
   const splashLogo  = useRef(new Animated.Value(0)).current;
@@ -595,11 +638,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }),
     });
 
-    // Foreground: FCM arrives while app is open → immediate poll
+    // Notification arrives while app is alive (foreground OR minimized with fg service)
+    // → start looping alarm immediately, then fetch ride details
     const sub1 = Notifications.addNotificationReceivedListener(n => {
       const data = n.request.content.data as any;
       if (data?.type === 'new_ride') {
         Vibration.vibrate([0, 500, 150, 500, 150, 800]);
+        startRideAlarm(); // looping audio — Spotify-like, plays even when minimized
         useDriverStore.getState().triggerPoll?.();
       }
     });
@@ -634,6 +679,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       appStateSub.remove();
     };
   }, []);
+
+  // Alarm start/stop tied to ride request state — covers the case where the main
+  // JS polls the backend and gets a ride (foreground polling path, not notification path).
+  useEffect(() => {
+    if (rideReq || hourlyRideReq) {
+      startRideAlarm();
+    } else {
+      stopRideAlarm();
+    }
+  }, [rideReq, hourlyRideReq]);
+
   // ── FCM Token Register ────────────────────────
   // Called on login AND on every app startup (session restore) AND when going online.
   // Expo push tokens can rotate — always refreshing prevents stale-token silent failures.
