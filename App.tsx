@@ -318,11 +318,32 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
   try {
     const phone = await AsyncStorage.getItem('driverPhone');
     if (!phone) return;
+
+    // 1. Location ping (fire-and-forget)
     fetch(`${_BG_API}/api/driver/update-location`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, lat: latitude, lng: longitude }),
     }).catch(() => {});
+
+    // 2. Poll for new ride — local notification fully bypasses FCM + battery restrictions
+    const rRes = await fetch(`${_BG_API}/api/driver/pending-ride?phone=${phone}`).catch(() => null);
+    if (!rRes?.ok) return;
+    const rd = await rRes.json().catch(() => null);
+    if (!rd?.ride) return;
+    const lastId = await AsyncStorage.getItem('_bgLastRideId');
+    if (lastId === String(rd.ride.id)) return; // already notified for this ride
+    await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: '🚖 Nayi Ride Request!',
+        body: `₹${rd.ride.fare || '?'} · ${(rd.ride.pickup || 'Pickup location').slice(0, 60)}`,
+        sound: 'default',
+        data: { type: 'new_ride' },
+        ...(Platform.OS === 'android' ? { channelId: 'ride_requests' } : {}),
+      },
+      trigger: null,
+    });
   } catch (_e) {}
 });
 
@@ -602,7 +623,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         // Refresh wallet + commission so stale cache doesn't show
         const ph = useDriverStore.getState().activeRide?.driver_phone
           || (globalThis as any).__driverPhone;
-        if (ph) { loadDriverWallet(ph); loadCommissionHistory(ph); }
+        if (ph) { loadDriverWallet(ph); loadCommissionHistory(ph); registerFCM(ph); }
       }
     });
 
@@ -629,11 +650,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       });
       const token = tokenData.data;
       // Compare with cached token — only hit backend if it changed
-      const cached = await AsyncStorage.getItem('fcmToken').catch(() => null);
-      if (token !== cached) {
-        await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
-        await AsyncStorage.setItem('fcmToken', token).catch(() => {});
-      }
+      // Always register — Nothing/CMF phones rotate FCM tokens when OS kills the process
+      await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
+      await AsyncStorage.setItem('fcmToken', token).catch(() => {});
     } catch (_e) {}
   };
   // ── Android Back Button ───────────────────────
@@ -1192,6 +1211,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       // Refresh FCM token every time driver goes online — prevents stale token failures
       registerFCM(phone).catch(() => {});
+
+      // One-time battery optimization warning (critical for Nothing/CMF, Xiaomi, Samsung)
+      if (Platform.OS === 'android') {
+        AsyncStorage.getItem('_batteryWarnShown').then(shown => {
+          if (shown) return;
+          AsyncStorage.setItem('_batteryWarnShown', '1');
+          Alert.alert(
+            '⚡ Notifications Setup Karo',
+            'CMF/Nothing phones background notifications block karte hain — ride miss ho sakti hai!\n\n📱 Fix karo:\nSettings → Battery → App Battery Management → Sppero Buddy → "No Restrictions" select karo\n\nAbhi app settings kholen?',
+            [
+              { text: 'Baad mein', style: 'cancel' },
+              { text: '⚙️ Settings Kholo', onPress: () => Linking.openSettings() },
+            ]
+          );
+        }).catch(() => {});
+      }
 
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
