@@ -336,6 +336,9 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     const lastId = await AsyncStorage.getItem('_bgLastRideId');
     if (lastId === String(rd.ride.id)) return; // already notified for this ride
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
+    // Fire immediately — plays sound via ride_requests channel (bypassDnd + IMPORTANCE_MAX).
+    // expo-av looping alarm handles the repeating sound when app is minimized (alive process).
+    // For killed-app scenario, this single notification sound is what alerts the driver.
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🚖 Nayi Ride Request!',
@@ -1244,41 +1247,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
       }
 
-      // Battery optimization prompt — once per install on Android
-      if (Platform.OS === 'android') {
-        AsyncStorage.getItem('batteryPromptShown').then(shown => {
-          if (shown) return;
-          AsyncStorage.setItem('batteryPromptShown', '1').catch(() => {});
-          Alert.alert(
-            '⚡ Ek Zaruri Setting',
-            'Lock screen pe ride requests aane ke liye:\n\n' +
-            '1. Neeche "Settings Kholein" tap karo\n' +
-            '2. "Battery" ya "Battery Optimization" dhundho\n' +
-            '3. Sppero Buddy select karo\n' +
-            '4. "Unrestricted" ya "Don\'t Optimize" choose karo\n\n' +
-            '(Xiaomi: Auto-start bhi ON karo)\n' +
-            '(Samsung: "Unrestricted" select karo)',
-            [
-              { text: 'Settings Kholein', onPress: () => Linking.openSettings() },
-              { text: 'Baad Mein', style: 'cancel' },
-            ]
-          );
-        }).catch(() => {});
-      }
-
       // Refresh FCM token every time driver goes online — prevents stale token failures
       registerFCM(phone).catch(() => {});
 
-      // One-time battery optimization warning (critical for Nothing/CMF, Xiaomi, Samsung)
+      // Battery optimization prompt — once per install on Android.
+      // Required on ALL phones (Xiaomi/Samsung/Nothing) so background ride alerts work.
+      // Linking.openSettings() opens the app's info page → battery section is there.
       if (Platform.OS === 'android') {
-        AsyncStorage.getItem('_batteryWarnShown').then(shown => {
+        AsyncStorage.getItem('_battOpShown').then(shown => {
           if (shown) return;
-          AsyncStorage.setItem('_batteryWarnShown', '1');
+          AsyncStorage.setItem('_battOpShown', '1').catch(() => {});
           Alert.alert(
-            '⚡ Notifications Setup Karo',
-            'CMF/Nothing phones background notifications block karte hain — ride miss ho sakti hai!\n\n📱 Fix karo:\nSettings → Battery → App Battery Management → Sppero Buddy → "No Restrictions" select karo\n\nAbhi app settings kholen?',
+            '🔔 Ride Alert Setup — 1 Min',
+            'App minimize karne ke baad bhi ride alert aaye, iske liye battery restriction hatao:\n\n' +
+            '📱 Sabhi phones:\n  Settings → Battery → Battery Optimization → Sppero Buddy → "Don\'t Optimize"\n\n' +
+            '🔴 Xiaomi/Redmi: Auto-start bhi ON karo\n' +
+            '🔵 Samsung: "Unrestricted" choose karo\n' +
+            '⚫ Nothing/CMF: App Battery Management → "No Restriction"\n\n' +
+            'Yeh sirf ek baar karna hai.',
             [
-              { text: 'Baad mein', style: 'cancel' },
+              { text: 'Baad Mein', style: 'cancel' },
               { text: '⚙️ Settings Kholo', onPress: () => Linking.openSettings() },
             ]
           );
