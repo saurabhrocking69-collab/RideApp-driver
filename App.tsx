@@ -751,13 +751,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res = await fetch(`${API}/api/driver/payout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
       if (d.success) {
-        const msg = d.commission_deducted > 0
-          ? `✅ Payout done! ₹${d.commission_deducted.toFixed(0)} commission deduct hua, ₹${d.actual_payout.toFixed(0)} aapko mila.`
-          : '✅ Payout request bhej di!';
-        setResult(msg);
+        setResult('✅ ' + (d.message || 'Payout request submit ho gaya — admin 24-48 ghante mein process karega'));
         setPayoutInput('');
-        loadDriverWallet(phone);
-        loadCommissionHistory(phone);
       } else setResult('❌ ' + (d.message || d.error || 'Error'));
     } catch (_e) { setResult('❌ Server error'); }
     setPayoutLoading(false);
