@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet, Image, Alert,
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar
 } from 'react-native';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as ImagePicker from 'expo-image-picker';
@@ -1691,8 +1692,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (screen === 'login' && regStep === 1) return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={rs.regHeader}>
-        <TouchableOpacity onPress={() => { setRegStep(0); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); }}>
-          <Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text>
+        <TouchableOpacity onPress={() => { setRegStep(0); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); }} style={{ padding: 4 }}>
+          <Ionicons name="arrow-back" size={22} color="#fff" />
         </TouchableOpacity>
         <Text style={rs.regTitle}>Step 1 of 5</Text>
         <View style={{ width: 50 }} />
@@ -1701,7 +1702,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {!loginOtpSent ? (
           <View>
-            <Text style={rs.bigTitle}>📱 Phone Number</Text>
+            <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
+              <Ionicons name="phone-portrait" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+              <Text style={[rs.bigTitle, { marginTop:0 }]}>Phone Number</Text>
+            </View>
             <Text style={rs.subTitle}>Aapka mobile number daalo — OTP se verify hoga</Text>
             <View style={[s.driverItem, { marginTop: 20 }]}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
@@ -1799,24 +1803,31 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ REGISTRATION STEP 2 — Vehicle Type ═══
   if (screen === 'login' && regStep === 2) return (
     <View style={s.screen}>
-      <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
+      <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
       <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '40%' }} /></View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <Text style={rs.bigTitle}>🚗 Vehicle Type</Text><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
+        <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
+          <Ionicons name="car-sport" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+          <Text style={[rs.bigTitle, { marginTop:0 }]}>Vehicle Type</Text>
+        </View><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
         {[
-          { id:'bike',          icon:'🏍️', label:'Bike',          sub:'',                                      color: null },
-          { id:'auto',          icon:'🛺', label:'Auto',          sub:'',                                      color: null },
-          { id:'car',           icon:'🚕', label:'Car / Taxi',    sub:'',                                      color: null },
-          { id:'eriksha',       icon:'🛵', label:'E-Riksha',      sub:'',                                      color: null },
-          { id:'green_bike',    icon:'⚡', label:'Green Bike',    sub:'Electric Bike / Scooty — Eco Friendly', color: '#2e7d32' },
-          { id:'electric_auto', icon:'🌿', label:'Electric Auto', sub:'Electric 3-Wheeler — Zero Emission',    color: '#1565c0' },
-          { id:'luxury',        icon:'💎', label:'Ultra Luxury',  sub:'BMW · Mercedes · Audi · Land Rover · Lexus', color: '#c9a227' },
+          { id:'bike',          mci:'motorbike',       ion:undefined,        label:'Bike',          sub:'',                                      color: null },
+          { id:'auto',          mci:'rickshaw',         ion:undefined,        label:'Auto',          sub:'',                                      color: null },
+          { id:'car',           mci:undefined,          ion:'car-sport',      label:'Car / Taxi',    sub:'',                                      color: null },
+          { id:'eriksha',       mci:undefined,          ion:'flash',          label:'E-Riksha',      sub:'',                                      color: null },
+          { id:'green_bike',    mci:undefined,          ion:'leaf',           label:'Green Bike',    sub:'Electric Bike / Scooty — Eco Friendly', color: '#2e7d32' },
+          { id:'electric_auto', mci:undefined,          ion:'flash-outline',  label:'Electric Auto', sub:'Electric 3-Wheeler — Zero Emission',    color: '#1565c0' },
+          { id:'luxury',        mci:undefined,          ion:'diamond',        label:'Ultra Luxury',  sub:'BMW · Mercedes · Audi · Land Rover · Lexus', color: '#c9a227' },
         ].map(v => (
           <TouchableOpacity key={v.id}
             style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive,
               v.color && { borderWidth: 2, borderColor: regData.vehicle_type === v.id ? '#e94560' : v.color }]}
             onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); updateReg('vehicle_model', ''); }}>
-            <Text style={{ fontSize: 32, marginRight: 16 }}>{v.icon}</Text>
+            <View style={{ marginRight: 16, width: 38, alignItems: 'center' }}>
+              {v.mci
+                ? <MaterialCommunityIcons name={v.mci as any} size={30} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#1a1a2e')} />
+                : <Ionicons name={v.ion as any} size={28} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#1a1a2e')} />}
+            </View>
             <View style={{ flex: 1 }}>
               <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1a1a2e' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
               {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#888'), marginTop: 2 }}>{v.sub}</Text> : null}
@@ -1837,13 +1848,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return (
       <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={rs.regHeader}>
-          <TouchableOpacity onPress={() => setRegStep(2)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setRegStep(2)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={rs.regTitle}>Step 3 of 5</Text>
           <View style={{ width: 50 }} />
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '60%' }} /></View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={rs.bigTitle}>📄 Driving License</Text>
+          <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
+            <Ionicons name="document-text" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+            <Text style={[rs.bigTitle, { marginTop:0 }]}>Driving License</Text>
+          </View>
           <Text style={rs.subTitle}>DL ki details — naam, number aur photo</Text>
 
           <View style={rs.adviceBox}>
@@ -1920,15 +1934,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return (
       <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={rs.regHeader}>
-          <TouchableOpacity onPress={() => setRegStep(3)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setRegStep(3)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={rs.regTitle}>Step 4 of 5</Text>
           <View style={{ width: 50 }} />
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '80%' }} /></View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={rs.bigTitle}>
-            {regData.vehicle_type === 'luxury' ? '💎' : regData.vehicle_type === 'green_bike' ? '⚡' : regData.vehicle_type === 'electric_auto' ? '🌿' : '🚗'} Vehicle Details
-          </Text>
+          <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
+            <Ionicons name="car" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+            <Text style={[rs.bigTitle, { marginTop:0 }]}>Vehicle Details</Text>
+          </View>
           <Text style={rs.subTitle}>
             {regData.vehicle_type === 'eriksha'       ? 'E-Riksha: photo zaruri, number optional' :
              regData.vehicle_type === 'luxury'        ? 'Premium vehicle — brand, model aur number' :
@@ -2044,13 +2059,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return (
       <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <View style={rs.regHeader}>
-          <TouchableOpacity onPress={() => setRegStep(4)}><Text style={{ color: '#fff', fontSize: 16 }}>← Back</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setRegStep(4)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
           <Text style={rs.regTitle}>Step 5 of 5</Text>
           <View style={{ width: 50 }} />
         </View>
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '100%' }} /></View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-          <Text style={rs.bigTitle}>🪪 Aadhaar & Selfie</Text>
+          <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
+            <Ionicons name="id-card" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+            <Text style={[rs.bigTitle, { marginTop:0 }]}>Aadhaar & Selfie</Text>
+          </View>
           <Text style={rs.subTitle}>Last step — aur aap ho jayenge!</Text>
 
           <View style={[rs.adviceBox, { backgroundColor: '#e8f5e9' }]}>
@@ -2165,7 +2183,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (screen === 'login') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.hero}>
-        <Text style={s.heroIcon}>🚖</Text>
+        <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(233,69,96,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
+          <Ionicons name="car" size={48} color="#e94560" />
+        </View>
         <Text style={s.heroTitle}>Sppero Buddy</Text>
         <Text style={s.heroSub}>Captain Login</Text>
       </View>
@@ -2479,9 +2499,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (showChat) return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setShowChat(false)} style={{ width: 36 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowChat(false)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.greeting}>💬 {activeRide?.passenger_name || 'Customer'}</Text>
-        <TouchableOpacity onPress={callCustomer} style={{ width: 36, alignItems: 'flex-end' }}><Text style={{ fontSize: 20 }}>📞</Text></TouchableOpacity>
+        <TouchableOpacity onPress={callCustomer} style={{ width: 36, alignItems: 'flex-end' }}><Ionicons name="call" size={20} color="#fff" /></TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
         {chatMsgs.length === 0 ? (
@@ -2502,7 +2522,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (showHourlyChat) return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
-        <TouchableOpacity onPress={() => setShowHourlyChat(false)} style={{ width: 36 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setShowHourlyChat(false)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.greeting}>💬 Customer (Hourly)</Text>
         <View style={{ width: 36 }} />
       </View>
@@ -2645,12 +2665,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                 <TouchableOpacity style={s.chatCallBtn} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
                   <View>
-                    <Text style={{ fontSize: 16 }}>💬</Text>
+                    <Ionicons name="chatbubble" size={18} color="#1a1a2e" />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
                   <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Text style={{ fontSize: 16 }}>📞</Text><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
+                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#1a1a2e" /><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
@@ -2666,10 +2686,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
 
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}><Text style={{ color: '#fff', fontWeight: '600' }}>🗺️ Pickup Navigate Karo</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}>
+                  <Ionicons name="navigate" size={15} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
+                </TouchableOpacity>
               )}
               {activeRide.status === 'started' && (
-                <TouchableOpacity style={s.navBtn} onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}><Text style={{ color: '#8ae961', fontWeight: '600' }}>🗺️ Drop Navigate Karo</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}>
+                  <Ionicons name="navigate" size={15} color="#8ae961" />
+                  <Text style={{ color: '#8ae961', fontWeight: '600' }}>Drop Navigate Karo</Text>
+                </TouchableOpacity>
               )}
 
               {activeRide.status === 'matched' && (
@@ -2841,14 +2867,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   onPress={() => { setShowHourlyChat(true); setHourlyChatMsgs([]); }}
                 >
-                  <Text style={{ fontSize: 18 }}>💬</Text>
+                  <Ionicons name="chatbubble" size={18} color="#fff" />
                   <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Chat</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={{ flex: 1, backgroundColor: '#e3f2fd', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
                   onPress={callCustomer}
                 >
-                  <Text style={{ fontSize: 18 }}>📞</Text>
+                  <Ionicons name="call" size={18} color="#1565c0" />
                   <Text style={{ color: '#1565c0', fontWeight: '700', fontSize: 14 }}>Call</Text>
                 </TouchableOpacity>
               </View>
@@ -2858,8 +2884,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ fontSize: 12, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
                   <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
                   <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
-                  <TouchableOpacity style={s.navBtn} onPress={() => activeHourlyRide.pickup_lat ? undefined : undefined}>
-                    <Text style={{ color: '#fff', fontWeight: '600' }} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>🗺️ Pickup Navigate Karo</Text>
+                  <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>
+                    <Ionicons name="navigate" size={15} color="#fff" />
+                    <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -3081,7 +3108,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const back = () => setDrSubScreen('');
     const SubHeader = ({ title }: { title: string }) => (
       <View style={s.topBar}>
-        <TouchableOpacity onPress={back} style={{ padding: 4 }}><Text style={{ color: '#fff', fontSize: 22 }}>←</Text></TouchableOpacity>
+        <TouchableOpacity onPress={back} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
         <Text style={s.greeting}>{title}</Text>
         <View style={{ width: 40 }} />
       </View>
@@ -3815,19 +3842,20 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => 
 
 function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
   const tabs = [
-    { t: 'home',     icon: '🏠', lbl: 'Home'    },
-    { t: 'earnings', icon: '💰', lbl: 'Kamai'   },
-    { t: 'profile',  icon: '👤', lbl: 'Profile' },
+    { t: 'home',     ion: 'home',       lbl: 'Home'   },
+    { t: 'earnings', ion: 'wallet',      lbl: 'Kamai'  },
+    { t: 'profile',  ion: 'person',      lbl: 'Profile'},
   ];
   const hasBadge = rideReq || hourlyRideReq;
   return (
     <View style={s.nav}>
-      {tabs.map(({ t, icon, lbl }) => {
+      {tabs.map(({ t, ion, lbl }) => {
         const active = activeTab === t;
+        const col = active ? '#e94560' : '#bbb';
         return (
           <TouchableOpacity key={t} style={s.navItem} onPress={() => setActiveTab(t)} activeOpacity={0.65}>
             <View style={{ position: 'relative', alignItems: 'center' }}>
-              <Text style={[s.navIcon, active && s.navIconActive]}>{icon}</Text>
+              <Ionicons name={active ? ion as any : `${ion}-outline` as any} size={24} color={col} />
               {t === 'home' && hasBadge && <View style={s.navDot} />}
             </View>
             <Text style={[s.navLbl, active && s.navActive]}>{lbl}</Text>
