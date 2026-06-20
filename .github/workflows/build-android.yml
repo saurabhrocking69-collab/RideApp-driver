@@ -30,14 +30,9 @@ jobs:
         run: npm install
 
       - name: Expo Prebuild (generates android/ folder)
-        run: npx expo prebuild --platform android --clean
+        run: npx expo prebuild --platform android --clean --no-install
         env:
           EXPO_NO_TELEMETRY: 1
-
-      - name: Use consistent debug keystore (prevents signature conflict on re-install)
-        run: |
-          mkdir -p ~/.android
-          cp .github/debug.keystore ~/.android/debug.keystore
 
       - name: Pin Razorpay standard-core to avoid JitPack metadata timeout
         run: |
@@ -45,29 +40,17 @@ jobs:
           echo "systemProp.org.gradle.internal.http.connectionTimeout=120000" >> android/gradle.properties
           echo "systemProp.org.gradle.internal.http.socketTimeout=120000" >> android/gradle.properties
 
-      - name: Bundle JS into APK (standalone — no Metro needed)
-        run: |
-          mkdir -p android/app/src/main/assets
-          npx expo export:embed \
-            --platform android \
-            --dev false \
-            --entry-file index.ts \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
-        env:
-          NODE_ENV: production
-
-      - name: Build Debug APK
+      - name: Build Release APK (always bundles JS + Hermes-compiles, no Metro needed)
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
+          ./gradlew assembleRelease --no-daemon
         env:
           JAVA_OPTS: "-Xmx4g"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: sppero-buddy-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          name: sppero-buddy-release
+          path: android/app/build/outputs/apk/release/app-release.apk
           retention-days: 7
