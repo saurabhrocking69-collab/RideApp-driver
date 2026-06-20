@@ -414,7 +414,7 @@ export default function App() {
   const [eta, setEta]               = useState('');
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
-  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings'>('');
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'complaints' | 'complaint-new' | 'complaint-detail'>('');
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -500,6 +500,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [driverInfo, setDriverInfo]       = useState<any>(null);
   const [favouriteCount, setFavouriteCount] = useState<number | null>(null);
   const [devOtp, setDevOtp]         = useState('');
+  // Complaint system state
+  const [drvComplaints, setDrvComplaints]   = useState<any[]>([]);
+  const [drvCmpType, setDrvCmpType]         = useState('');
+  const [drvCmpTitle, setDrvCmpTitle]       = useState('');
+  const [drvCmpDesc, setDrvCmpDesc]         = useState('');
+  const [drvCmpMsg, setDrvCmpMsg]           = useState('');
+  const [drvCmpLoading, setDrvCmpLoading]   = useState(false);
+  const [drvCmpDetail, setDrvCmpDetail]     = useState<any>(null);
 
 
   // ── Splash + Auto login ────────────────────────
@@ -2484,6 +2492,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 14, fontWeight: '700', color: '#2e7d32' }}>Customer rating submit ho gaya!</Text>
           </View>
         )}
+        <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrSubScreen('complaint-new'); setTripSummary(null); }}
+          style={{ backgroundColor: '#fff8f8', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: '#e94560', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <Text style={{ fontSize: 18 }}>⚠️</Text>
+          <Text style={{ color: '#e94560', fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
+        </TouchableOpacity>
         <Bouncy style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
       </ScrollView>
     </ScreenIn>
@@ -3226,6 +3239,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
           </View>
           {[
+            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setDrvCmpLoading(true); try { const t = await AsyncStorage.getItem('driverToken'); const r = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${t}` } }); const d = await r.json(); setDrvComplaints(d.complaints||[]); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
             { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
             { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
             { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:driver.support@sppero.com') },
@@ -3258,6 +3272,192 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
       </View>
     );
+
+    // ─── Driver: My Complaints ───
+    if (driverSubScreen === 'complaints') {
+      const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', evidence_requested:'#ff5722', resolved:'#4CAF50', closed:'#9e9e9e', appealed:'#e91e63', escalated:'#f44336' };
+      return (
+        <View style={s.screen}>
+          <SubHeader title="📋 My Complaints" />
+          <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
+            <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrSubScreen('complaint-new'); }}
+              style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>+ Nayi Complaint File Karo</Text>
+            </TouchableOpacity>
+            {drvComplaints.length === 0 && (
+              <View style={{ alignItems: 'center', paddingTop: 40 }}>
+                <Text style={{ fontSize: 40 }}>📭</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginTop: 12 }}>Koi complaint nahi</Text>
+                <Text style={{ fontSize: 13, color: '#888', marginTop: 6 }}>Customer issue tha? Complaint file karo</Text>
+              </View>
+            )}
+            {drvComplaints.map((c: any) => (
+              <TouchableOpacity key={c.id} onPress={async () => {
+                setDrvCmpLoading(true);
+                try { const t = await AsyncStorage.getItem('driverToken'); const r = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${t}` } }); const d = await r.json(); setDrvCmpDetail(d); setDrSubScreen('complaint-detail'); } catch{}
+                setDrvCmpLoading(false);
+              }} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, elevation: 2 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', flex: 1, marginRight: 8 }}>{c.title}</Text>
+                  <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{c.status.replace('_',' ').toUpperCase()}</Text>
+                  </View>
+                </View>
+                <Text style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{c.complaint_type?.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN')}</Text>
+                {c.resolution && <Text style={{ fontSize: 12, color: '#4CAF50', marginTop: 4, fontWeight: '600' }}>✅ {c.resolution.replace(/_/g,' ')}</Text>}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+        </View>
+      );
+    }
+
+    // ─── Driver: New Complaint ───
+    if (driverSubScreen === 'complaint-new') {
+      const driverTypes = [
+        { id: 'customer_no_show', label: '🚫 Customer No Show', desc: 'Customer pickup pe nahi aaya' },
+        { id: 'property_damage', label: '🚗 Vehicle Damage', desc: 'Customer ne vehicle ko damage kiya' },
+        { id: 'abusive_behavior', label: '😠 Abusive Behavior', desc: 'Customer ne gali/dhamki di' },
+        { id: 'false_accusation', label: '⚖️ False Accusation', desc: 'Customer ne galat complaint ki' },
+        { id: 'wrong_location', label: '📍 Wrong Location', desc: 'Galat pickup location diya' },
+        { id: 'payment_issue', label: '💸 Payment Issue', desc: 'Payment karne se mana kiya' },
+        { id: 'other', label: '📝 Other', desc: 'Koi aur problem' },
+      ];
+      return (
+        <View style={s.screen}>
+          <SubHeader title="⚠️ File Complaint" />
+          <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Issue type select karo</Text>
+            {driverTypes.map(t => (
+              <TouchableOpacity key={t.id} onPress={() => setDrvCmpType(t.id)}
+                style={{ backgroundColor: drvCmpType === t.id ? '#1a1a2e' : '#fff', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: drvCmpType === t.id ? '#e94560' : '#f0f0f0', flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 16, marginRight: 10 }}>{t.label.split(' ')[0]}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontWeight: '700', fontSize: 13, color: drvCmpType === t.id ? '#fff' : '#1a1a2e' }}>{t.label.substring(t.label.indexOf(' ')+1)}</Text>
+                  <Text style={{ fontSize: 11, color: drvCmpType === t.id ? '#aaa' : '#888', marginTop: 2 }}>{t.desc}</Text>
+                </View>
+                {drvCmpType === t.id && <Text style={{ color: '#e94560', fontSize: 18 }}>✓</Text>}
+              </TouchableOpacity>
+            ))}
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Title</Text>
+            <TextInput value={drvCmpTitle} onChangeText={setDrvCmpTitle} placeholder="Complaint ka short title..."
+              style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0', fontSize: 14, marginBottom: 14 }} maxLength={200} />
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 8 }}>Details</Text>
+            <TextInput value={drvCmpDesc} onChangeText={setDrvCmpDesc} placeholder="Kya hua — puri detail mein batao..."
+              multiline style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0', height: 110, textAlignVertical: 'top', fontSize: 13, marginBottom: 20 }} maxLength={2000} />
+            <TouchableOpacity
+              onPress={async () => {
+                if (!drvCmpType) return Alert.alert('Issue Type', 'Complaint type select karo');
+                if (!drvCmpTitle.trim()) return Alert.alert('Title', 'Title daalo');
+                if (drvCmpDesc.trim().length < 20) return Alert.alert('Description', 'Kam se kam 20 characters likho');
+                setDrvCmpLoading(true);
+                try {
+                  const token = await AsyncStorage.getItem('driverToken');
+                  const res = await fetch(`${API}/api/complaints`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                    body: JSON.stringify({ complaint_type: drvCmpType, title: drvCmpTitle.trim(), description: drvCmpDesc.trim() }),
+                  });
+                  const data = await res.json();
+                  if (data.complaint) {
+                    const t = await AsyncStorage.getItem('driverToken');
+                    const lr = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${t}` } });
+                    const ld = await lr.json();
+                    setDrvComplaints(ld.complaints || []);
+                    Alert.alert('✅ Submitted', 'Complaint submit ho gayi. 24-48 ghante mein review hogi.', [{ text: 'OK', onPress: () => setDrSubScreen('complaints') }]);
+                  } else Alert.alert('Error', data.error || 'Submit failed');
+                } catch { Alert.alert('Error', 'Network error'); }
+                setDrvCmpLoading(false);
+              }}
+              style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', opacity: drvCmpLoading ? 0.6 : 1 }}
+              disabled={drvCmpLoading}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{drvCmpLoading ? 'Submitting...' : '📤 Submit Complaint'}</Text>
+            </TouchableOpacity>
+          </ScrollView>
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+        </View>
+      );
+    }
+
+    // ─── Driver: Complaint Detail ───
+    if (driverSubScreen === 'complaint-detail' && drvCmpDetail) {
+      const c = drvCmpDetail.complaint;
+      const msgs = drvCmpDetail.messages || [];
+      const timeline = drvCmpDetail.timeline || [];
+      const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', resolved:'#4CAF50', closed:'#9e9e9e', escalated:'#f44336' };
+      const isClosed = ['resolved','closed'].includes(c?.status);
+      return (
+        <View style={s.screen}>
+          <SubHeader title="Complaint Detail" />
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
+            <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <Text style={{ fontSize: 24 }}>{c.status === 'resolved' ? '✅' : '🔍'}</Text>
+              <View>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{c.status?.replace(/_/g,' ').toUpperCase()}</Text>
+                {c.assigned_admin && <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>Assigned: {c.assigned_admin}</Text>}
+              </View>
+            </View>
+            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+              <Text style={{ fontSize: 17, fontWeight: '800', color: '#1a1a2e' }}>{c.title}</Text>
+              <Text style={{ fontSize: 12, color: '#e94560', fontWeight: '600', marginTop: 4 }}>{c.complaint_type?.replace(/_/g,' ')}</Text>
+              <Text style={{ fontSize: 13, color: '#555', marginTop: 10, lineHeight: 20 }}>{c.description}</Text>
+            </View>
+            {c.resolution && (
+              <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2e7d32' }}>✅ Resolution: {c.resolution?.replace(/_/g,' ')}</Text>
+                {c.resolution_note && <Text style={{ fontSize: 13, color: '#2e7d32', marginTop: 6 }}>{c.resolution_note}</Text>}
+              </View>
+            )}
+            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>💬 Messages</Text>
+              {msgs.length === 0 && <Text style={{ color: '#aaa', textAlign: 'center', fontSize: 12, paddingVertical: 10 }}>Koi message nahi</Text>}
+              {msgs.map((m: any, i: number) => (
+                <View key={i} style={{ marginBottom: 12, padding: 12, backgroundColor: m.sender_role === 'admin' ? '#e3f2fd' : '#fff8e1', borderRadius: 10 }}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#1565c0', marginBottom: 4 }}>{m.sender_name} · {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                  <Text style={{ fontSize: 13, color: '#333' }}>{m.message}</Text>
+                </View>
+              ))}
+            </View>
+            {!isClosed && (
+              <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+                <TextInput value={drvCmpMsg} onChangeText={setDrvCmpMsg} placeholder="Reply karein..."
+                  multiline style={{ backgroundColor: '#f8f8f8', borderRadius: 10, padding: 12, height: 80, textAlignVertical: 'top', fontSize: 13, marginBottom: 10 }} />
+                <TouchableOpacity onPress={async () => {
+                  if (!drvCmpMsg.trim()) return;
+                  try {
+                    const token = await AsyncStorage.getItem('driverToken');
+                    await fetch(`${API}/api/complaints/${c.id}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message: drvCmpMsg.trim() }) });
+                    setDrvCmpMsg('');
+                    const r2 = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${token}` } });
+                    setDrvCmpDetail(await r2.json());
+                  } catch { Alert.alert('Error', 'Message nahi bheja'); }
+                }} style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 12, alignItems: 'center' }}>
+                  <Text style={{ color: '#fff', fontWeight: '700' }}>📤 Bhejo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+            {timeline.length > 0 && (
+              <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
+                <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>📅 Timeline</Text>
+                {timeline.map((t: any, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+                    <View style={{ width: 28, alignItems: 'center' }}>
+                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginTop: 3 }} />
+                    </View>
+                    <View style={{ flex: 1, paddingLeft: 10 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#1a1a2e' }}>{t.description}</Text>
+                      <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+        </View>
+      );
+    }
 
     if (driverSubScreen === 'settings') {
       return (
