@@ -13,7 +13,11 @@ import * as Notifications from 'expo-notifications';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
-import RazorpayCheckout from 'react-native-razorpay';
+// Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
+// evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
+// registered yet. The try/catch prevents this from killing the app on startup.
+let RazorpayCheckout: any = null;
+try { RazorpayCheckout = require('react-native-razorpay'); } catch (_e) {}
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
