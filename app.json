@@ -24,7 +24,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.saurabhspero.rideappdriver",
-      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "READ_EXTERNAL_STORAGE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION", "FOREGROUND_SERVICE_CONNECTED_DEVICE", "FOREGROUND_SERVICE_MEDIA_PLAYBACK"]
+      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "READ_EXTERNAL_STORAGE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION", "FOREGROUND_SERVICE_CONNECTED_DEVICE"]
     },
        "config": {
       "googleMaps": {
@@ -66,8 +66,7 @@
         "isIosBackgroundLocationEnabled": true,
         "isAndroidBackgroundLocationEnabled": true
       }],
-      ["expo-image-picker", { "photosPermission": "Documents upload karne ke liye gallery access chahiye" }],
-      ["expo-av", { "microphonePermission": false }]
+      ["expo-image-picker", { "photosPermission": "Documents upload karne ke liye gallery access chahiye" }]
     ],
     "web": {
       "favicon": "./assets/favicon.png"
