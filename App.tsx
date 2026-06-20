@@ -317,6 +317,22 @@ type Screen = 'splash' | 'login' | 'home';
 const DRIVER_LOCATION_TASK = 'sppero-driver-bg-location';
 const _BG_API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
+// Fetch with timeout + 1 retry — handles Jio's packet-drop and slow-DNS issues
+async function _bgFetch(url: string, opts?: RequestInit, timeoutMs = 8000): Promise<Response | null> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), timeoutMs);
+      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      clearTimeout(tid);
+      if (res.ok) return res;
+    } catch (_e) {
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1500)); // brief pause before retry
+    }
+  }
+  return null;
+}
+
 TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
   if (error || !data?.locations?.length) return;
   const { latitude, longitude } = data.locations[0].coords;
@@ -324,23 +340,22 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     const phone = await AsyncStorage.getItem('driverPhone');
     if (!phone) return;
 
-    // 1. Location ping (fire-and-forget)
-    fetch(`${_BG_API}/api/driver/update-location`, {
+    // 1. Location ping — retry once on failure (critical for Jio mobile data)
+    _bgFetch(`${_BG_API}/api/driver/update-location`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, lat: latitude, lng: longitude }),
     }).catch(() => {});
 
-    // 2. Poll for new ride — local notification fully bypasses FCM + battery restrictions
-    const rRes = await fetch(`${_BG_API}/api/driver/pending-ride?phone=${phone}`).catch(() => null);
-    if (!rRes?.ok) return;
+    // 2. Poll for new ride — retry once; local notification bypasses FCM + battery restrictions
+    const rRes = await _bgFetch(`${_BG_API}/api/driver/pending-ride?phone=${phone}`);
+    if (!rRes) return; // both attempts failed — Jio down, skip this tick
     const rd = await rRes.json().catch(() => null);
     if (!rd?.ride) return;
     const lastId = await AsyncStorage.getItem('_bgLastRideId');
     if (lastId === String(rd.ride.id)) return; // already notified for this ride
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
     // Fire immediately — plays sound via ride_requests channel (bypassDnd + IMPORTANCE_MAX).
-    // Notification sound + vibration alerts the driver in all states (foreground, minimized, killed).
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🚖 Nayi Ride Request!',
@@ -810,11 +825,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           ({ coords }) => {
             if (!mounted) return;
             setDriverGps({ lat: coords.latitude, lng: coords.longitude });
-            fetch(`${API}/api/driver/update-location`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ phone, lat: coords.latitude, lng: coords.longitude }),
-            }).catch(() => {});
+            // Retry once on failure — handles Jio packet drops
+            const body = JSON.stringify({ phone, lat: coords.latitude, lng: coords.longitude });
+            fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
+              .catch(() => new Promise(r => setTimeout(r, 2000)).then(() =>
+                fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).catch(() => {})
+              ));
           }
         );
       } catch (_e) {}
