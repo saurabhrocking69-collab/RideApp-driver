@@ -10,7 +10,6 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
-import { Audio } from 'expo-av';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
@@ -337,8 +336,7 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     if (lastId === String(rd.ride.id)) return; // already notified for this ride
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
     // Fire immediately — plays sound via ride_requests channel (bypassDnd + IMPORTANCE_MAX).
-    // expo-av looping alarm handles the repeating sound when app is minimized (alive process).
-    // For killed-app scenario, this single notification sound is what alerts the driver.
+    // Notification sound + vibration alerts the driver in all states (foreground, minimized, killed).
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🚖 Nayi Ride Request!',
@@ -380,48 +378,6 @@ async function stopBgLocation(): Promise<void> {
     const running = await Location.hasStartedLocationUpdatesAsync(DRIVER_LOCATION_TASK).catch(() => false);
     if (running) await Location.stopLocationUpdatesAsync(DRIVER_LOCATION_TASK);
   } catch (_e) {}
-}
-
-// ─── Ride Alarm (Spotify-like looping audio) ──────────────────────────────────
-// Module-level so notification listeners and component effects share the same state.
-// The existing foreground location service keeps the process alive, so this audio
-// continues playing even when the driver minimizes the app (same mechanism Spotify uses).
-// Replace RIDE_ALARM_SOUND_URL with require('./assets/ride_alarm.mp3') after adding the file.
-const RIDE_ALARM_SOUND_URL = 'https://cdn.freecodecamp.org/testable-projects-fcc/audio/BeepSound.wav';
-let _alarmSound: any = null;
-let _alarmActive = false;
-let _alarmTimeout: ReturnType<typeof setTimeout> | null = null;
-
-async function stopRideAlarm() {
-  _alarmActive = false;
-  if (_alarmTimeout) { clearTimeout(_alarmTimeout); _alarmTimeout = null; }
-  if (_alarmSound) {
-    try { await _alarmSound.stopAsync(); } catch {}
-    try { await _alarmSound.unloadAsync(); } catch {}
-    _alarmSound = null;
-  }
-}
-
-async function startRideAlarm() {
-  if (_alarmActive) return;
-  _alarmActive = true;
-  try {
-    await Audio.setAudioModeAsync({
-      staysActiveInBackground: true,   // keeps audio alive when app minimized
-      shouldDuckAndroid: false,        // don't duck — this IS the priority sound
-      allowsRecordingIOS: false,
-      playsInSilentModeIOS: true,
-    });
-    const { sound } = await Audio.Sound.createAsync(
-      { uri: RIDE_ALARM_SOUND_URL },
-      { isLooping: true, volume: 1.0 }
-    );
-    _alarmSound = sound;
-    await sound.playAsync();
-    _alarmTimeout = setTimeout(() => stopRideAlarm(), 40000); // auto-stop after 40s
-  } catch (_e) {
-    _alarmActive = false;
-  }
 }
 
 export default function App() {
@@ -647,7 +603,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = n.request.content.data as any;
       if (data?.type === 'new_ride') {
         Vibration.vibrate([0, 500, 150, 500, 150, 800]);
-        startRideAlarm(); // looping audio — Spotify-like, plays even when minimized
         useDriverStore.getState().triggerPoll?.();
       }
     });
@@ -683,15 +638,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
   }, []);
 
-  // Alarm start/stop tied to ride request state — covers the case where the main
-  // JS polls the backend and gets a ride (foreground polling path, not notification path).
-  useEffect(() => {
-    if (rideReq || hourlyRideReq) {
-      startRideAlarm();
-    } else {
-      stopRideAlarm();
-    }
-  }, [rideReq, hourlyRideReq]);
 
   // ── FCM Token Register ────────────────────────
   // Called on login AND on every app startup (session restore) AND when going online.
