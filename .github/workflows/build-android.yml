@@ -34,6 +34,11 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: 1
 
+      - name: Use consistent debug keystore (prevents signature conflict on re-install)
+        run: |
+          mkdir -p ~/.android
+          cp .github/debug.keystore ~/.android/debug.keystore
+
       - name: Pin Razorpay standard-core to avoid JitPack metadata timeout
         run: |
           cat .github/scripts/razorpay-patch.gradle >> android/build.gradle
