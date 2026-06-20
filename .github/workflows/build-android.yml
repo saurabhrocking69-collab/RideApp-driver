@@ -34,6 +34,9 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: 1
 
+      - name: Force legacy native-lib packaging (extract .so files; fixes crashes on many devices)
+        run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
+
       - name: Build Release APK (always bundles JS + Hermes-compiles, no Metro needed)
         run: |
           cd android
