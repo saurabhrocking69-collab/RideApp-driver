@@ -34,12 +34,6 @@ jobs:
         env:
           EXPO_NO_TELEMETRY: 1
 
-      - name: Pin Razorpay standard-core to avoid JitPack metadata timeout
-        run: |
-          cat .github/scripts/razorpay-patch.gradle >> android/build.gradle
-          echo "systemProp.org.gradle.internal.http.connectionTimeout=120000" >> android/gradle.properties
-          echo "systemProp.org.gradle.internal.http.socketTimeout=120000" >> android/gradle.properties
-
       - name: Build Release APK (always bundles JS + Hermes-compiles, no Metro needed)
         run: |
           cd android
