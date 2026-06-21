@@ -1351,20 +1351,53 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const completeTrip = async () => {
-    setLoading(true);
-    // Capture before any async/state changes
     const rideId = activeRide?.id;
     const rideFare = String(activeRide?.fare || '0');
     const ridePMethod = activeRide?.payment_method || '';
+    const dropLat = activeRide?.drop_lat ? parseFloat(activeRide.drop_lat) : null;
+    const dropLng = activeRide?.drop_lng ? parseFloat(activeRide.drop_lng) : null;
+    const curLat = driverGps?.lat;
+    const curLng = driverGps?.lng;
+
+    // GPS early-completion guard: warn if >800m from drop point
+    if (dropLat && dropLng && curLat && curLng) {
+      const R = 6371;
+      const dLat = (dropLat - curLat) * Math.PI / 180;
+      const dLon = (dropLng - curLng) * Math.PI / 180;
+      const a = Math.sin(dLat/2)**2 + Math.cos(curLat*Math.PI/180)*Math.cos(dropLat*Math.PI/180)*Math.sin(dLon/2)**2;
+      const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      if (distKm > 0.8) {
+        const confirm = await new Promise<boolean>(resolve =>
+          Alert.alert(
+            '⚠️ Aap drop location se door hain',
+            `Aap abhi drop se ${distKm.toFixed(1)}km door hain.\n\nAbhi complete karne se platform policy violation hoga aur customer ko alert jaayega. Kya waqai complete karna chahte ho?`,
+            [
+              { text: 'Cancel — Drop Karo Pehle', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Haan, Complete Karo', style: 'destructive', onPress: () => resolve(true) },
+            ]
+          )
+        );
+        if (!confirm) return;
+      }
+    }
+
+    setLoading(true);
     try {
       const res = await fetch(`${API}/api/rides/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: rideId, driver_phone: phone })
+        body: JSON.stringify({ ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng }),
       });
       let data: any = {};
       try { data = await res.json(); } catch (_e) {}
-      // Consider it success if HTTP 2xx OR data.success (backend might send 500 even if UPDATE went through)
       if (res.ok || data.success) {
+        if (data.early_completion) {
+          Alert.alert(
+            '⚠️ Early Completion Flagged',
+            `Trip complete hua — lekin system ne detect kiya ki aap drop se ${data.dist_from_drop}km door the.\n\nCustomer ko alert bheja gaya hai aur yeh policy violation record hua.`,
+            [{ text: 'Samajh Gaya' }]
+          );
+        }
         setPaymentRideId(rideId);
         setPaymentFare(rideFare);
         setPaymentMethod(ridePMethod);
@@ -1377,7 +1410,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setResult('❌ ' + (data.message || data.error || 'Complete nahi hua, retry karo'));
       }
     } catch (_e) {
-      // Fetch itself failed (no network) — show error, don't navigate away
       setResult('❌ Network error — check internet aur retry karo');
     }
     setLoading(false);
@@ -2374,11 +2406,50 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         )}
 
-        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14 }}>
+        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, marginBottom: 16 }}>
           <Text style={{ fontSize: 12, color: '#888', textAlign: 'center', lineHeight: 18 }}>
             💡 15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
           </Text>
         </View>
+
+        {/* ── Payment Not Received (cash escape) ── */}
+        <TouchableOpacity
+          onPress={() => Alert.alert(
+            '⚠️ Payment Nahi Mili?',
+            `Customer ne ₹${paymentFare} cash payment nahi ki?\n\nYeh report 10 minute ke andar hi ki ja sakti hai. Customer ka account flag hoga aur Sppero team investigate karegi.`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Haan, Report Karo', style: 'destructive', onPress: async () => {
+                try {
+                  const res = await fetch(`${API}/api/rides/payment-not-received`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ride_id: paymentRideId, driver_phone: phone }),
+                  });
+                  const d = await res.json();
+                  if (d.success) {
+                    Alert.alert('✅ Report Ho Gayi',
+                      'Customer ko flag kar diya gaya. Sppero team 24 ghante mein review karegi.\n\nYeh record customer ke account pe jayega.',
+                      [{ text: 'OK', onPress: () => setPaymentWaiting(false) }]
+                    );
+                  } else {
+                    Alert.alert('❌ Error', d.error || 'Report nahi ho saki');
+                  }
+                } catch {
+                  Alert.alert('❌ Network Error', 'Dobara try karo');
+                }
+              }},
+            ]
+          )}
+          style={{ backgroundColor: '#ffebee', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#ef9a9a' }}>
+          <Text style={{ fontSize: 22 }}>🚨</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontWeight: '800', fontSize: 13, color: '#c62828' }}>Customer Ne Payment Nahi Ki</Text>
+            <Text style={{ fontSize: 11, color: '#e57373', marginTop: 2 }}>Cash liye bina chale gaye? Report karo — 10 min mein</Text>
+          </View>
+          <Text style={{ color: '#c62828', fontSize: 18 }}>›</Text>
+        </TouchableOpacity>
+
       </ScrollView>
     </ScreenIn>
   );
