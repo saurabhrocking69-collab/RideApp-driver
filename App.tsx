@@ -437,6 +437,7 @@ export default function App() {
   const [bankHolder, setBankHolder]     = useState('');
   const [bankSaving, setBankSaving]     = useState(false);
   const [bankLoaded, setBankLoaded]     = useState(false);
+  const [bankEditing, setBankEditing]   = useState(false);
   const [bankMsg, setBankMsg]           = useState('');
   const [showDriverCancelModal, setShowDriverCancelModal] = useState(false);
   const [cancelReason, setCancelReason]         = useState('');
@@ -455,11 +456,18 @@ export default function App() {
   const [hourlyChatMsgs, setHourlyChatMsgs] = useState<any[]>([]);
   const [hourlyChatInput, setHourlyChatInput] = useState('');
 
-  // ── Wallet / Earnings + Bonus State ──────────
-  const [bonusData, setBonusData] = useState<any>({ rides_today: 0, available_bonuses: [], claimed_tiers: [], next_target: null });
+  // ── Wallet / Earnings State ──────────────────
   const [driverOffers, setDriverOffers] = useState<any[]>([]);
   const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
+  // ── Bonus System State ───────────────────────
+  const [bonusDash, setBonusDash] = useState<any>(null);
+  const [bonusHistory, setBonusHistory] = useState<any[]>([]);
+  const [bonusHistoryLoaded, setBonusHistoryLoaded] = useState(false);
+  const [bonusLoading, setBonusLoading] = useState(false);
   const [bonusClaiming, setBonusClaiming] = useState(false);
+  const [bonusMsg, setBonusMsg] = useState('');
+  const [bonusRedeemAmt, setBonusRedeemAmt] = useState('');
+  const [bonusRedeemLoading, setBonusRedeemLoading] = useState(false);
   const [driverWallet, setDriverWallet] = useState<any>({ balance: 0, total_earned: 0, total_withdrawn: 0 });
   const [driverRideHistory, setDriverRideHistory] = useState<any[]>([]);
   const [driverHourlyHistory, setDriverHourlyHistory] = useState<any[]>([]);
@@ -700,12 +708,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (showChat) { setShowChat(false); return true; }
       if (tripSummary) return true; // Trip summary pe back nahi
       if (paymentWaiting) return true; // Payment waiting pe back nahi
+      if (driverSubScreen !== '') { setDrSubScreen(''); return true; }
       if (activeTab !== 'home') { setActiveTab('home'); return true; }
       return false;
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting]);
+  }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen]);
 
   // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
@@ -748,8 +757,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setUpiSaving(false);
   };
 
-  const loadBonusToday = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/driver/bonus-today?phone=${ph}`); const d = await r.json(); setBonusData(d); } catch (_e) {}
+  const loadBonusDash = async (ph: string) => {
+    setBonusLoading(true);
+    try { const r = await fetch(`${API}/api/bonus/dashboard?phone=${ph}`); const d = await r.json(); setBonusDash(d); } catch (_e) {}
+    setBonusLoading(false);
+  };
+  const loadBonusHistory = async (ph: string) => {
+    try { const r = await fetch(`${API}/api/bonus/history?phone=${ph}`); const d = await r.json(); setBonusHistory(d.history || []); setBonusHistoryLoaded(true); } catch (_e) {}
   };
   const loadReferralInfo = async () => {
     if (!phone) return;
@@ -759,15 +773,37 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (d.code) { setReferralInfo(d); setReferralLoaded(true); }
     } catch (_e) {}
   };
-  const claimBonus = async (tier: number) => {
-    setBonusClaiming(true);
+  const claimDailyBonus = async (rule_id: number, tier_index: number) => {
+    setBonusClaiming(true); setBonusMsg('');
     try {
-      const res = await fetch(`${API}/api/driver/bonus-claim`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, tier }) });
+      const res = await fetch(`${API}/api/bonus/claim-daily`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, rule_id, tier_index }) });
       const d = await res.json();
-      if (d.success) { setResult('✅ ' + d.message); loadBonusToday(phone); loadDriverWallet(phone); }
-      else setResult('❌ ' + (d.error || 'Error'));
-    } catch (_e) { setResult('❌ Server error'); }
+      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
+    } catch (_e) { setBonusMsg('❌ Server error'); }
     setBonusClaiming(false);
+  };
+  const claimStreakBonus = async () => {
+    setBonusClaiming(true); setBonusMsg('');
+    try {
+      const res = await fetch(`${API}/api/bonus/claim-streak`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+      const d = await res.json();
+      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
+    } catch (_e) { setBonusMsg('❌ Server error'); }
+    setBonusClaiming(false);
+  };
+  const redeemBonus = async () => {
+    const amt = parseFloat(bonusRedeemAmt);
+    if (isNaN(amt) || amt < 50) { setBonusMsg('❌ Minimum ₹50 redeem karo'); return; }
+    setBonusRedeemLoading(true); setBonusMsg('');
+    try {
+      const res = await fetch(`${API}/api/bonus/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
+      const d = await res.json();
+      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      if (d.success) { setBonusRedeemAmt(''); loadBonusDash(phone); loadDriverWallet(phone); }
+    } catch (_e) { setBonusMsg('❌ Server error'); }
+    setBonusRedeemLoading(false);
   };
 
   const loadCommissionHistory = async (ph: string) => {
@@ -1420,12 +1456,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // Load bank details when bank sub-screen opens
   useEffect(() => {
-    if (driverSubScreen === 'bank' && phone && !bankLoaded) {
-      fetch(`${API}/api/driver/bank?phone=${phone}`)
-        .then(r => r.json()).then(d => {
-          setBankAccount(d.bank_account || ''); setBankIfsc(d.bank_ifsc || ''); setBankHolder(d.bank_holder || '');
-          setBankLoaded(true);
-        }).catch(() => {});
+    if (driverSubScreen === 'bank' && phone) {
+      setBankMsg(''); setBankEditing(false);
+      if (!bankLoaded) {
+        fetch(`${API}/api/driver/bank?phone=${phone}`)
+          .then(r => r.json()).then(d => {
+            setBankAccount(d.bank_account || ''); setBankIfsc(d.bank_ifsc || ''); setBankHolder(d.bank_holder || '');
+            setBankLoaded(true);
+          }).catch(() => {});
+      }
     }
   }, [driverSubScreen, phone]);
 
@@ -1449,7 +1488,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         body: JSON.stringify({ phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder }),
       });
       const d = await res.json();
-      setBankMsg(d.success ? '✅ Bank details save ho gayi!' : '❌ ' + (d.error || 'Error'));
+      if (d.success) { setBankMsg('✅ Bank details save ho gayi!'); setBankEditing(false); }
+      else setBankMsg('❌ ' + (d.error || 'Error'));
     } catch (_e) { setBankMsg('❌ Network error'); }
     setBankSaving(false);
   };
@@ -3213,13 +3253,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <SubHeader title="📋 Documents" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Verification status */}
-          <View style={{ backgroundColor: driverInfo?.verification_status === 'approved' ? '#e8f5e9' : '#fff3e0', borderRadius: 16, padding: 18, marginBottom: 16, alignItems: 'center', elevation: 2 }}>
-            <Text style={{ fontSize: 32, marginBottom: 8 }}>{driverInfo?.verification_status === 'approved' ? '✅' : '⏳'}</Text>
+          <View style={{ backgroundColor: driverInfo?.status === 'approved' ? '#e8f5e9' : '#fff3e0', borderRadius: 16, padding: 18, marginBottom: 16, alignItems: 'center', elevation: 2 }}>
+            <Text style={{ fontSize: 32, marginBottom: 8 }}>{driverInfo?.status === 'approved' ? '✅' : '⏳'}</Text>
             <Text style={{ fontSize: 16, fontWeight: '900', color: '#1a1a2e' }}>
-              {driverInfo?.verification_status === 'approved' ? 'Verified Driver' : 'Verification Pending'}
+              {driverInfo?.status === 'approved' ? 'Verified Driver' : 'Verification Pending'}
             </Text>
             <Text style={{ fontSize: 12, color: '#666', marginTop: 4, textAlign: 'center' }}>
-              {driverInfo?.verification_status === 'approved'
+              {driverInfo?.status === 'approved'
                 ? 'Aapke sabhi documents verify ho chuke hain'
                 : 'Aapke documents review me hain — 24-48 ghante lagenge'}
             </Text>
@@ -3232,6 +3272,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Image source={{ uri: driverInfo.face_photo }} style={{ width: '100%', height: 180, borderRadius: 12 }} resizeMode="cover" />
             </View>
           )}
+
+          {/* Document IDs */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>📄 Document Details</Text>
+            {[
+              ['DL Number', driverInfo?.dl_number || '—'],
+              ['Aadhaar', driverInfo?.aadhaar_masked || '—'],
+            ].map(([k, v], i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 1 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                <Text style={{ fontSize: 13, color: '#888' }}>{k}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{v}</Text>
+              </View>
+            ))}
+          </View>
 
           {/* Vehicle details */}
           <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
@@ -3262,7 +3316,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
     );
 
-    if (driverSubScreen === 'bank') return (
+    if (driverSubScreen === 'bank') {
+      const hasSaved = bankLoaded && !!bankAccount;
+      const showForm = !hasSaved || bankEditing;
+      return (
       <View style={s.screen}>
         <SubHeader title="🏦 Bank Details" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -3273,48 +3330,81 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </Text>
           </View>
 
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 2 }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>Bank Account Details</Text>
+          {!showForm ? (
+            /* ── Confirmed view ── */
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>✅</Text>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>Bank Account Confirmed</Text>
+              </View>
+              {[
+                ['Account Holder', bankHolder || '—'],
+                ['Account Number', bankAccount ? '••••' + bankAccount.slice(-4) : '—'],
+                ['IFSC Code', bankIfsc || '—'],
+              ].map(([label, val], i) => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                  <Text style={{ fontSize: 13, color: '#888' }}>{label}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{val}</Text>
+                </View>
+              ))}
+              <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(true); }}
+                style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 18 }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✏️ Edit Bank Details</Text>
+              </TouchableOpacity>
+              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: '#4CAF50' }}>{bankMsg}</Text> : null}
+            </View>
+          ) : (
+            /* ── Editable form ── */
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 2 }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>Bank Account Details</Text>
 
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Holder Name</Text>
-            <TextInput
-              style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
-              placeholder="Aapka pura naam"
-              placeholderTextColor="#ccc"
-              value={bankHolder}
-              onChangeText={setBankHolder}
-            />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Holder Name</Text>
+              <TextInput
+                style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
+                placeholder="Aapka pura naam"
+                placeholderTextColor="#ccc"
+                value={bankHolder}
+                onChangeText={setBankHolder}
+              />
 
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Number</Text>
-            <TextInput
-              style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
-              placeholder="1234567890"
-              placeholderTextColor="#ccc"
-              keyboardType="numeric"
-              value={bankAccount}
-              onChangeText={setBankAccount}
-            />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Number</Text>
+              <TextInput
+                style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
+                placeholder="1234567890"
+                placeholderTextColor="#ccc"
+                keyboardType="numeric"
+                value={bankAccount}
+                onChangeText={setBankAccount}
+              />
 
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>IFSC Code</Text>
-            <TextInput
-              style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 20 }}
-              placeholder="SBIN0001234"
-              placeholderTextColor="#ccc"
-              autoCapitalize="characters"
-              value={bankIfsc}
-              onChangeText={v => setBankIfsc(v.toUpperCase())}
-            />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>IFSC Code</Text>
+              <TextInput
+                style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 20 }}
+                placeholder="SBIN0001234"
+                placeholderTextColor="#ccc"
+                autoCapitalize="characters"
+                value={bankIfsc}
+                onChangeText={v => setBankIfsc(v.toUpperCase())}
+              />
 
-            <TouchableOpacity onPress={saveBank} disabled={bankSaving}
-              style={{ backgroundColor: bankSaving ? '#ccc' : '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : '💾 Save Bank Details'}</Text>
-            </TouchableOpacity>
-            {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? '#4CAF50' : '#e94560' }}>{bankMsg}</Text> : null}
-          </View>
+              <TouchableOpacity onPress={saveBank} disabled={bankSaving}
+                style={{ backgroundColor: bankSaving ? '#ccc' : '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : '💾 Save Bank Details'}</Text>
+              </TouchableOpacity>
+              {hasSaved && (
+                <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(false); }}
+                  style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 10 }}>
+                  <Text style={{ color: '#555', fontWeight: '700', fontSize: 14 }}>Cancel</Text>
+                </TouchableOpacity>
+              )}
+              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? '#4CAF50' : '#e94560' }}>{bankMsg}</Text> : null}
+            </View>
+          )}
         </ScrollView>
         <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
       </View>
-    );
+      );
+    }
 
     if (driverSubScreen === 'support') return (
       <View style={s.screen}>
@@ -3603,7 +3693,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') {
-    if (!walletLoaded) { loadDriverWallet(phone); loadBonusToday(phone); loadCommissionHistory(phone); }
+    if (!walletLoaded) { loadDriverWallet(phone); loadCommissionHistory(phone); }
     const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
     return (
     <View style={s.screen}>
@@ -3754,42 +3844,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
               </TouchableOpacity>
             ))}
-          </View>
-
-          {/* ── Daily Bonus Target Card ── */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, marginTop: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 20, marginRight: 8 }}>🎯</Text>
-              <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', flex: 1 }}>Daily Bonus Targets</Text>
-              <TouchableOpacity onPress={() => loadBonusToday(phone)} style={{ padding: 4 }}><Text style={{ fontSize: 16 }}>⟳</Text></TouchableOpacity>
-            </View>
-            {[{rides:5,bonus:30,tier:1},{rides:10,bonus:50,tier:2},{rides:15,bonus:100,tier:3}].map(t => {
-              const isClaimed = (bonusData?.claimed_tiers || []).includes(t.tier);
-              const isUnlocked = (bonusData?.rides_today || 0) >= t.rides;
-              const isAvail = (bonusData?.available_bonuses || []).some((b: any) => b.tier === t.tier);
-              return (
-                <View key={t.tier} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: '#f0f0f0' }}>
-                  <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: isClaimed ? '#e8f5e9' : isUnlocked ? '#fff3e0' : '#f5f5f5', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                    <Text style={{ fontSize: 16 }}>{isClaimed ? '✅' : isUnlocked ? '🔓' : '🔒'}</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{t.rides} rides today</Text>
-                    <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }}>Bonus: ₹{t.bonus} · ({bonusData?.rides_today || 0}/{t.rides})</Text>
-                  </View>
-                  {isAvail ? (
-                    <TouchableOpacity onPress={() => claimBonus(t.tier)}
-                      style={{ backgroundColor: '#4CAF50', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
-                      <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>Claim ₹{t.bonus}</Text>
-                    </TouchableOpacity>
-                  ) : isClaimed ? (
-                    <Text style={{ fontSize: 12, color: '#4CAF50', fontWeight: '700' }}>Claimed!</Text>
-                  ) : (
-                    <Text style={{ fontSize: 11, color: '#bbb' }}>{t.rides - (bonusData?.rides_today || 0)} aur</Text>
-                  )}
-                </View>
-              );
-            })}
-            <Text style={{ fontSize: 11, color: '#888', marginTop: 10, textAlign: 'center' }}>Aaj ke rides se unlock hote hain — raat 12 baje reset</Text>
           </View>
 
           {/* ── How Hourly Works ── */}
@@ -3965,6 +4019,277 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   );
   }
 
+  // ═══ BONUS TAB ═══
+  if (activeTab === 'bonus') {
+    if (!bonusDash && !bonusLoading) { loadBonusDash(phone); loadBonusHistory(phone); }
+
+    const dash = bonusDash;
+    const balance = parseFloat(dash?.wallet?.balance || 0);
+    const totalEarned = parseFloat(dash?.wallet?.total_earned || 0);
+    const totalRedeemed = parseFloat(dash?.wallet?.total_redeemed || 0);
+    const ridesCount: number = dash?.rides_today || 0;
+    const isPeak: boolean = dash?.is_peak_hour || false;
+
+    // Daily rides rule for this driver's vehicle group
+    const dailyRule = dash?.rules?.find((r: any) => r.bonus_type === 'daily_rides');
+    const peakRule  = dash?.rules?.find((r: any) => r.bonus_type === 'peak_hour');
+    const streakRule = dash?.rules?.find((r: any) => r.bonus_type === 'weekly_streak');
+
+    // Week calendar: Mon to Sun
+    const weekDayLabels = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const now = new Date();
+    const dow = now.getDay() === 0 ? 7 : now.getDay();
+    const weekDays = weekDayLabels.map((_, i) => {
+      const d = new Date(now); d.setDate(now.getDate() - dow + 1 + i);
+      return d.toISOString().slice(0,10);
+    });
+    const ridesByDay: Record<string,number> = {};
+    (dash?.week_rides_by_day || []).forEach((r: any) => { ridesByDay[r.ride_date?.slice(0,10)] = parseInt(r.cnt); });
+    const ridesPerDayTarget = streakRule?.config?.rides_per_day || 4;
+    const qualifyingDays = weekDays.filter(d => (ridesByDay[d] || 0) >= ridesPerDayTarget && new Date(d) <= now).length;
+    const streakTarget = streakRule?.config?.target_days || 5;
+    const streakAchieved = qualifyingDays >= streakTarget;
+    const streakClaimed = dash?.week_bonus_claimed;
+
+    return (
+    <View style={s.screen}>
+      <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', flex: 1 }}>🎁 Bonus Wallet</Text>
+          <TouchableOpacity onPress={() => { loadBonusDash(phone); setBonusMsg(''); }} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+            <Text style={{ fontSize: 16 }}>⟳</Text>
+          </TouchableOpacity>
+        </View>
+        {/* Balance Hero */}
+        <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+          <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 4 }}>Bonus Balance</Text>
+          <Text style={{ color: '#FFD700', fontSize: 40, fontWeight: '900' }}>₹{balance.toFixed(0)}</Text>
+          <View style={{ flexDirection: 'row', gap: 24, marginTop: 10 }}>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#4CAF50', fontSize: 16, fontWeight: '800' }}>₹{totalEarned.toFixed(0)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>Total Earned</Text>
+            </View>
+            <View style={{ alignItems: 'center' }}>
+              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: '800' }}>₹{totalRedeemed.toFixed(0)}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>Redeemed</Text>
+            </View>
+          </View>
+        </View>
+        {/* Redeem section */}
+        {balance >= 50 && (
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, marginTop: 8 }}>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginBottom: 10 }}>💸 Redeem → Main Wallet</Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput
+                style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, color: '#fff', fontWeight: '700' }}
+                placeholder={`Min ₹50`} placeholderTextColor="rgba(255,255,255,0.4)"
+                keyboardType="numeric" value={bonusRedeemAmt}
+                onChangeText={setBonusRedeemAmt}
+              />
+              <TouchableOpacity onPress={redeemBonus} disabled={bonusRedeemLoading}
+                style={{ backgroundColor: bonusRedeemLoading ? '#555' : '#FFD700', borderRadius: 10, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#1a1a2e', fontWeight: '900', fontSize: 14 }}>{bonusRedeemLoading ? '...' : 'Redeem'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+        {balance < 50 && balance > 0 && (
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, textAlign: 'center', marginTop: 8 }}>₹{(50 - balance).toFixed(0)} aur chahiye redeem ke liye (min ₹50)</Text>
+        )}
+      </View>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+        {bonusMsg ? (
+          <View style={{ backgroundColor: bonusMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <Text style={{ color: bonusMsg.startsWith('✅') ? '#2e7d32' : '#c62828', fontWeight: '700', fontSize: 13 }}>{bonusMsg}</Text>
+          </View>
+        ) : null}
+
+        {bonusLoading && !dash ? (
+          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+            <Text style={{ color: '#999', fontSize: 14 }}>Loading bonus data...</Text>
+          </View>
+        ) : (
+          <>
+          {/* ── Peak Hour Banner ── */}
+          {peakRule && (
+            <View style={{ backgroundColor: isPeak ? '#FFF8E1' : '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: isPeak ? 2 : 0, borderColor: '#FF8F00' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Text style={{ fontSize: 28, marginRight: 12 }}>{isPeak ? '⚡' : '🕐'}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>{peakRule.label}</Text>
+                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>+₹{peakRule.config.per_ride}/ride · 7-9 AM aur 5-8 PM</Text>
+                </View>
+                {isPeak && (
+                  <View style={{ backgroundColor: '#FF8F00', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 11 }}>LIVE NOW</Text>
+                  </View>
+                )}
+              </View>
+              {isPeak && (
+                <View style={{ backgroundColor: '#FF8F0015', borderRadius: 10, padding: 10, marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
+                  <Text style={{ fontSize: 12, color: '#E65100' }}>Aaj peak bonus earned:</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#E65100' }}>₹{(dash?.peak_today || 0).toFixed(0)}</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── Daily Ride Challenge ── */}
+          {dailyRule && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>🎯</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>{dailyRule.label}</Text>
+                  <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Aaj ki rides: {ridesCount} completed · Raat 12 baje reset</Text>
+                </View>
+              </View>
+              {(dailyRule.config.tiers || []).map((tier: any, idx: number) => {
+                const refKey = `daily_${new Date().toISOString().slice(0,10)}_r${dailyRule.id}_t${idx}`;
+                const isClaimed = (dash?.today_claimed || []).some((c: any) => c.ref_key === refKey);
+                const isUnlocked = ridesCount >= tier.rides;
+                const pct = Math.min(100, (ridesCount / tier.rides) * 100);
+                return (
+                  <View key={idx} style={{ marginBottom: idx < dailyRule.config.tiers.length - 1 ? 14 : 0 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ fontSize: 16 }}>{isClaimed ? '✅' : isUnlocked ? '🔓' : '🔒'}</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: isClaimed ? '#4CAF50' : '#1a1a2e' }}>{tier.rides} rides today</Text>
+                      </View>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#e94560' }}>₹{tier.amount}</Text>
+                    </View>
+                    <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                      <View style={{ height: 8, backgroundColor: isClaimed ? '#4CAF50' : isUnlocked ? '#FF8F00' : '#e94560', borderRadius: 4, width: pct + '%' }} />
+                    </View>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, alignItems: 'center' }}>
+                      <Text style={{ fontSize: 10, color: '#999' }}>{ridesCount}/{tier.rides} rides</Text>
+                      {isUnlocked && !isClaimed ? (
+                        <TouchableOpacity onPress={() => claimDailyBonus(dailyRule.id, idx)} disabled={bonusClaiming}
+                          style={{ backgroundColor: bonusClaiming ? '#ccc' : '#4CAF50', borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 }}>
+                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Claim ₹{tier.amount} 🎉</Text>
+                        </TouchableOpacity>
+                      ) : isClaimed ? (
+                        <Text style={{ fontSize: 12, color: '#4CAF50', fontWeight: '700' }}>✅ Claimed!</Text>
+                      ) : (
+                        <Text style={{ fontSize: 11, color: '#aaa' }}>{tier.rides - ridesCount} aur rides chahiye</Text>
+                      )}
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
+          {/* ── Weekly Warrior ── */}
+          {streakRule && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>🏆</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>Weekly Warrior</Text>
+                  <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{streakRule.config.target_days} days × {ridesPerDayTarget}+ rides/day → ₹{streakRule.config.amount}</Text>
+                </View>
+                <View style={{ backgroundColor: streakAchieved && !streakClaimed ? '#FFF3E0' : '#f5f5f5', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: streakAchieved && !streakClaimed ? '#FF8F00' : '#999' }}>{qualifyingDays}/{streakTarget}</Text>
+                </View>
+              </View>
+              {/* 7-day calendar */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
+                {weekDays.map((date, i) => {
+                  const cnt = ridesByDay[date] || 0;
+                  const qualified = cnt >= ridesPerDayTarget;
+                  const isPast = new Date(date) <= now;
+                  const isToday = date === now.toISOString().slice(0,10);
+                  return (
+                    <View key={i} style={{ alignItems: 'center', flex: 1 }}>
+                      <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: qualified ? '#4CAF50' : isToday ? '#FFF3E0' : isPast ? '#ffebee' : '#f5f5f5',
+                        borderWidth: isToday ? 2 : 0, borderColor: '#FF8F00' }}>
+                        <Text style={{ fontSize: 12, fontWeight: '800', color: qualified ? '#fff' : isPast ? '#e94560' : '#bbb' }}>
+                          {qualified ? '✓' : cnt > 0 ? String(cnt) : weekDayLabels[i][0]}
+                        </Text>
+                      </View>
+                      <Text style={{ fontSize: 9, color: isToday ? '#FF8F00' : '#aaa', marginTop: 3, fontWeight: isToday ? '800' : '400' }}>{weekDayLabels[i]}</Text>
+                    </View>
+                  );
+                })}
+              </View>
+              {streakAchieved && !streakClaimed ? (
+                <TouchableOpacity onPress={claimStreakBonus} disabled={bonusClaiming}
+                  style={{ backgroundColor: bonusClaiming ? '#ccc' : '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                  <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 15 }}>🏆 Claim Weekly Warrior ₹{streakRule.config.amount}</Text>
+                </TouchableOpacity>
+              ) : streakClaimed ? (
+                <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+                  <Text style={{ color: '#2e7d32', fontWeight: '800', fontSize: 13 }}>✅ Is hafte ka bonus claim ho gaya!</Text>
+                </View>
+              ) : (
+                <View style={{ backgroundColor: '#f5f5f5', borderRadius: 12, padding: 12 }}>
+                  <Text style={{ color: '#888', fontSize: 12, textAlign: 'center' }}>{streakTarget - qualifyingDays} aur qualifying days chahiye ({ridesPerDayTarget}+ rides/day)</Text>
+                </View>
+              )}
+            </View>
+          )}
+
+          {/* ── How Bonus Works ── */}
+          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, marginBottom: 14 }}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13, marginBottom: 10 }}>ℹ️ Bonus Kaise Kaam Karta Hai</Text>
+            {[
+              ['🎯', 'Daily Rides', 'Aaj ke targets complete karo aur bonus claim karo (raat 12 baje reset)'],
+              ['⚡', 'Peak Hour', 'Rush hours mein ride complete karo — automatically credit hoga'],
+              ['🏆', 'Weekly Warrior', 'Hafte ke 5 din 4+ rides karo — Sunday ko claim karo'],
+              ['💸', 'Redeem', 'Minimum ₹50 bonus collect hone par main wallet mein transfer karo'],
+            ].map(([icon, title, desc], i) => (
+              <View key={i} style={{ flexDirection: 'row', marginBottom: i < 3 ? 10 : 0 }}>
+                <Text style={{ fontSize: 16, marginRight: 10, width: 22 }}>{icon}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#FFD700', fontWeight: '700', fontSize: 12 }}>{title}</Text>
+                  <Text style={{ color: '#aaa', fontSize: 11, marginTop: 2, lineHeight: 16 }}>{desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* ── Recent History ── */}
+          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 8, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 15, fontWeight: '900', color: '#1a1a2e', flex: 1 }}>📋 Bonus History</Text>
+              {!bonusHistoryLoaded && (
+                <TouchableOpacity onPress={() => loadBonusHistory(phone)}>
+                  <Text style={{ fontSize: 12, color: '#2196F3', fontWeight: '700' }}>Load History</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+            {bonusHistory.length === 0 ? (
+              <Text style={{ color: '#aaa', fontSize: 13, textAlign: 'center', paddingVertical: 16 }}>Koi bonus history nahi — abhi pehli ride karo!</Text>
+            ) : (
+              bonusHistory.slice(0, 15).map((item: any, i: number) => {
+                const isEarn = item.amount > 0;
+                const typeLabel: Record<string,string> = { daily_rides: '🎯 Daily Rides', peak_hour: '⚡ Peak Hour', weekly_streak: '🏆 Weekly Warrior', redeem: '💸 Redeemed' };
+                return (
+                  <View key={item.id || i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: i < bonusHistory.length - 1 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{typeLabel[item.bonus_type] || item.bonus_type}</Text>
+                      <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{item.description}</Text>
+                      <Text style={{ fontSize: 10, color: '#bbb', marginTop: 1 }}>{new Date(item.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                    </View>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: isEarn ? '#4CAF50' : '#e94560' }}>
+                      {isEarn ? '+' : ''}₹{Math.abs(item.amount).toFixed(0)}
+                    </Text>
+                  </View>
+                );
+              })
+            )}
+          </View>
+          </>
+        )}
+      </ScrollView>
+      <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
+    </View>
+    );
+  }
+
   // ═══ PROFILE TAB ═══
   return (
     <View style={s.screen}>
@@ -4125,6 +4450,7 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
   const tabs = [
     { t: 'home',     ion: 'home',       lbl: 'Home'   },
     { t: 'earnings', ion: 'wallet',      lbl: 'Kamai'  },
+    { t: 'bonus',    ion: 'gift',        lbl: 'Bonus'  },
     { t: 'profile',  ion: 'person',      lbl: 'Profile'},
   ];
   const hasBadge = rideReq || hourlyRideReq;
