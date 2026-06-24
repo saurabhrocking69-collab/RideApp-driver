@@ -355,14 +355,15 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     const lastId = await AsyncStorage.getItem('_bgLastRideId');
     if (lastId === String(rd.ride.id)) return; // already notified for this ride
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
-    // Fire immediately — plays sound via ride_requests channel (bypassDnd + IMPORTANCE_MAX).
+    // Local notification — bypasses FCM entirely, guaranteed delivery from background task.
+    // ride_requests_v2: MAX importance, bypassDnd, 3s vibration.
     await Notifications.scheduleNotificationAsync({
       content: {
         title: '🚖 Nayi Ride Request!',
         body: `₹${rd.ride.fare || '?'} · ${(rd.ride.pickup || 'Pickup location').slice(0, 60)}`,
         sound: 'default',
         data: { type: 'new_ride' },
-        ...(Platform.OS === 'android' ? { channelId: 'ride_requests' } : {}),
+        ...(Platform.OS === 'android' ? { channelId: 'ride_requests_v2' } : {}),
       },
       trigger: null,
     });
@@ -379,8 +380,8 @@ async function startBgLocation(): Promise<boolean> {
     if (already) return true;
     await Location.startLocationUpdatesAsync(DRIVER_LOCATION_TASK, {
       accuracy: Location.Accuracy.Balanced,
-      timeInterval: 5000,
-      distanceInterval: 20,
+      timeInterval: 8000,      // fire every 8 seconds
+      distanceInterval: 0,     // no distance gate — time-only, works for stationary drivers
       foregroundService: {
         notificationTitle: '🟢 Sppero Buddy — Online',
         notificationBody: 'Location active — ride requests aa rahi hain',
@@ -592,18 +593,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Notification Handler ──────────────────────
   useEffect(() => {
     if (Platform.OS === 'android') {
-      // Primary channel for ride assignments — MAX importance, bypass DND
-      Notifications.setNotificationChannelAsync('ride_requests', {
+      // v2 channel — Android locks channel settings after first creation; v2 forces
+      // correct MAX+bypassDnd settings on every device regardless of previous installs.
+      Notifications.setNotificationChannelAsync('ride_requests_v2', {
         name: 'Ride Requests',
         importance: Notifications.AndroidImportance.MAX,
         sound: 'default',
-        vibrationPattern: [0, 500, 150, 500, 150, 800],
+        vibrationPattern: [0, 800, 200, 800, 200, 800],   // ~3 seconds
+        enableVibrate: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+        bypassDnd: true,
+        showBadge: true,
+      });
+      // Keep old channel so old FCM tokens don't silently drop (some cached backend calls)
+      Notifications.setNotificationChannelAsync('ride_requests', {
+        name: 'Ride Requests (Legacy)',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'default',
+        vibrationPattern: [0, 800, 200, 800, 200, 800],
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         bypassDnd: true,
       });
-      // Low-importance persistent channel for "Driver Online" status bar notification
-      // This keeps process priority high → Android doesn't kill app on screen lock
       Notifications.setNotificationChannelAsync('driver_status', {
         name: 'Driver Online Status',
         importance: Notifications.AndroidImportance.LOW,
@@ -612,12 +623,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         showBadge: false,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
-      // Fallback channel — Android 8+ drops notifications if channel doesn't exist
       Notifications.setNotificationChannelAsync('default', {
         name: 'General Notifications',
         importance: Notifications.AndroidImportance.HIGH,
         sound: 'default',
-        vibrationPattern: [0, 250, 250, 250],
+        vibrationPattern: [0, 400, 200, 400],
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
@@ -637,7 +647,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const sub1 = Notifications.addNotificationReceivedListener(n => {
       const data = n.request.content.data as any;
       if (data?.type === 'new_ride') {
-        Vibration.vibrate([0, 500, 150, 500, 150, 800]);
+        Vibration.vibrate([0, 800, 200, 800, 200, 800]); // ~3 seconds
         useDriverStore.getState().triggerPoll?.();
       }
     });
@@ -756,18 +766,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
     useDriverStore.getState().startPolling(dp, () => {
-      Vibration.vibrate([0, 500, 150, 500, 150, 800]);
+      Vibration.vibrate([0, 800, 200, 800, 200, 800]); // ~3 seconds
       setActiveTab('home');
-      // Schedule local notification — triggers sound even in foreground/background
       Notifications.scheduleNotificationAsync({
         content: {
           title: '🚖 Nayi Ride Request!',
           body: 'Passenger aapka intezaar kar raha hai — jaldi dekho!',
           sound: 'default',
           data: { type: 'new_ride' },
-          ...(Platform.OS === 'android' ? { channelId: 'ride_requests' } : {}),
+          ...(Platform.OS === 'android' ? { channelId: 'ride_requests_v2' } : {}),
         },
-        trigger: null, // immediate
+        trigger: null,
       }).catch(() => {});
     });
   };
