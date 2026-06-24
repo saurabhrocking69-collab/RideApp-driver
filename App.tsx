@@ -937,10 +937,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [showHourlyChat, activeHourlyRide?.id]);
 
-  const sendHourlyChat = async () => {
-    if (!hourlyChatInput.trim() || !activeHourlyRide?.id) return;
-    const msg = hourlyChatInput;
-    setHourlyChatInput('');
+  const sendHourlyChat = async (text?: string) => {
+    const msg = text ?? hourlyChatInput;
+    if (!msg.trim() || !activeHourlyRide?.id) return;
+    if (!text) setHourlyChatInput('');
     try {
       await fetch(`${API}/api/hourly/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, sender: 'driver', message: msg }) });
       const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
@@ -1628,9 +1628,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   // ── Chat ───────────────────────────────────────
-  const sendChat = async () => {
-    if (!chatInput.trim() || !activeRide?.id) return;
-    const msg = chatInput; setChatInput('');
+  const sendChat = async (text?: string) => {
+    const msg = text ?? chatInput;
+    if (!msg.trim() || !activeRide?.id) return;
+    if (!text) setChatInput('');
     try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
   const callCustomer = async () => {
@@ -2713,9 +2714,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         ))}
       </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fafafa' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
+        {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke pickup point pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
+          <TouchableOpacity key={q} onPress={() => sendChat(q)} style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600' }}>{q}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
       <View style={cs.inputRow}>
-        <TextInput style={cs.input} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={sendChat} />
-        <TouchableOpacity style={cs.send} onPress={sendChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+        <TextInput style={cs.input} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={() => sendChat()} />
+        <TouchableOpacity style={cs.send} onPress={() => sendChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -2736,9 +2744,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         ))}
       </ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fafafa' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
+        {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke location pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
+          <TouchableOpacity key={q} onPress={() => sendHourlyChat(q)} style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600' }}>{q}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
       <View style={cs.inputRow}>
-        <TextInput style={cs.input} placeholder="Customer ko message karo..." value={hourlyChatInput} onChangeText={setHourlyChatInput} onSubmitEditing={sendHourlyChat} />
-        <TouchableOpacity style={cs.send} onPress={sendHourlyChat}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+        <TextInput style={cs.input} placeholder="Customer ko message karo..." value={hourlyChatInput} onChangeText={setHourlyChatInput} onSubmitEditing={() => sendHourlyChat()} />
+        <TouchableOpacity style={cs.send} onPress={() => sendHourlyChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
