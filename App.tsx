@@ -1297,8 +1297,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           reconnectionDelayMax: 10000,
           timeout: 10000,
         });
-        s.on('connect', () => { s.emit('driverJoin', { phone }); });
+        s.on('connect', () => {
+          s.emit('driverJoin', { phone });
+          // Re-join active ride room on reconnect so we don't miss payment/chat events
+          const ar = useDriverStore.getState().activeRide;
+          if (ar?.id) s.emit('joinRide', { rideId: ar.id });
+        });
         s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); });
+        s.on('paymentConfirmed', async (data: any) => {
+          if (data.status !== 'completed') return;
+          try {
+            const res = await fetch(`${API}/api/rides/payment-status/${data.ride_id}`);
+            const d = await res.json();
+            if (d.payment_status === 'completed') {
+              const fare = parseFloat(d.fare || 0);
+              setPaymentMethod(d.payment_method || '');
+              setPaymentWaiting(false);
+              setTripSummary({
+                fare: String(d.fare),
+                payment_method: d.payment_method,
+                earned: '₹' + (fare * 0.85).toFixed(0),
+                fee: '₹' + (fare * 0.15).toFixed(0),
+              });
+            }
+          } catch (_e) {}
+        });
+        s.on('chatMessage', (msg: any) => {
+          setChatMsgs((prev: any[]) => [...prev, msg]);
+          setUnreadChat((prev: number) => prev + 1);
+        });
         socketRef.current = s;
         (globalThis as any).__driverSocket = s;
       }
@@ -1342,6 +1369,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult('❌ ' + data.message);
     } else if (data.success) {
       setResult('✅ Ride accept ki!');
+      // Join ride room for real-time payment + chat updates
+      socketRef.current?.emit('joinRide', { rideId: rideReq.id });
       setRideReq(null);
       fetchEta(rideReq.pickup, rideReq.drop_location);
     } else {
