@@ -561,7 +561,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
-              navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone);
+              navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); promptBatteryOptimization();
               // Restore active ride into store so home screen shows it immediately
               try {
                 const ar = await fetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
@@ -675,8 +675,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
 
   // ── FCM Token Register ────────────────────────
-  // Called on login AND on every app startup (session restore) AND when going online.
-  // Expo push tokens can rotate — always refreshing prevents stale-token silent failures.
   const registerFCM = async (userPhone: string) => {
     try {
       const { status: existing } = await Notifications.getPermissionsAsync();
@@ -686,15 +684,54 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         finalStatus = status;
       }
       if (finalStatus !== 'granted') return;
-      const tokenData = await Notifications.getExpoPushTokenAsync({
-        projectId: '8c13e622-0206-4e3f-ad33-8851c0f9353c',
-      });
-      const token = tokenData.data;
-      // Compare with cached token — only hit backend if it changed
-      // Always register — Nothing/CMF phones rotate FCM tokens when OS kills the process
+
+      // Native FCM token — bypasses Expo relay entirely, goes direct to Firebase Admin.
+      // This fixes killed-app notifications on Android (Expo relay requires FCM V1 creds
+      // configured in Expo dashboard; native path skips that dependency completely).
+      let token: string | null = null;
+      try {
+        const dt = await Notifications.getDevicePushTokenAsync();
+        token = dt.data as string;
+      } catch (_e) {
+        // Fallback: Expo relay token (works if FCM V1 creds are set in Expo dashboard)
+        try {
+          const et = await Notifications.getExpoPushTokenAsync({ projectId: '8c13e622-0206-4e3f-ad33-8851c0f9353c' });
+          token = et.data;
+        } catch (_e2) {}
+      }
+      if (!token) return;
       await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
       await AsyncStorage.setItem('fcmToken', token).catch(() => {});
     } catch (_e) {}
+  };
+
+  // ── Battery Optimization Prompt ───────────────
+  // Indian phones (MIUI, ColorOS, MIUI, Realme) aggressively kill background processes
+  // including FCM delivery. Ask once to disable battery restriction for this app.
+  const promptBatteryOptimization = async () => {
+    if (Platform.OS !== 'android') return;
+    const shown = await AsyncStorage.getItem('batteryOptPromptShown').catch(() => null);
+    if (shown) return;
+    await AsyncStorage.setItem('batteryOptPromptShown', '1').catch(() => {});
+    Alert.alert(
+      '⚡ Notifications Enable Karo',
+      'Nai ride requests theek se paane ke liye:\n\n1. "Band Karo" tap karo\n2. "Allow" select karo\n\nIsse app background mein bhi notifications milenge.',
+      [
+        { text: 'Baad Mein', style: 'cancel' },
+        {
+          text: '✅ Band Karo',
+          onPress: async () => {
+            try {
+              await Linking.sendIntent('android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', [
+                { key: 'android.intent.extra.PACKAGE_NAME', value: 'com.saurabhspero.rideappdriver' },
+              ]);
+            } catch (_e) {
+              Linking.openSettings();
+            }
+          },
+        },
+      ]
+    );
   };
   // ── Android Back Button ───────────────────────
   useEffect(() => {
@@ -1138,6 +1175,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
+        promptBatteryOptimization();
         loadUpiId(data.driver.phone); loadDriverOffers();
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
