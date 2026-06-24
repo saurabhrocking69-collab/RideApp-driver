@@ -3104,6 +3104,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Ionicons name="navigate" size={15} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    style={{ marginTop: 10, borderWidth: 1.5, borderColor: '#e94560', borderRadius: 12, padding: 12, alignItems: 'center' }}
+                    onPress={() => {
+                      Alert.alert('Ride Cancel?', 'Pickup nahi pahunch sakte? Isse customer ko naya driver milega.', [
+                        { text: 'Nahi', style: 'cancel' },
+                        { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
+                          try {
+                            const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
+                            const d = await r.json();
+                            if (d.success) { setActiveHourlyRide(null); setResult('Ride cancel ho gayi.'); }
+                            else Alert.alert('Error', d.error || 'Cancel nahi hua');
+                          } catch (_e) { Alert.alert('Error', 'Network error'); }
+                        }},
+                      ]);
+                    }}>
+                    <Text style={{ color: '#e94560', fontWeight: '700', fontSize: 13 }}>✗ Pickup Nahi Pahunch Sakta — Cancel Karo</Text>
+                  </TouchableOpacity>
                 </View>
               )}
 
