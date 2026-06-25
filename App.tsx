@@ -252,16 +252,16 @@ const TripStatusBar = ({ status }: { status: string }) => {
   const steps = [{ icon: '🚗', label: 'Jao' }, { icon: '📍', label: 'Pahunche' }, { icon: '🛣️', label: 'Trip' }, { icon: '✅', label: 'Done' }];
   return (
     <View style={{ paddingHorizontal: 4, paddingBottom: 10, paddingTop: 2 }}>
-      <View style={{ height: 3, backgroundColor: '#e8f5e9', borderRadius: 2, marginHorizontal: 10, marginBottom: 8, overflow: 'hidden' }}>
-        <Animated.View style={{ height: 3, backgroundColor: '#4CAF50', borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }) }} />
+      <View style={{ height: 3, backgroundColor: '#1E293B', borderRadius: 2, marginHorizontal: 10, marginBottom: 8, overflow: 'hidden' }}>
+        <Animated.View style={{ height: 3, backgroundColor: '#10B981', borderRadius: 2, width: anim.interpolate({ inputRange: [0, 3], outputRange: ['0%', '100%'] }) }} />
       </View>
       <View style={{ flexDirection: 'row' }}>
         {steps.map((s, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center' }}>
-            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i <= idx ? '#4CAF50' : '#efefef', alignItems: 'center', justifyContent: 'center', transform: [{ scale: i === idx ? 1.2 : 1 }], elevation: i === idx ? 4 : 0 }}>
+            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i <= idx ? '#10B981' : '#1E293B', alignItems: 'center', justifyContent: 'center', transform: [{ scale: i === idx ? 1.2 : 1 }], elevation: i === idx ? 4 : 0, borderWidth: i > idx ? 1 : 0, borderColor: '#334155' }}>
               <Text style={{ fontSize: 12 }}>{i <= idx ? s.icon : '·'}</Text>
             </View>
-            <Text style={{ fontSize: 9, marginTop: 3, color: i <= idx ? '#4CAF50' : '#bbb', fontWeight: i === idx ? 'bold' : 'normal' }}>{s.label}</Text>
+            <Text style={{ fontSize: 9, marginTop: 3, color: i <= idx ? '#10B981' : '#475569', fontWeight: i === idx ? 'bold' : 'normal' }}>{s.label}</Text>
           </View>
         ))}
       </View>
@@ -1902,16 +1902,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <View>
             <Text style={rs.bigTitle}>🔐 OTP Verify Karo</Text>
             <Text style={rs.subTitle}>+91 {regData.phone} pe OTP bheja gaya</Text>
-            <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginTop: 16, marginBottom: 20, flexDirection: 'row' }}>
+            <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 12, marginTop: 16, marginBottom: 20, flexDirection: 'row', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
-              <Text style={{ fontSize: 12, color: '#e65100', flex: 1 }}>SMS aane par OTP copy karo — boxes mein auto fill ho jaayega!</Text>
+              <Text style={{ fontSize: 12, color: '#F59E0B', flex: 1 }}>SMS aane par OTP copy karo — boxes mein auto fill ho jaayega!</Text>
             </View>
             {/* 6 OTP Boxes */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
               {loginOtpDigits.map((digit, i) => (
                 <TextInput key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#e94560' : '#e0e0e0', backgroundColor: digit ? '#fff8f8' : '#fafafa', color: '#1a1a2e' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#E94560' : '#334155', backgroundColor: digit ? 'rgba(233,69,96,0.1)' : '#1E293B', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -1996,12 +1996,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             onPress={() => { updateReg('vehicle_type', v.id); updateReg('vehicle_brand', ''); updateReg('vehicle_model', ''); }}>
             <View style={{ marginRight: 16, width: 38, alignItems: 'center' }}>
               {v.mci
-                ? <MaterialCommunityIcons name={v.mci as any} size={30} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#1a1a2e')} />
-                : <Ionicons name={v.ion as any} size={28} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#1a1a2e')} />}
+                ? <MaterialCommunityIcons name={v.mci as any} size={30} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#94A3B8')} />
+                : <Ionicons name={v.ion as any} size={28} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#94A3B8')} />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1a1a2e' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
-              {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#888'), marginTop: 2 }}>{v.sub}</Text> : null}
+              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#F1F5F9' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
+              {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#64748B'), marginTop: 2 }}>{v.sub}</Text> : null}
             </View>
             {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
           </TouchableOpacity>
@@ -2052,7 +2052,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           />
           <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, marginBottom: 4 }}>
             {dlCleaned.length === 0 ? (
-              <Text style={{ fontSize: 11, color: '#888' }}>Format: XX00 YYYY XXXXXXX (2 letter + 13 digits)</Text>
+              <Text style={{ fontSize: 11, color: '#64748B' }}>Format: XX00 YYYY XXXXXXX (2 letter + 13 digits)</Text>
             ) : dlValid && dlCleaned.length === 15 ? (
               <Text style={{ fontSize: 11, color: '#2e7d32', fontWeight: '700' }}>✅ DL number format sahi hai</Text>
             ) : (
@@ -2172,8 +2172,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     : <Text style={{ color: '#e65100', fontSize: 12 }}>{regData.vehicle_brand ? 'Model select karo' : 'Pehle brand select karo'}</Text>}
                 </View>
               ) : regData.vehicle_type === 'luxury' ? (
-                <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 8 }}>
-                  <Text style={{ color: '#e65100', fontSize: 13 }}>Pehle upar brand select karo — fir model dikhega</Text>
+                <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                  <Text style={{ color: '#F59E0B', fontSize: 13 }}>Pehle upar brand select karo — fir model dikhega</Text>
                 </View>
               ) : (
                 <>
@@ -2183,7 +2183,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     value={regData.vehicle_model}
                     onChangeText={(v) => updateReg('vehicle_model', v)}
                   />
-                  <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Model = brand ke baad ka specific name (eg. Hyundai → Creta)</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Model = brand ke baad ka specific name (eg. Hyundai → Creta)</Text>
                 </>
               )}
             </>
@@ -2206,11 +2206,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* ── Photos ── */}
           <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Vehicle Front Photo *</Text>
-          <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Number plate clearly visible honi chahiye</Text>
+          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Number plate clearly visible honi chahiye</Text>
           <PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="🚗" />
 
           <Text style={[rs.fieldLabel, { marginTop: 14 }]}>RC (Registration Certificate) Photo</Text>
-          <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Optional — lekin jaldi verify hoga agar doge</Text>
+          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Optional — lekin jaldi verify hoga agar doge</Text>
           <PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
 
           {result ? <Text style={s.err}>{result}</Text> : null}
@@ -2237,15 +2237,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '100%' }} /></View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
-            <Ionicons name="id-card" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+            <Ionicons name="id-card" size={26} color="#94A3B8" style={{ marginRight:10 }} />
             <Text style={[rs.bigTitle, { marginTop:0 }]}>Aadhaar & Selfie</Text>
           </View>
           <Text style={rs.subTitle}>Last step — aur aap ho jayenge!</Text>
 
-          <View style={[rs.adviceBox, { backgroundColor: '#e8f5e9' }]}>
-            <Text style={[rs.adviceTitle, { color: '#2e7d32' }]}>🔒 Privacy Note:</Text>
-            <Text style={[rs.adviceText, { color: '#388e3c' }]}>• Aapka Aadhaar sirf verification ke liye hai</Text>
-            <Text style={[rs.adviceText, { color: '#388e3c' }]}>• Documents securely store kiye jaate hain</Text>
+          <View style={[rs.adviceBox, { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)', borderWidth: 1 }]}>
+            <Text style={[rs.adviceTitle, { color: '#10B981' }]}>🔒 Privacy Note:</Text>
+            <Text style={[rs.adviceText, { color: '#6EE7B7' }]}>• Aapka Aadhaar sirf verification ke liye hai</Text>
+            <Text style={[rs.adviceText, { color: '#6EE7B7' }]}>• Documents securely store kiye jaate hain</Text>
           </View>
 
           <Text style={rs.fieldLabel}>Aadhaar Number *</Text>
@@ -2264,13 +2264,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           )}
 
           <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Aadhaar Photo *</Text>
-          <Text style={{ fontSize: 11, color: '#888', marginBottom: 8 }}>Front side — naam aur number clearly visible ho</Text>
+          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Front side — naam aur number clearly visible ho</Text>
           <PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="🪪" />
 
           <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Live Selfie *</Text>
-          <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
             <Text style={{ fontSize: 16, marginRight: 8 }}>🔒</Text>
-            <Text style={{ fontSize: 11, color: '#e65100', flex: 1 }}>Sirf live camera se selfie — gallery se upload nahi hoga. Saaf light mein, seedha chehra.</Text>
+            <Text style={{ fontSize: 11, color: '#F59E0B', flex: 1 }}>Sirf live camera se selfie — gallery se upload nahi hoga. Saaf light mein, seedha chehra.</Text>
           </View>
           <PhotoBox field="face_photo" label="Live Selfie" icon="🤳" cameraOnly />
 
@@ -2295,14 +2295,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Sppero Buddy Captain</Text>
       </View>
       <View style={{ padding: 24, alignItems: 'center' }}>
-        <Text style={{ fontSize: 16, color: '#333', textAlign: 'center', lineHeight: 26 }}>
+        <Text style={{ fontSize: 16, color: '#94A3B8', textAlign: 'center', lineHeight: 26 }}>
           Aapki Sppero Buddy Captain application submit ho gayi! ✅{'\n\n'}Admin aapke sare documents — DL, Aadhaar, Vehicle aur Selfie — verify karega.
         </Text>
-        <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 16, marginTop: 16, width: '100%' }}>
-          <Text style={{ color: '#2e7d32', textAlign: 'center', fontWeight: '600', fontSize: 13 }}>✅ Verification hone ke baad app khud notify kar dega</Text>
+        <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 16, marginTop: 16, width: '100%', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+          <Text style={{ color: '#10B981', textAlign: 'center', fontWeight: '600', fontSize: 13 }}>✅ Verification hone ke baad app khud notify kar dega</Text>
         </View>
-        <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 16, marginTop: 10, width: '100%' }}>
-          <Text style={{ color: '#ef6c00', textAlign: 'center', fontWeight: '600' }}>⏳ Status: Verification Pending</Text>
+        <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 16, marginTop: 10, width: '100%', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+          <Text style={{ color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>⏳ Status: Verification Pending</Text>
         </View>
         <TouchableOpacity style={[s.btn, { marginTop: 24, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}>
           <Text style={s.btnTxt}>🏠 Login Screen pe jao</Text>
@@ -2332,9 +2332,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 15, lineHeight: 24, textAlign: 'center', color: cfg.col }}>{cfg.msg}</Text>
           </View>
           {driverInfo.admin_message ? (
-            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 18, marginBottom: 20, borderWidth: 2, borderColor: cfg.col }}>
-              <Text style={{ fontSize: 13, color: '#888', marginBottom: 6, fontWeight: '600' }}>📩 Admin ka message:</Text>
-              <Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500', lineHeight: 22 }}>{driverInfo.admin_message}</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 18, marginBottom: 20, borderWidth: 2, borderColor: cfg.col }}>
+              <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 6, fontWeight: '600' }}>📩 Admin ka message:</Text>
+              <Text style={{ fontSize: 15, color: '#F1F5F9', fontWeight: '500', lineHeight: 22 }}>{driverInfo.admin_message}</Text>
             </View>
           ) : null}
           {(driverInfo.status === 'rejected' || driverInfo.status === 'resubmit') && (
@@ -2380,16 +2380,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ) : (
           // ── OTP Input ──
           <View>
-            <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14, marginBottom: 20, flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ backgroundColor: 'rgba(96,165,250,0.1)', borderRadius: 12, padding: 14, marginBottom: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)' }}>
               <Text style={{ fontSize: 20, marginRight: 10 }}>📱</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, color: '#1565c0', fontWeight: '600' }}>OTP bheja gaya!</Text>
-                <Text style={{ fontSize: 12, color: '#1976d2', marginTop: 2 }}>+91 {loginPhone} pe 6-digit code aaya hoga</Text>
+                <Text style={{ fontSize: 13, color: '#60A5FA', fontWeight: '600' }}>OTP bheja gaya!</Text>
+                <Text style={{ fontSize: 12, color: '#93C5FD', marginTop: 2 }}>+91 {loginPhone} pe 6-digit code aaya hoga</Text>
               </View>
             </View>
-            <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 18, flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 12, marginBottom: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
               <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
-              <Text style={{ fontSize: 12, color: '#e65100', flex: 1 }}>SMS aane par OTP copy karo — 6 boxes mein paste ho jaayega!</Text>
+              <Text style={{ fontSize: 12, color: '#F59E0B', flex: 1 }}>SMS aane par OTP copy karo — 6 boxes mein paste ho jaayega!</Text>
             </View>
             {/* 6 OTP Boxes */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
@@ -2397,7 +2397,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TextInput
                   key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#e94560' : '#e0e0e0', backgroundColor: digit ? '#fff8f8' : '#fafafa', color: '#1a1a2e' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#E94560' : '#334155', backgroundColor: digit ? 'rgba(233,69,96,0.1)' : '#1E293B', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2447,43 +2447,43 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={[s.hero, { paddingTop: 50, paddingBottom: 28 }]}>
         <Text style={{ fontSize: 60 }}>💰</Text>
         <Text style={s.heroTitle}>Trip Complete!</Text>
-        <Text style={{ color: '#4CAF50', fontSize: 40, fontWeight: 'bold', marginTop: 8 }}>₹{paymentFare}</Text>
-        <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} (15% fee ke baad)</Text>
+        <Text style={{ color: '#10B981', fontSize: 40, fontWeight: 'bold', marginTop: 8 }}>₹{paymentFare}</Text>
+        <Text style={{ color: '#64748B', fontSize: 13, marginTop: 4 }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} (15% fee ke baad)</Text>
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
 
         {/* ── Driver se directly pay kiya ── */}
-        <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 12 }}>
+        <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#F1F5F9', marginBottom: 12 }}>
           Customer ne aapko directly pay kiya?
         </Text>
 
         <Bouncy
-          style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#a5d6a7', opacity: loading ? 0.6 : 1 }}
+          style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 14, padding: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', opacity: loading ? 0.6 : 1 }}
           onPress={() => confirmDirectPayment('cash')} disabled={loading}>
           <Text style={{ fontSize: 36, marginRight: 14 }}>💵</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#2e7d32' }}>Cash Mila — ₹{paymentFare}</Text>
-            <Text style={{ fontSize: 12, color: '#388e3c', marginTop: 3 }}>Customer ne haath mein cash diya</Text>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#10B981' }}>Cash Mila — ₹{paymentFare}</Text>
+            <Text style={{ fontSize: 12, color: '#6EE7B7', marginTop: 3 }}>Customer ne haath mein cash diya</Text>
           </View>
-          <Text style={{ fontSize: 22, color: '#2e7d32' }}>›</Text>
+          <Text style={{ fontSize: 22, color: '#10B981' }}>›</Text>
         </Bouncy>
 
         <Bouncy
-          style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 18, marginBottom: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#90caf9', opacity: loading ? 0.6 : 1 }}
+          style={{ backgroundColor: 'rgba(96,165,250,0.1)', borderRadius: 14, padding: 18, marginBottom: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)', opacity: loading ? 0.6 : 1 }}
           onPress={() => confirmDirectPayment('upi_direct')} disabled={loading}>
           <Text style={{ fontSize: 36, marginRight: 14 }}>📱</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#1565c0' }}>UPI / QR Se Mila — ₹{paymentFare}</Text>
-            <Text style={{ fontSize: 12, color: '#1976d2', marginTop: 3 }}>Customer ne mera QR scan kiya ya UPI pe diya</Text>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#60A5FA' }}>UPI / QR Se Mila — ₹{paymentFare}</Text>
+            <Text style={{ fontSize: 12, color: '#93C5FD', marginTop: 3 }}>Customer ne mera QR scan kiya ya UPI pe diya</Text>
           </View>
-          <Text style={{ fontSize: 22, color: '#1565c0' }}>›</Text>
+          <Text style={{ fontSize: 22, color: '#60A5FA' }}>›</Text>
         </Bouncy>
 
         {/* ── Divider ── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
-          <Text style={{ color: '#999', marginHorizontal: 12, fontSize: 13, fontWeight: '600' }}>YA</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: '#e0e0e0' }} />
+          <View style={{ flex: 1, height: 1, backgroundColor: '#334155' }} />
+          <Text style={{ color: '#475569', marginHorizontal: 12, fontSize: 13, fontWeight: '600' }}>YA</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: '#334155' }} />
         </View>
 
         {/* ── My UPI QR — customer scan kar sakta hai ── */}
@@ -2491,44 +2491,44 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=Sppero%20Trip`;
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(upiLink)}`;
           return (
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 3, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e0e0e0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>📱 Customer Ko Dikhao — Scan Kare</Text>
-              <Text style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>GPay · PhonePe · Paytm · Koi bhi UPI</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 18, elevation: 3, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 4 }}>📱 Customer Ko Dikhao — Scan Kare</Text>
+              <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>GPay · PhonePe · Paytm · Koi bhi UPI</Text>
               <Image source={{ uri: qrUrl }} style={{ width: 200, height: 200, borderRadius: 12 }} resizeMode="contain" />
-              <Text style={{ fontSize: 12, color: '#1565c0', marginTop: 10, fontWeight: '600' }}>{driverUpiId}</Text>
+              <Text style={{ fontSize: 12, color: '#60A5FA', marginTop: 10, fontWeight: '600' }}>{driverUpiId}</Text>
               <View style={{ backgroundColor: '#e94560', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 7, marginTop: 10 }}>
                 <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>₹{paymentFare}</Text>
               </View>
             </View>
           );
         })() : (
-          <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#ffe082' }}>
-            <Text style={{ fontSize: 13, color: '#e65100', textAlign: 'center' }}>⚠️ UPI ID set karo profile mein QR dikhane ke liye</Text>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+            <Text style={{ fontSize: 13, color: '#F59E0B', textAlign: 'center' }}>⚠️ UPI ID set karo profile mein QR dikhane ke liye</Text>
           </View>
         )}
 
         {/* ── Customer app se payment ── */}
         {paymentMethod !== 'cash' ? (
-          <View style={{ backgroundColor: '#f5f5f5', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 14 }}>
-            <Text style={{ fontSize: 13, color: '#888', textAlign: 'center' }}>Customer abhi app mein pay kar raha hai...</Text>
+          <View style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>Customer abhi app mein pay kar raha hai...</Text>
             <FloatingDots color="#e94560" />
           </View>
         ) : (
-          <View style={{ backgroundColor: '#fff8e1', borderRadius: 14, padding: 18, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#ffe082' }}>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#f57f17', marginBottom: 6 }}>💵 Customer Ne Cash Select Kiya</Text>
-            <Text style={{ fontSize: 13, color: '#e65100', marginBottom: 16, lineHeight: 20 }}>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 14, padding: 18, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#F59E0B', marginBottom: 6 }}>💵 Customer Ne Cash Select Kiya</Text>
+            <Text style={{ fontSize: 13, color: '#FCD34D', marginBottom: 16, lineHeight: 20 }}>
               Customer ne app mein cash payment select ki hai. Unse ₹{paymentFare} cash lo aur confirm karo.
             </Text>
             <TouchableOpacity
-              style={{ backgroundColor: '#4CAF50', borderRadius: 12, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
+              style={{ backgroundColor: '#10B981', borderRadius: 12, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
               onPress={() => confirmDirectPayment('cash')} disabled={loading}>
               <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>✅ ₹{paymentFare} Cash Mil Gaya</Text>
             </TouchableOpacity>
           </View>
         )}
 
-        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, marginBottom: 16 }}>
-          <Text style={{ fontSize: 12, color: '#888', textAlign: 'center', lineHeight: 18 }}>
+        <View style={{ backgroundColor: '#1E293B', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#334155' }}>
+          <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', lineHeight: 18 }}>
             💡 15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
           </Text>
         </View>
@@ -2579,28 +2579,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (showDriverCancelModal) return (
     <View style={s.screen}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 20, paddingBottom: 30 }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#ddd', alignSelf: 'center', marginBottom: 16 }} />
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1a1a2e', marginBottom: 6 }}>Trip Cancel karein?</Text>
-          <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
-            <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '600' }}>⚠️ Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
+        <View style={{ backgroundColor: '#111827', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 30, borderTopWidth: 1, borderTopColor: '#1E293B' }}>
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#334155', alignSelf: 'center', marginBottom: 16 }} />
+          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#F1F5F9', marginBottom: 6 }}>Trip Cancel karein?</Text>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '600' }}>⚠️ Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
           </View>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#333', marginBottom: 10 }}>Cancel ka reason?</Text>
+          <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1', marginBottom: 10 }}>Cancel ka reason?</Text>
           {['Customer nahi mila', 'Galat location', 'Emergency aa gayi', 'Vehicle problem', 'Customer rude tha'].map((reason, i) => (
             <TouchableOpacity key={i}
-              style={{ backgroundColor: cancelReason === reason ? '#1a1a2e' : '#f5f5f5', borderRadius: 10, padding: 14, marginBottom: 8 }}
+              style={{ backgroundColor: cancelReason === reason ? '#E94560' : '#1E293B', borderRadius: 10, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: cancelReason === reason ? '#E94560' : '#334155' }}
               onPress={() => setCancelReason(reason)}>
-              <Text style={{ fontSize: 14, color: cancelReason === reason ? '#fff' : '#333' }}>{reason}</Text>
+              <Text style={{ fontSize: 14, color: cancelReason === reason ? '#fff' : '#CBD5E1' }}>{reason}</Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
-            style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8, opacity: cancelReason ? 1 : 0.5 }}
+            style={{ backgroundColor: '#E94560', borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8, opacity: cancelReason ? 1 : 0.5 }}
             disabled={!cancelReason || loading}
             onPress={cancelTrip}>
             <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{loading ? '⏳ Cancel ho raha hai...' : '✕ Trip Cancel Karo'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={{ padding: 14, alignItems: 'center' }} onPress={() => { setShowDriverCancelModal(false); setCancelReason(''); }}>
-            <Text style={{ color: '#1a1a2e', fontWeight: 'bold', fontSize: 14 }}>Nahi, trip rakhni hai</Text>
+            <Text style={{ color: '#64748B', fontWeight: 'bold', fontSize: 14 }}>Nahi, trip rakhni hai</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -2615,97 +2615,97 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Celebration />
         <Text style={{ fontSize: 60 }}>🎉</Text>
         <Text style={s.heroTitle}>Trip Complete!</Text>
-        <CountUp value={tripSummary.earned} style={{ color: '#4CAF50', fontSize: 36, fontWeight: 'bold', marginTop: 8 }} />
+        <CountUp value={tripSummary.earned} style={{ color: '#10B981', fontSize: 36, fontWeight: 'bold', marginTop: 8 }} />
         <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Aapki kamai is trip se</Text>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
-        <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16 }}>
+        <View style={{ backgroundColor: '#1E293B', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16, borderWidth: 1, borderColor: '#334155' }}>
           <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
           {/* Payment method badge */}
-          <View style={{ backgroundColor: tripSummary.payment_method === 'cash' ? '#e8f5e9' : tripSummary.payment_method === 'wallet' ? '#e3f2fd' : '#f3e5f5', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center' }}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>
+          <View style={{ backgroundColor: tripSummary.payment_method === 'cash' ? 'rgba(16,185,129,0.12)' : tripSummary.payment_method === 'wallet' ? 'rgba(59,130,246,0.12)' : 'rgba(168,85,247,0.12)', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: tripSummary.payment_method === 'cash' ? 'rgba(16,185,129,0.3)' : tripSummary.payment_method === 'wallet' ? 'rgba(59,130,246,0.3)' : 'rgba(168,85,247,0.3)' }}>
+            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#F1F5F9' }}>
               {tripSummary.payment_method === 'cash' ? '💵 Cash Payment' : tripSummary.payment_method === 'wallet' ? '💰 Wallet Payment' : '💳 Online Payment'}
             </Text>
           </View>
           {tripSummary.isHourly && (
-            <View style={{ backgroundColor: '#e8f5e9', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center' }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>⏱️ Hourly Trip · 💰 Wallet Payment</Text>
-              {tripSummary.earlyEnd && <Text style={{ fontSize: 12, color: '#666', marginTop: 4 }}>Early end — 70% minimum protection applied</Text>}
-              {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#e65100', marginTop: 4 }}>📍 {tripSummary.extraKmInfo}</Text>}
+            <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#10B981' }}>⏱️ Hourly Trip · 💰 Wallet Payment</Text>
+              {tripSummary.earlyEnd && <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>Early end — 70% minimum protection applied</Text>}
+              {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#F59E0B', marginTop: 4 }}>📍 {tripSummary.extraKmInfo}</Text>}
             </View>
           )}
           {[['Total Fare', '₹' + tripSummary.fare],[`Platform Fee (${tripSummary.isHourly ? '12' : '15'}%)`, tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
-            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
-              <Text style={{ fontSize: 14, color: '#666' }}>{k}</Text>
-              <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? '#4CAF50' : '#333' }}>{v}</Text>
+            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#334155' }}>
+              <Text style={{ fontSize: 14, color: '#94A3B8' }}>{k}</Text>
+              <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? '#10B981' : '#E2E8F0' }}>{v}</Text>
             </View>
           ))}
         </View>
         {/* Ride Extension Request — same customer wants another trip */}
         {extRequest && (
-          <View style={{ backgroundColor: '#fff3e0', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#ff9800' }}>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: 'rgba(245,158,11,0.4)' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
               <Text style={{ fontSize: 28, marginRight: 10 }}>🔄</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#bf360c', fontWeight: '800', fontSize: 15 }}>Ride Extension Request!</Text>
-                <Text style={{ color: '#e65100', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} — same customer</Text>
+                <Text style={{ color: '#F59E0B', fontWeight: '800', fontSize: 15 }}>Ride Extension Request!</Text>
+                <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} — same customer</Text>
               </View>
-              <View style={{ backgroundColor: '#e94560', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
+              <View style={{ backgroundColor: '#E94560', borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{extRespSec}</Text>
               </View>
             </View>
-            <View style={{ backgroundColor: '#fff', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-              <Text style={{ color: '#888', fontSize: 11 }}>Naya destination</Text>
-              <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 14, marginTop: 2 }}>{extRequest.new_drop}</Text>
-              <Text style={{ color: '#4CAF50', fontWeight: 'bold', fontSize: 18, marginTop: 6 }}>₹{Math.round(extRequest.estimated_fare)}</Text>
-              <Text style={{ color: '#888', fontSize: 11 }}>Estimated fare</Text>
+            <View style={{ backgroundColor: '#0F172A', borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ color: '#64748B', fontSize: 11 }}>Naya destination</Text>
+              <Text style={{ color: '#F1F5F9', fontWeight: '700', fontSize: 14, marginTop: 2 }}>{extRequest.new_drop}</Text>
+              <Text style={{ color: '#10B981', fontWeight: 'bold', fontSize: 18, marginTop: 6 }}>₹{Math.round(extRequest.estimated_fare)}</Text>
+              <Text style={{ color: '#64748B', fontSize: 11 }}>Estimated fare</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={acceptExtension} disabled={extAccLoading}>
+              <Bouncy style={{ flex: 1, backgroundColor: '#10B981', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={acceptExtension} disabled={extAccLoading}>
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{extAccLoading ? '...' : '✅ Accept'}</Text>
               </Bouncy>
-              <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={rejectExtension}>
-                <Text style={{ color: '#555', fontWeight: 'bold', fontSize: 15 }}>✗ Reject</Text>
+              <Bouncy style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }} onPress={rejectExtension}>
+                <Text style={{ color: '#94A3B8', fontWeight: 'bold', fontSize: 15 }}>✗ Reject</Text>
               </Bouncy>
             </View>
           </View>
         )}
         {/* Rate Customer */}
         {!custRatingDone ? (
-          <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 20, elevation: 3, marginBottom: 16 }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 2 }}>Customer ko Rate karo</Text>
-            <Text style={{ fontSize: 12, color: '#888', marginBottom: 14 }}>Yeh customer kaisa tha? (1–5 stars)</Text>
+          <View style={{ backgroundColor: '#1E293B', borderRadius: 20, padding: 20, elevation: 3, marginBottom: 16, borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#F1F5F9', marginBottom: 2 }}>Customer ko Rate karo</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>Yeh customer kaisa tha? (1–5 stars)</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
               {[1,2,3,4,5].map(star => (
                 <TouchableOpacity key={star} onPress={() => setCustRatingStars(star)}>
-                  <Text style={{ fontSize: 38, opacity: star <= custRatingStars ? 1 : 0.2 }}>⭐</Text>
+                  <Text style={{ fontSize: 38, opacity: star <= custRatingStars ? 1 : 0.25 }}>⭐</Text>
                 </TouchableOpacity>
               ))}
             </View>
             {custRatingStars > 0 && (
               <TouchableOpacity onPress={rateCustomer}
-                style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 13, alignItems: 'center' }}>
+                style={{ backgroundColor: '#10B981', borderRadius: 12, padding: 13, alignItems: 'center', elevation: 3, shadowColor: '#10B981', shadowOpacity: 0.35, shadowRadius: 6 }}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Submit Rating</Text>
               </TouchableOpacity>
             )}
             {custRatingStars === 0 && (
               <TouchableOpacity onPress={() => setCustRatingDone(true)}>
-                <Text style={{ textAlign: 'center', color: '#bbb', fontSize: 12, marginTop: 4 }}>Skip</Text>
+                <Text style={{ textAlign: 'center', color: '#475569', fontSize: 12, marginTop: 4 }}>Skip</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
-          <View style={{ backgroundColor: '#e8f5e9', borderRadius: 16, padding: 16, marginBottom: 16, alignItems: 'center', flexDirection: 'row', gap: 10 }}>
+          <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 16, padding: 16, marginBottom: 16, alignItems: 'center', flexDirection: 'row', gap: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
             <Text style={{ fontSize: 22 }}>✅</Text>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: '#2e7d32' }}>Customer rating submit ho gaya!</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#10B981' }}>Customer rating submit ho gaya!</Text>
           </View>
         )}
         <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(tripSummary?.ride_id || lastRideId || ''); setDrvCmpStep(1); setDrSubScreen('complaint-new'); setTripSummary(null); }}
-          style={{ backgroundColor: '#fff8f8', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: '#e94560', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          style={{ backgroundColor: 'rgba(233,69,96,0.08)', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: '#E94560', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <Text style={{ fontSize: 18 }}>⚠️</Text>
-          <Text style={{ color: '#e94560', fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
+          <Text style={{ color: '#E94560', fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
         </TouchableOpacity>
-        <Bouncy style={[s.btn, { backgroundColor: '#4CAF50' }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
+        <Bouncy style={[s.btn, { backgroundColor: '#10B981', shadowColor: '#10B981', shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
       </ScrollView>
     </ScreenIn>
   );
@@ -2723,14 +2723,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi</Text>
         ) : chatMsgs.map((m, i) => (
           <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
-            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#1a1a2e', fontSize: 14 }}>{m.message}</Text>
+            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#CBD5E1', fontSize: 14 }}>{m.message}</Text>
           </View>
         ))}
       </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fafafa' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#1E293B', backgroundColor: '#0F172A' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
         {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke pickup point pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
-          <TouchableOpacity key={q} onPress={() => sendChat(q)} style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600' }}>{q}</Text>
+          <TouchableOpacity key={q} onPress={() => sendChat(q)} style={{ backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600' }}>{q}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -2753,14 +2753,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi — pehla message bhejo!</Text>
         ) : hourlyChatMsgs.map((m, i) => (
           <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
-            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#1a1a2e', fontSize: 14 }}>{m.message}</Text>
+            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#CBD5E1', fontSize: 14 }}>{m.message}</Text>
           </View>
         ))}
       </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#f0f0f0', backgroundColor: '#fafafa' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#1E293B', backgroundColor: '#0F172A' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
         {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke location pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
-          <TouchableOpacity key={q} onPress={() => sendHourlyChat(q)} style={{ backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#1a1a2e', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600' }}>{q}</Text>
+          <TouchableOpacity key={q} onPress={() => sendHourlyChat(q)} style={{ backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
+            <Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600' }}>{q}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -2797,7 +2797,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
       {/* Content */}
-      <View style={{ flex: 1, backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, marginTop: -20, paddingTop: 16, paddingHorizontal: 16 }}>
+      <View style={{ flex: 1, backgroundColor: '#111827', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
@@ -2808,34 +2808,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {/* Pending Commission Info Banner */}
           {commissionData.pending_commission > 0 && !activeRide && (
             <TouchableOpacity onPress={() => { setActiveTab('earnings'); setWalletEarningsTab('commission'); }}
-              style={{ backgroundColor: '#fff8e1', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#f9a825' }}>
+              style={{ backgroundColor: 'rgba(230,81,0,0.12)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(230,81,0,0.35)' }}>
               <Text style={{ fontSize: 20 }}>💰</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: '#e65100' }}>Commission Due: ₹{commissionData.pending_commission.toFixed(0)}</Text>
-                <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Cash rides ki platform fee pending hai. Tap karke pay karo.</Text>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: '#FB923C' }}>Commission Due: ₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Cash rides ki platform fee pending hai. Tap karke pay karo.</Text>
               </View>
-              <Text style={{ color: '#e65100', fontWeight: '700', fontSize: 12 }}>Pay →</Text>
+              <Text style={{ color: '#FB923C', fontWeight: '700', fontSize: 12 }}>Pay →</Text>
             </TouchableOpacity>
           )}
 
           {/* Surge Active Banner */}
           {surgeMultiplier > 1.0 && !activeRide && (
-            <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 12, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)' }}>
               <Text style={{ fontSize: 20 }}>⚡</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: '#e65100' }}>Surge Active: {surgeMultiplier}x — Rides pe zyada kamai!</Text>
-                <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Abhi sabhi ride fares {surgeMultiplier}x hain</Text>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: '#F59E0B' }}>Surge Active: {surgeMultiplier}x — Rides pe zyada kamai!</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Abhi sabhi ride fares {surgeMultiplier}x hain</Text>
               </View>
             </View>
           )}
 
           {/* Admin Notification Banner */}
           {adminNotif && adminNotif.created_at !== adminNotifDismissed && (
-            <View style={{ borderRadius: 14, marginBottom: 10, backgroundColor: '#e3f2fd', borderWidth: 1.5, borderColor: '#1565c0', padding: 12, flexDirection: 'row', alignItems: 'center' }}>
+            <View style={{ borderRadius: 14, marginBottom: 10, backgroundColor: 'rgba(59,130,246,0.12)', borderWidth: 1.5, borderColor: 'rgba(59,130,246,0.4)', padding: 12, flexDirection: 'row', alignItems: 'center' }}>
               <Text style={{ fontSize: 22, marginRight: 10 }}>📩</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 12, color: '#1565c0', marginBottom: 2 }}>Sppero Admin</Text>
-                <Text style={{ fontSize: 12, color: '#1a1a2e' }}>{adminNotif.body || adminNotif.title}</Text>
+                <Text style={{ fontWeight: '800', fontSize: 12, color: '#60A5FA', marginBottom: 2 }}>Sppero Admin</Text>
+                <Text style={{ fontSize: 12, color: '#CBD5E1' }}>{adminNotif.body || adminNotif.title}</Text>
               </View>
               <TouchableOpacity onPress={() => setAdminNotifDismissed(adminNotif.created_at)} style={{ padding: 6 }}>
                 <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
@@ -2845,12 +2845,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* Driver-targeted marketing banners */}
           {driverOffers.filter(o => !offerDismissed.has(o.id)).map((offer: any) => (
-            <View key={offer.id} style={{ borderRadius: 14, marginBottom: 10, backgroundColor: offer.type === 'incentive' ? '#e8f5e9' : '#fff3e0', borderWidth: 1.5, borderColor: offer.type === 'incentive' ? '#2e7d32' : '#e65100', overflow: 'hidden' }}>
+            <View key={offer.id} style={{ borderRadius: 14, marginBottom: 10, backgroundColor: offer.type === 'incentive' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', borderWidth: 1.5, borderColor: offer.type === 'incentive' ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)', overflow: 'hidden' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
                 <Text style={{ fontSize: 22, marginRight: 10 }}>{offer.type === 'incentive' ? '💰' : '📢'}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#1a1a2e' }}>{offer.title}</Text>
-                  {offer.body ? <Text style={{ fontSize: 11, color: '#555', marginTop: 2 }}>{offer.body}</Text> : null}
+                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#F1F5F9' }}>{offer.title}</Text>
+                  {offer.body ? <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{offer.body}</Text> : null}
                 </View>
                 <TouchableOpacity onPress={() => setOfferDismissed(s => new Set([...s, offer.id]))} style={{ padding: 6 }}>
                   <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
@@ -2862,13 +2862,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {target && !activeRide && (
             <View style={s.targetCard}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#1a1a2e' }}>🎯 Daily Target</Text>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#4CAF50' : '#e94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#F1F5F9' }}>🎯 Daily Target</Text>
+                <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#10B981' : '#E94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
               </View>
-              <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-                <AnimatedBar pct={Math.min(100, (target.completed / target.target) * 100)} color={target.achieved ? '#4CAF50' : '#e94560'} />
+              <View style={{ height: 8, backgroundColor: '#334155', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+                <AnimatedBar pct={Math.min(100, (target.completed / target.target) * 100)} color={target.achieved ? '#10B981' : '#E94560'} />
               </View>
-              <Text style={{ fontSize: 12, color: '#666' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
+              <Text style={{ fontSize: 12, color: '#94A3B8' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
             </View>
           )}
 
@@ -2894,12 +2894,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                 <TouchableOpacity style={s.chatCallBtn} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
                   <View>
-                    <Ionicons name="chatbubble" size={18} color="#1a1a2e" />
+                    <Ionicons name="chatbubble" size={18} color="#10B981" />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
+                  <Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#1a1a2e" /><Text style={{ fontSize: 12, color: '#1a1a2e', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
+                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#10B981" /><Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
@@ -2912,7 +2912,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={s.tripArrow}>↓</Text>
                 <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
               </View>
-              {eta ? <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center' }}><Text style={{ color: '#2e7d32', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+              {eta ? <View style={{ backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}><Text style={{ color: '#10B981', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
 
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}>
@@ -2933,15 +2933,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {activeRide.status === 'arrived' && (
                 <View>
-                  <Text style={{ fontSize: 13, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                  <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
+                  <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
+                  <TextInput style={{ borderWidth: 2, borderColor: '#10B981', borderRadius: 12, padding: 14, fontSize: 28, textAlign: 'center', letterSpacing: 10, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#0F172A', color: '#F1F5F9' }} placeholder="0000" placeholderTextColor="#475569" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
                   <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
                 </View>
               )}
 
               {activeRide.status === 'started' && (
                 <View>
-                  <Bouncy style={[s.tripBtn, { backgroundColor: '#4CAF50' }]} onPress={completeTrip} disabled={loading}>
+                  <Bouncy style={[s.tripBtn, { backgroundColor: '#10B981', shadowColor: '#10B981' }]} onPress={completeTrip} disabled={loading}>
                     <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
                   </Bouncy>
                 </View>
@@ -2959,7 +2959,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
                 {rideReq?.is_favourite_request && (
                   <View style={{ backgroundColor: '#f0a500', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 7, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: '#1a1a2e', fontSize: 13, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
+                    <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
                   </View>
                 )}
                 <View style={{ backgroundColor: rideReq?.is_favourite_request ? '#2e7d32' : '#e94560', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 10 }}>
@@ -2979,37 +2979,37 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
 
               {/* Fare */}
-              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 18, padding: 20, marginBottom: 16, alignItems: 'center' }}>
-                <Text style={{ color: '#aaa', fontSize: 13, marginBottom: 4 }}>Aapki Kamai</Text>
-                <Text style={{ color: '#4CAF50', fontSize: 48, fontWeight: '900' }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
-                <Text style={{ color: '#666', fontSize: 13 }}>Total fare: ₹{rideReq?.fare}</Text>
+              <View style={{ backgroundColor: '#111827', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#1E293B' }}>
+                <Text style={{ color: '#64748B', fontSize: 13, marginBottom: 4, letterSpacing: 0.5 }}>AAPKI KAMAI</Text>
+                <Text style={{ color: '#10B981', fontSize: 52, fontWeight: '900', lineHeight: 58 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                <Text style={{ color: '#475569', fontSize: 13 }}>Total fare: ₹{rideReq?.fare} · 12% commission</Text>
               </View>
 
               {/* Route info */}
-              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 18, padding: 16, marginBottom: 12 }}>
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+              <View style={{ backgroundColor: '#111827', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#1E293B' }}>
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                   {driverGps && rideReq?.pickup_lat && (
-                    <View style={{ backgroundColor: '#1565c0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, flex: 1, alignItems: 'center' }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>📍 Pickup se</Text>
+                    <View style={{ backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flex: 1, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' }}>
+                      <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '700' }}>📍 Pickup se</Text>
                       <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km</Text>
                     </View>
                   )}
                   {rideReq?.distance && (
-                    <View style={{ backgroundColor: '#2e7d32', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 6, flex: 1, alignItems: 'center' }}>
-                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>🛣️ Trip</Text>
+                    <View style={{ backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flex: 1, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}>
+                      <Text style={{ color: '#10B981', fontSize: 11, fontWeight: '700' }}>🛣️ Trip</Text>
                       <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{rideReq.distance} km</Text>
                     </View>
                   )}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                   <View style={{ width: 12, alignItems: 'center', paddingTop: 4 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#4CAF50' }} />
-                    <View style={{ width: 2, height: 28, backgroundColor: '#444', marginTop: 3 }} />
-                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#e94560' }} />
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' }} />
+                    <View style={{ width: 2, height: 28, backgroundColor: '#334155', marginTop: 3 }} />
+                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#E94560' }} />
                   </View>
                   <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={{ color: '#ccc', fontSize: 15, marginBottom: 8 }}>{rideReq?.pickup}</Text>
-                    <Text style={{ color: '#fff', fontSize: 15, fontWeight: '600' }}>{rideReq?.drop_location}</Text>
+                    <Text style={{ color: '#94A3B8', fontSize: 15, marginBottom: 8 }}>{rideReq?.pickup}</Text>
+                    <Text style={{ color: '#F1F5F9', fontSize: 15, fontWeight: '600' }}>{rideReq?.drop_location}</Text>
                   </View>
                 </View>
               </View>
@@ -3019,10 +3019,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {/* Accept / Reject */}
               <View style={{ flexDirection: 'row', gap: 14, marginTop: 20 }}>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: '#2a2a3e', borderRadius: 18, padding: 20, alignItems: 'center', borderWidth: 2, borderColor: '#444' }} onPress={rejectRide}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>✕ Reject</Text>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 18, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#475569' }} onPress={rejectRide}>
+                  <Text style={{ color: '#94A3B8', fontSize: 18, fontWeight: 'bold' }}>✕ Reject</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={{ flex: 2, backgroundColor: '#e94560', borderRadius: 18, padding: 20, alignItems: 'center', elevation: 6 }} onPress={acceptRide} disabled={loading}>
+                <TouchableOpacity style={{ flex: 2, backgroundColor: '#10B981', borderRadius: 18, padding: 20, alignItems: 'center', elevation: 8, shadowColor: '#10B981', shadowOpacity: 0.5, shadowRadius: 12 }} onPress={acceptRide} disabled={loading}>
                   <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>{loading ? '⏳...' : '✓ ACCEPT'}</Text>
                 </TouchableOpacity>
               </View>
@@ -3039,7 +3039,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <View style={{ backgroundColor: '#e94560', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⏱️ HOURLY</Text></View>
                       <Text style={s.rideTitle}>{hourlyRideReq.package_hours >= 24 ? `${hourlyRideReq.package_hours/24} Day${hourlyRideReq.package_hours > 24?'s':''}` : hourlyRideReq.package_hours === 8 ? 'Full Day (8h)' : `${hourlyRideReq.package_hours} Hours`}</Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: '#888' }}>{hourlyRideReq.km_included} km included · {hourlyRideReq.is_roundtrip ? '🔄 Round trip' : '➡️ One way'}</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>{hourlyRideReq.km_included} km included · {hourlyRideReq.is_roundtrip ? '🔄 Round trip' : '➡️ One way'}</Text>
                   </View>
                   <Text style={s.rideFare}>₹{hourlyRideReq.base_fare}</Text>
                 </View>
@@ -3049,13 +3049,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   {!hourlyRideReq.drop_location && <Text style={[s.rideTo, { color: '#999' }]}>📍 Drop: Flexible</Text>}
                 </View>
                 {hourlyRideReq.scheduled_at && (
-                  <View style={{ backgroundColor: '#e3f2fd', borderRadius: 8, padding: 8, marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <View style={{ backgroundColor: 'rgba(59,130,246,0.12)', borderRadius: 8, padding: 8, marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' }}>
                     <Text style={{ fontSize: 14 }}>📅</Text>
-                    <Text style={{ color: '#1565c0', fontSize: 12, fontWeight: '700' }}>SCHEDULED: {new Date(hourlyRideReq.scheduled_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                    <Text style={{ color: '#60A5FA', fontSize: 12, fontWeight: '700' }}>SCHEDULED: {new Date(hourlyRideReq.scheduled_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
                   </View>
                 )}
-                <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4 }}>
-                  <Text style={{ color: '#2e7d32', fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
+                <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+                  <Text style={{ color: '#10B981', fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
                 </View>
                 {!hourlyRideReq.scheduled_at && <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />}
                 <View style={[s.rideActions, { marginTop: 12 }]}>
@@ -3072,15 +3072,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                 <View style={{ backgroundColor: '#e94560', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>⏱️ HOURLY TRIP</Text></View>
                 {activeHourlyRide.status === 'active' && (
-                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1a1a2e', fontVariant: ['tabular-nums'] }}>
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#F1F5F9', fontVariant: ['tabular-nums'] }}>
                     {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')}:{String(hourlyTimerSec%60).padStart(2,'0')}
                   </Text>
                 )}
               </View>
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text style={{ color: '#666', fontSize: 13 }}>{activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} · {activeHourlyRide.km_included} km · ₹{activeHourlyRide.base_fare}</Text>
-                <Text style={{ color: activeHourlyRide.status === 'active' ? '#4CAF50' : '#e94560', fontSize: 12, fontWeight: '600' }}>
+                <Text style={{ color: '#94A3B8', fontSize: 13 }}>{activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} · {activeHourlyRide.km_included} km · ₹{activeHourlyRide.base_fare}</Text>
+                <Text style={{ color: activeHourlyRide.status === 'active' ? '#10B981' : '#E94560', fontSize: 12, fontWeight: '600' }}>
                   {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : '🛣️ Trip chal rahi hai'}
                 </Text>
               </View>
@@ -3093,25 +3093,25 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Chat + Call buttons */}
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
                 <TouchableOpacity
-                  style={{ flex: 1, backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  style={{ flex: 1, backgroundColor: '#0F172A', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#334155' }}
                   onPress={() => { setShowHourlyChat(true); setHourlyChatMsgs([]); }}
                 >
                   <Ionicons name="chatbubble" size={18} color="#fff" />
                   <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Chat</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={{ flex: 1, backgroundColor: '#e3f2fd', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  style={{ flex: 1, backgroundColor: 'rgba(96,165,250,0.1)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)' }}
                   onPress={callCustomer}
                 >
-                  <Ionicons name="call" size={18} color="#1565c0" />
-                  <Text style={{ color: '#1565c0', fontWeight: '700', fontSize: 14 }}>Call</Text>
+                  <Ionicons name="call" size={18} color="#60A5FA" />
+                  <Text style={{ color: '#60A5FA', fontWeight: '700', fontSize: 14 }}>Call</Text>
                 </TouchableOpacity>
               </View>
 
               {activeHourlyRide.status === 'matched' && (
                 <View style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 12, color: '#666', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
-                  <TextInput style={{ borderWidth: 2, borderColor: '#1a1a2e', borderRadius: 10, padding: 14, fontSize: 24, textAlign: 'center', letterSpacing: 8, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#fff' }} placeholder="0000" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
+                  <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
+                  <TextInput style={{ borderWidth: 2, borderColor: '#10B981', borderRadius: 12, padding: 14, fontSize: 28, textAlign: 'center', letterSpacing: 10, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#0F172A', color: '#F1F5F9' }} placeholder="0000" placeholderTextColor="#475569" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
                   <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
                   <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>
                     <Ionicons name="navigate" size={15} color="#fff" />
@@ -3152,28 +3152,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
                       <Text style={{ fontSize: 12, color: '#666' }}>⏱️ {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')} elapsed</Text>
-                      <Text style={{ fontSize: 12, color: '#666' }}>
+                      <Text style={{ fontSize: 12, color: '#94A3B8' }}>
                         {(() => { const rem = Math.max(0, parseFloat(activeHourlyRide.package_hours||0)*3600 - hourlyTimerSec); return rem > 0 ? `${String(Math.floor(rem/3600)).padStart(2,'0')}:${String(Math.floor((rem%3600)/60)).padStart(2,'0')} bache` : '⚠️ Time up!'; })()}
                       </Text>
                     </View>
-                    <View style={{ height: 6, backgroundColor: '#f0f0f0', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
-                      <View style={{ height: 6, borderRadius: 3, backgroundColor: '#1a1a2e', width: `${Math.min(100, (hourlyTimerSec / ((parseFloat(activeHourlyRide.package_hours||1))*3600)) * 100)}%` as any }} />
+                    <View style={{ height: 6, backgroundColor: '#334155', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
+                      <View style={{ height: 6, borderRadius: 3, backgroundColor: '#10B981', width: `${Math.min(100, (hourlyTimerSec / ((parseFloat(activeHourlyRide.package_hours||1))*3600)) * 100)}%` as any }} />
                     </View>
                     {liveKm / (activeHourlyRide.km_included||1) > 0.8 && (
-                      <View style={{ backgroundColor: '#fff3e0', borderRadius: 8, padding: 8 }}>
-                        <Text style={{ color: '#e65100', fontSize: 12, fontWeight: '700' }}>⚠️ {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache — extra charges lagengen!</Text>
+                      <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                        <Text style={{ color: '#F59E0B', fontSize: 12, fontWeight: '700' }}>⚠️ {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache — extra charges lagengen!</Text>
                       </View>
                     )}
                   </View>
 
-                  <View style={{ backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8, marginBottom: 10 }}>
-                    <Text style={{ color: '#2e7d32', fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} min · Full milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
+                  <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 8, padding: 8, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+                    <Text style={{ color: '#10B981', fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} min · Full milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
                   </View>
 
                   {/* Return trip navigation — driver navigates back to original pickup */}
                   {activeHourlyRide.is_roundtrip && (
                     <TouchableOpacity
-                      style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 13, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10 }}
+                      style={{ backgroundColor: 'rgba(96,165,250,0.1)', borderRadius: 12, padding: 13, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)' }}
                       onPress={() => {
                         const lat = activeHourlyRide.pickup_lat;
                         const lng = activeHourlyRide.pickup_lng;
@@ -3186,30 +3186,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       }}>
                       <Text style={{ fontSize: 22 }}>🔄</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontWeight: '700', color: '#1565c0', fontSize: 14 }}>Return — Pickup Navigate Karo</Text>
-                        <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>📍 {activeHourlyRide.pickup}</Text>
+                        <Text style={{ fontWeight: '700', color: '#60A5FA', fontSize: 14 }}>Return — Pickup Navigate Karo</Text>
+                        <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }} numberOfLines={1}>📍 {activeHourlyRide.pickup}</Text>
                       </View>
-                      <Text style={{ color: '#1565c0', fontSize: 18 }}>›</Text>
+                      <Text style={{ color: '#60A5FA', fontSize: 18 }}>›</Text>
                     </TouchableOpacity>
                   )}
 
                   {/* Extension request from customer */}
                   {!!activeHourlyRide.extend_requested_hours && (
-                    <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 14, marginBottom: 10 }}>
+                    <View style={{ backgroundColor: 'rgba(96,165,250,0.1)', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)' }}>
                       {(() => {
                         const dec = parseFloat(activeHourlyRide.extend_requested_hours);
                         const hrs = Math.floor(dec);
                         const mins = Math.round((dec - hrs) * 60);
                         const label = hrs > 0 && mins > 0 ? `${hrs}h ${mins}m` : hrs > 0 ? `${hrs}h` : `${mins} min`;
-                        return <Text style={{ fontWeight: 'bold', color: '#1565c0', marginBottom: 4 }}>📅 Customer +{label} Extend Chahta Hai</Text>;
+                        return <Text style={{ fontWeight: 'bold', color: '#60A5FA', marginBottom: 4 }}>📅 Customer +{label} Extend Chahta Hai</Text>;
                       })()}
-                      <Text style={{ fontSize: 12, color: '#555', marginBottom: 10 }}>Agree karne se trip extend hogi — paise escrow mein hain</Text>
+                      <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Agree karne se trip extend hogi — paise escrow mein hain</Text>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#aaa' : '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
+                        <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#334155' : '#10B981', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
                           <Text style={{ color: '#fff', fontWeight: 'bold' }}>{hExtendLoading ? '⏳ ...' : '✅ Accept'}</Text>
                         </Bouncy>
-                        <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#e0e0e0' : '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectExtend} disabled={hExtendLoading}>
-                          <Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text>
+                        <Bouncy style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }} onPress={rejectExtend} disabled={hExtendLoading}>
+                          <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text>
                         </Bouncy>
                       </View>
                     </View>
@@ -3227,25 +3227,25 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     // Early end section — reusable inside each state
                     const EarlyEndSection = () => (
                       activeHourlyRide.early_end_requested_by === 'customer' ? (
-                        <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginTop: 10 }}>
-                          <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
-                          <Text style={{ color: '#666', fontSize: 12, marginBottom: 10 }}>Agree karne par actual time ke hisaab se proportional payment milegi.</Text>
+                        <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 14, marginTop: 10, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                          <Text style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
+                          <Text style={{ color: '#94A3B8', fontSize: 12, marginBottom: 10 }}>Agree karne par actual time ke hisaab se proportional payment milegi.</Text>
                           <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <Bouncy style={{ flex: 1, backgroundColor: '#4CAF50', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Agree</Text></Bouncy>
-                            <Bouncy style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#333', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                            <Bouncy style={{ flex: 1, backgroundColor: '#10B981', borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Agree</Text></Bouncy>
+                            <Bouncy style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
                           </View>
                         </View>
                       ) : activeHourlyRide.early_end_requested_by === 'driver' ? (
-                        <View style={{ backgroundColor: '#fff3e0', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8 }}>
-                          <Text style={{ color: '#e65100', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
+                        <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                          <Text style={{ color: '#F59E0B', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
                         </View>
                       ) : (activeHourlyRide.early_end_reject_count || 0) >= 2 ? (
-                        <View style={{ backgroundColor: '#ffebee', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8 }}>
-                          <Text style={{ color: '#c62828', fontSize: 12, fontWeight: '700' }}>🔒 2 baar reject — Support se contact karo</Text>
+                        <View style={{ backgroundColor: 'rgba(233,69,96,0.1)', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: 'rgba(233,69,96,0.3)' }}>
+                          <Text style={{ color: '#E94560', fontSize: 12, fontWeight: '700' }}>🔒 2 baar reject — Support se contact karo</Text>
                         </View>
                       ) : activeHourlyRide.early_end_last_rejected_at && (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime()) < 15 * 60 * 1000 ? (
-                        <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8 }}>
-                          <Text style={{ color: '#999', fontSize: 12 }}>⏳ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request</Text>
+                        <View style={{ backgroundColor: '#1E293B', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#334155' }}>
+                          <Text style={{ color: '#64748B', fontSize: 12 }}>⏳ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request</Text>
                         </View>
                       ) : (
                         <Bouncy style={[s.cancelBtn, { borderColor: '#ff9800', borderWidth: 1, marginTop: 8 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
@@ -3256,26 +3256,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
                     // State 1: Legacy pending customer confirm
                     if (activeHourlyRide.pending_customer_confirm) return (
-                      <View style={{ backgroundColor: '#fff3e0', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center' }}>
-                        <Text style={{ fontWeight: 'bold', color: '#e65100', marginBottom: 4 }}>⏳ Customer Confirmation Ka Intezaar...</Text>
-                        <Text style={{ fontSize: 12, color: '#888' }}>10 min mein auto-confirm ho jayega</Text>
+                      <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+                        <Text style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: 4 }}>⏳ Customer Confirmation Ka Intezaar...</Text>
+                        <Text style={{ fontSize: 12, color: '#94A3B8' }}>10 min mein auto-confirm ho jayega</Text>
                       </View>
                     );
 
                     // State 2: 20-min startup lock
                     if (hourlyTimerSec < 20 * 60) return (
-                      <View style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10 }}>
-                        <Text style={{ color: '#999', fontWeight: '700', fontSize: 14 }}>🔒 Startup: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
-                        <Text style={{ color: '#bbb', fontSize: 11, marginTop: 3 }}>Trip start ke baad 20 min ka lock</Text>
+                      <View style={{ backgroundColor: '#1E293B', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
+                        <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>🔒 Startup: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
+                        <Text style={{ color: '#475569', fontSize: 11, marginTop: 3 }}>Trip start ke baad 20 min ka lock</Text>
                       </View>
                     );
 
                     // State 3: Package time still remaining — locked, show early end option
                     if (remSec > 0) return (
                       <View style={{ marginBottom: 10 }}>
-                        <View style={{ backgroundColor: '#e3f2fd', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: '#90caf9' }}>
-                          <Text style={{ color: '#1565c0', fontWeight: '800', fontSize: 18, marginBottom: 4 }}>⏰ {remStr} Baaki</Text>
-                          <Text style={{ color: '#1565c0', fontSize: 12, textAlign: 'center', lineHeight: 18 }}>
+                        <View style={{ backgroundColor: 'rgba(96,165,250,0.1)', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(96,165,250,0.3)' }}>
+                          <Text style={{ color: '#60A5FA', fontWeight: '800', fontSize: 18, marginBottom: 4 }}>⏰ {remStr} Baaki</Text>
+                          <Text style={{ color: '#93C5FD', fontSize: 12, textAlign: 'center', lineHeight: 18 }}>
                             Package time poori hone par hi{'\n'}Complete button aayega
                           </Text>
                         </View>
@@ -3303,8 +3303,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {/* Rules & Info */}
           {!activeRide && !activeHourlyRide && (
             <View style={{ marginTop: 10 }}>
-              <View style={{ backgroundColor: '#f8f9fa', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#e0e0e0' }}>
-                <Text style={{ color: '#1a1a2e', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>📋 Standard Rides — Rules & Fees</Text>
+              <View style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#F1F5F9', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>📋 Standard Rides — Rules & Fees</Text>
                 {[
                   ['💰 Commission', '15% platform fee — baaki aapki net kamai'],
                   ['🎯 Ride Accept', '20 second window — miss hone par auto-reject'],
@@ -3365,12 +3365,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <SubHeader title="📋 Documents" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Verification status */}
-          <View style={{ backgroundColor: driverInfo?.status === 'approved' ? '#e8f5e9' : '#fff3e0', borderRadius: 16, padding: 18, marginBottom: 16, alignItems: 'center', elevation: 2 }}>
+          <View style={{ backgroundColor: driverInfo?.status === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 18, marginBottom: 16, alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: driverInfo?.status === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)' }}>
             <Text style={{ fontSize: 32, marginBottom: 8 }}>{driverInfo?.status === 'approved' ? '✅' : '⏳'}</Text>
-            <Text style={{ fontSize: 16, fontWeight: '900', color: '#1a1a2e' }}>
+            <Text style={{ fontSize: 16, fontWeight: '900', color: driverInfo?.status === 'approved' ? '#10B981' : '#F59E0B' }}>
               {driverInfo?.status === 'approved' ? 'Verified Driver' : 'Verification Pending'}
             </Text>
-            <Text style={{ fontSize: 12, color: '#666', marginTop: 4, textAlign: 'center' }}>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center' }}>
               {driverInfo?.status === 'approved'
                 ? 'Aapke sabhi documents verify ho chuke hain'
                 : 'Aapke documents review me hain — 24-48 ghante lagenge'}
@@ -3379,47 +3379,47 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* Driver face photo */}
           {driverInfo?.face_photo && (
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>📸 Profile Photo</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 10 }}>📸 Profile Photo</Text>
               <Image source={{ uri: driverInfo.face_photo }} style={{ width: '100%', height: 180, borderRadius: 12 }} resizeMode="cover" />
             </View>
           )}
 
           {/* Document IDs */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>📄 Document Details</Text>
+          <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 12 }}>📄 Document Details</Text>
             {[
               ['DL Number', driverInfo?.dl_number || '—'],
               ['Aadhaar', driverInfo?.aadhaar_masked || '—'],
             ].map(([k, v], i) => (
-              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 1 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
-                <Text style={{ fontSize: 13, color: '#888' }}>{k}</Text>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{v}</Text>
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 1 ? 1 : 0, borderBottomColor: '#334155' }}>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>{k}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#F1F5F9' }}>{v}</Text>
               </View>
             ))}
           </View>
 
           {/* Vehicle details */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>🚗 Vehicle Info</Text>
+          <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 12 }}>🚗 Vehicle Info</Text>
             {[
               ['Type', (driverInfo?.vehicle_type || '—').replace('_', ' ').toUpperCase()],
               ['Vehicle No', driverInfo?.vehicle_no || '—'],
               ['Brand', driverInfo?.vehicle_brand || '—'],
               ['Model', driverInfo?.vehicle_model || '—'],
             ].map(([k, v], i) => (
-              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
-                <Text style={{ fontSize: 13, color: '#888' }}>{k}</Text>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{v}</Text>
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: '#334155' }}>
+                <Text style={{ fontSize: 13, color: '#94A3B8' }}>{k}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: '#F1F5F9' }}>{v}</Text>
               </View>
             ))}
           </View>
 
-          <View style={{ backgroundColor: '#e3f2fd', borderRadius: 14, padding: 14 }}>
-            <Text style={{ fontSize: 13, color: '#1565c0', fontWeight: '600', marginBottom: 4 }}>📌 Documents Update karne ke liye</Text>
-            <Text style={{ fontSize: 12, color: '#1976d2' }}>Support se contact karo ya app re-registration karo naye documents ke saath.</Text>
+          <View style={{ backgroundColor: 'rgba(59,130,246,0.1)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(59,130,246,0.25)' }}>
+            <Text style={{ fontSize: 13, color: '#60A5FA', fontWeight: '600', marginBottom: 4 }}>📌 Documents Update karne ke liye</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8' }}>Support se contact karo ya app re-registration karo naye documents ke saath.</Text>
             <TouchableOpacity onPress={() => { back(); setDrSubScreen('support'); }}
-              style={{ backgroundColor: '#1565c0', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 10 }}>
+              style={{ backgroundColor: '#3B82F6', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 10 }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Contact Support</Text>
             </TouchableOpacity>
           </View>
@@ -3435,81 +3435,81 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={s.screen}>
         <SubHeader title="🏦 Bank Details" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
-          <View style={{ backgroundColor: '#fff3e0', borderRadius: 14, padding: 14, marginBottom: 16 }}>
-            <Text style={{ fontSize: 13, color: '#e65100', fontWeight: '700' }}>ℹ️ Payout Information</Text>
-            <Text style={{ fontSize: 12, color: '#bf360c', marginTop: 4 }}>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '700' }}>ℹ️ Payout Information</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
               Bank details verified hone ke baad aapka weekly payout seedha account me aayega. NEFT/IMPS ke through — 1-2 working days.
             </Text>
           </View>
 
           {!showForm ? (
             /* ── Confirmed view ── */
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 2 }}>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 18, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
                 <Text style={{ fontSize: 22, marginRight: 10 }}>✅</Text>
-                <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>Bank Account Confirmed</Text>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#F1F5F9' }}>Bank Account Confirmed</Text>
               </View>
               {[
                 ['Account Holder', bankHolder || '—'],
                 ['Account Number', bankAccount ? '••••' + bankAccount.slice(-4) : '—'],
                 ['IFSC Code', bankIfsc || '—'],
               ].map(([label, val], i) => (
-                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
-                  <Text style={{ fontSize: 13, color: '#888' }}>{label}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{val}</Text>
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#334155' }}>
+                  <Text style={{ fontSize: 13, color: '#94A3B8' }}>{label}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F1F5F9' }}>{val}</Text>
                 </View>
               ))}
               <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(true); }}
-                style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 18 }}>
+                style={{ backgroundColor: '#10B981', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 18 }}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✏️ Edit Bank Details</Text>
               </TouchableOpacity>
-              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: '#4CAF50' }}>{bankMsg}</Text> : null}
+              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: '#10B981' }}>{bankMsg}</Text> : null}
             </View>
           ) : (
             /* ── Editable form ── */
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, elevation: 2 }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>Bank Account Details</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 18, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 16 }}>Bank Account Details</Text>
 
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Holder Name</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8', marginBottom: 6 }}>Account Holder Name</Text>
               <TextInput
-                style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
+                style={{ borderWidth: 1.5, borderColor: '#334155', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#F1F5F9', marginBottom: 14, backgroundColor: '#0F172A' }}
                 placeholder="Aapka pura naam"
-                placeholderTextColor="#ccc"
+                placeholderTextColor="#475569"
                 value={bankHolder}
                 onChangeText={setBankHolder}
               />
 
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>Account Number</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8', marginBottom: 6 }}>Account Number</Text>
               <TextInput
-                style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 14 }}
+                style={{ borderWidth: 1.5, borderColor: '#334155', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#F1F5F9', marginBottom: 14, backgroundColor: '#0F172A' }}
                 placeholder="1234567890"
-                placeholderTextColor="#ccc"
+                placeholderTextColor="#475569"
                 keyboardType="numeric"
                 value={bankAccount}
                 onChangeText={setBankAccount}
               />
 
-              <Text style={{ fontSize: 12, fontWeight: '600', color: '#555', marginBottom: 6 }}>IFSC Code</Text>
+              <Text style={{ fontSize: 12, fontWeight: '600', color: '#94A3B8', marginBottom: 6 }}>IFSC Code</Text>
               <TextInput
-                style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 20 }}
+                style={{ borderWidth: 1.5, borderColor: '#334155', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#F1F5F9', marginBottom: 20, backgroundColor: '#0F172A' }}
                 placeholder="SBIN0001234"
-                placeholderTextColor="#ccc"
+                placeholderTextColor="#475569"
                 autoCapitalize="characters"
                 value={bankIfsc}
                 onChangeText={v => setBankIfsc(v.toUpperCase())}
               />
 
               <TouchableOpacity onPress={saveBank} disabled={bankSaving}
-                style={{ backgroundColor: bankSaving ? '#ccc' : '#1a1a2e', borderRadius: 12, padding: 14, alignItems: 'center' }}>
+                style={{ backgroundColor: bankSaving ? '#334155' : '#10B981', borderRadius: 12, padding: 14, alignItems: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : '💾 Save Bank Details'}</Text>
               </TouchableOpacity>
               {hasSaved && (
                 <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(false); }}
-                  style={{ borderWidth: 1.5, borderColor: '#e0e0e0', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 10 }}>
-                  <Text style={{ color: '#555', fontWeight: '700', fontSize: 14 }}>Cancel</Text>
+                  style={{ borderWidth: 1, borderColor: '#334155', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 10 }}>
+                  <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>Cancel</Text>
                 </TouchableOpacity>
               )}
-              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? '#4CAF50' : '#e94560' }}>{bankMsg}</Text> : null}
+              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? '#10B981' : '#E94560' }}>{bankMsg}</Text> : null}
             </View>
           )}
         </ScrollView>
@@ -3522,39 +3522,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={s.screen}>
         <SubHeader title="📞 Support" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
-          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#1E293B', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
             <Text style={{ fontSize: 36, marginBottom: 8 }}>🎧</Text>
-            <Text style={{ color: '#fff', fontSize: 17, fontWeight: '900' }}>Sppero Driver Support</Text>
-            <Text style={{ color: '#aaa', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
+            <Text style={{ color: '#F1F5F9', fontSize: 17, fontWeight: '900' }}>Sppero Driver Support</Text>
+            <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
           </View>
           {[
-            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#e94560', action: async () => { setDrvCmpLoading(true); try { const t = await AsyncStorage.getItem('driverToken'); const r = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${t}` } }); const d = await r.json(); setDrvComplaints(d.complaints||[]); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
+            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#E94560', action: async () => { setDrvCmpLoading(true); try { const t = await AsyncStorage.getItem('driverToken'); const r = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${t}` } }); const d = await r.json(); setDrvComplaints(d.complaints||[]); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
             { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
-            { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#2196F3', action: () => Linking.openURL('tel:9999999999') },
-            { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#e94560', action: () => Linking.openURL('mailto:driver.support@sppero.com') },
+            { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
+            { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#E94560', action: () => Linking.openURL('mailto:driver.support@sppero.com') },
           ].map((item, i) => (
             <TouchableOpacity key={i} onPress={item.action}
-              style={{ backgroundColor: '#fff', borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 2 }}>
-              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: item.color, alignItems: 'center', justifyContent: 'center', marginRight: 16 }}>
+              style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+              <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: item.color + '22', alignItems: 'center', justifyContent: 'center', marginRight: 16, borderWidth: 1.5, borderColor: item.color + '55' }}>
                 <Text style={{ fontSize: 24 }}>{item.icon}</Text>
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e' }}>{item.label}</Text>
-                <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>{item.sub}</Text>
+                <Text style={{ fontSize: 15, fontWeight: '700', color: '#F1F5F9' }}>{item.label}</Text>
+                <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{item.sub}</Text>
               </View>
-              <Text style={{ fontSize: 20, color: '#ddd' }}>›</Text>
+              <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
             </TouchableOpacity>
           ))}
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 8, marginBottom: 10 }}>Common Issues</Text>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginTop: 8, marginBottom: 10 }}>Common Issues</Text>
           {[
             ['Payment nahi mila?', 'Trip complete ke baad 24 ghante wait karo. Agar nahi aaya toh support contact karo.'],
             ['Account suspend hua?', 'Email pe reason bheja gaya hoga — support se baat karo appeal ke liye.'],
             ['Rating kaise badhayein?', 'Time pe pickup, clean vehicle aur polite behaviour se rating naturally badhti hai.'],
             ['Commission kab katega?', 'Har completed ride pe 15% commission automatically wallet se cut hota hai.'],
           ].map(([q, a], i) => (
-            <View key={i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 1 }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e', marginBottom: 6 }}>❓ {q}</Text>
-              <Text style={{ fontSize: 12, color: '#666', lineHeight: 18 }}>{a}</Text>
+            <View key={i} style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 1, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#CBD5E1', marginBottom: 6 }}>❓ {q}</Text>
+              <Text style={{ fontSize: 12, color: '#94A3B8', lineHeight: 18 }}>{a}</Text>
             </View>
           ))}
         </ScrollView>
@@ -3594,8 +3594,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <>
                 <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24 }}>
                   <Text style={{ fontSize: 48 }}>📭</Text>
-                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#1a1a2e', marginTop: 14 }}>Koi complaint nahi abhi</Text>
-                  <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Koi issue tha? Hum 24-72 ghante mein{'\n'}resolve karte hain</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#F1F5F9', marginTop: 14 }}>Koi complaint nahi abhi</Text>
+                  <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Koi issue tha? Hum 24-72 ghante mein{'\n'}resolve karte hain</Text>
                 </View>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 1, marginBottom: 10, marginLeft: 2 }}>COMMON ISSUES</Text>
                 {[
@@ -3605,15 +3605,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 ].map(q => (
                   <TouchableOpacity key={q.id}
                     onPress={() => { setDrvCmpType(q.id); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(lastRideId || ''); setDrvCmpStep(2); setDrSubScreen('complaint-new'); }}
-                    style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0', elevation: 2 }}>
-                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(233,69,96,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#334155', elevation: 2 }}>
+                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(233,69,96,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                       <Text style={{ fontSize: 20 }}>{q.icon}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>{q.label}</Text>
-                      <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Usually resolved in {q.sla}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#F1F5F9' }}>{q.label}</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Usually resolved in {q.sla}</Text>
                     </View>
-                    <Text style={{ color: '#e94560', fontSize: 16 }}>›</Text>
+                    <Text style={{ color: '#E94560', fontSize: 16 }}>›</Text>
                   </TouchableOpacity>
                 ))}
               </>
@@ -3637,7 +3637,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         setDrSubScreen('complaint-detail');
                       } catch {}
                       setDrvCmpLoading(false);
-                    }} style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, overflow: 'hidden', elevation: 3, borderWidth: needsAction ? 2 : 1, borderColor: needsAction ? '#e94560' : '#f0f0f0' }}>
+                    }} style={{ backgroundColor: '#1E293B', borderRadius: 16, marginBottom: 10, overflow: 'hidden', elevation: 3, borderWidth: needsAction ? 2 : 1, borderColor: needsAction ? '#E94560' : '#334155' }}>
                       {needsAction && (
                         <View style={{ backgroundColor: '#e94560', paddingHorizontal: 14, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                           <Text style={{ fontSize: 10, color: '#fff', fontWeight: '900', letterSpacing: 0.5 }}>ACTION REQUIRED</Text>
@@ -3649,7 +3649,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                             <Text style={{ fontSize: 16 }}>{typeEmoji[c.complaint_type] || '📋'}</Text>
                           </View>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', lineHeight: 18 }} numberOfLines={2}>{c.title}</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#F1F5F9', lineHeight: 18 }} numberOfLines={2}>{c.title}</Text>
                             <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
                               {c.complaint_type?.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
                             </Text>
@@ -3697,7 +3697,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       };
       return (
         <View style={s.screen}>
-          <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16 }}>
+          <View style={{ backgroundColor: '#0F172A', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#1E293B' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <TouchableOpacity onPress={() => drvCmpStep === 1 ? setDrSubScreen('complaints') : setDrvCmpStep(1)}
                 style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
@@ -3718,32 +3718,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
             {drvCmpStep === 1 && (
               <>
-                <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 14, lineHeight: 18 }}>
+                <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 14, lineHeight: 18 }}>
                   Sahi category se complaint jaldi resolve hoti hai
                 </Text>
                 {driverTypes.map(t => (
                   <TouchableOpacity key={t.id} onPress={() => { setDrvCmpType(t.id); if (!drvCmpTitle) setDrvCmpTitle(autoTitleMap[t.id] || ''); }}
                     style={{
-                      backgroundColor: drvCmpType === t.id ? '#1a1a2e' : '#fff',
+                      backgroundColor: drvCmpType === t.id ? '#0F172A' : '#1E293B',
                       borderRadius: 14, padding: 14, marginBottom: 8,
-                      borderWidth: 2, borderColor: drvCmpType === t.id ? '#e94560' : '#f3f4f6',
+                      borderWidth: 2, borderColor: drvCmpType === t.id ? '#E94560' : '#334155',
                       flexDirection: 'row', alignItems: 'center',
                       elevation: drvCmpType === t.id ? 4 : 2,
                     }}>
-                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: drvCmpType === t.id ? 'rgba(233,69,96,0.2)' : 'rgba(233,69,96,0.07)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: drvCmpType === t.id ? 'rgba(233,69,96,0.2)' : 'rgba(233,69,96,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                       <Text style={{ fontSize: 20 }}>{t.icon}</Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
-                        <Text style={{ fontWeight: '800', fontSize: 13, color: drvCmpType === t.id ? '#fff' : '#1a1a2e' }}>{t.label}</Text>
+                        <Text style={{ fontWeight: '800', fontSize: 13, color: '#F1F5F9' }}>{t.label}</Text>
                         {t.urgent && (
                           <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
                             <Text style={{ fontSize: 9, color: '#ef4444', fontWeight: '800' }}>URGENT</Text>
                           </View>
                         )}
                       </View>
-                      <Text style={{ fontSize: 11, color: drvCmpType === t.id ? 'rgba(255,255,255,0.6)' : '#9ca3af', marginTop: 2, lineHeight: 15 }}>{t.desc}</Text>
-                      <Text style={{ fontSize: 10, color: drvCmpType === t.id ? '#e94560' : '#d1d5db', marginTop: 3, fontWeight: '700' }}>⏱ SLA: {t.sla}</Text>
+                      <Text style={{ fontSize: 11, color: drvCmpType === t.id ? 'rgba(255,255,255,0.55)' : '#64748B', marginTop: 2, lineHeight: 15 }}>{t.desc}</Text>
+                      <Text style={{ fontSize: 10, color: drvCmpType === t.id ? '#E94560' : '#475569', marginTop: 3, fontWeight: '700' }}>⏱ SLA: {t.sla}</Text>
                     </View>
                     {drvCmpType === t.id && (
                       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' }}>
@@ -3763,67 +3763,68 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {drvCmpStep === 2 && selectedType && (
               <>
                 {/* Selected type recap */}
-                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <View style={{ backgroundColor: '#0F172A', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#334155' }}>
                   <Text style={{ fontSize: 24 }}>{selectedType.icon}</Text>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{selectedType.label}</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>SLA: {selectedType.sla} · {selectedType.urgent ? 'Priority case' : 'Standard review'}</Text>
+                    <Text style={{ color: '#F1F5F9', fontWeight: '800', fontSize: 14 }}>{selectedType.label}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }}>SLA: {selectedType.sla} · {selectedType.urgent ? 'Priority case' : 'Standard review'}</Text>
                   </View>
                   <TouchableOpacity onPress={() => setDrvCmpStep(1)}>
-                    <Text style={{ color: '#e94560', fontSize: 12, fontWeight: '700' }}>Badlo</Text>
+                    <Text style={{ color: '#E94560', fontSize: 12, fontWeight: '700' }}>Badlo</Text>
                   </TouchableOpacity>
                 </View>
 
                 {/* Ride link (required) */}
-                <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#f3f4f6' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#374151', marginBottom: 4 }}>🚗 Ride ID (Zaroori)</Text>
-                  <Text style={{ fontSize: 10, color: '#9ca3af', marginBottom: 8 }}>Complaint kisi ride ke baare mein honi chahiye</Text>
+                <View style={{ backgroundColor: '#1E293B', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#334155' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#CBD5E1', marginBottom: 4 }}>🚗 Ride ID (Zaroori)</Text>
+                  <Text style={{ fontSize: 10, color: '#64748B', marginBottom: 8 }}>Complaint kisi ride ke baare mein honi chahiye</Text>
                   {lastRideId && drvCmpRideId !== lastRideId && (
                     <TouchableOpacity onPress={() => setDrvCmpRideId(lastRideId)}
-                      style={{ backgroundColor: 'rgba(233,69,96,0.07)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,69,96,0.2)' }}>
-                      <Text style={{ fontSize: 12, color: '#e94560', fontWeight: '700' }}>⚡ Last ride use karo</Text>
-                      <Text style={{ fontSize: 11, color: '#9ca3af' }}>#{lastRideId.slice(-8)}</Text>
+                      style={{ backgroundColor: 'rgba(233,69,96,0.1)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,69,96,0.25)' }}>
+                      <Text style={{ fontSize: 12, color: '#E94560', fontWeight: '700' }}>⚡ Last ride use karo</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B' }}>#{lastRideId.slice(-8)}</Text>
                     </TouchableOpacity>
                   )}
                   <TextInput
                     value={drvCmpRideId}
                     onChangeText={setDrvCmpRideId}
                     placeholder="Ride ID daalo..."
-                    style={{ backgroundColor: '#f9fafb', borderRadius: 10, padding: 10, borderWidth: 1.5, borderColor: drvCmpRideId ? '#22c55e' : '#e5e7eb', fontSize: 13, color: '#1a1a2e' }}
+                    style={{ backgroundColor: '#0F172A', borderRadius: 10, padding: 10, borderWidth: 1.5, borderColor: drvCmpRideId ? '#10B981' : '#334155', fontSize: 13, color: '#F1F5F9' }}
                     autoCapitalize="none"
                     autoCorrect={false}
+                    placeholderTextColor="#475569"
                   />
                   {drvCmpRideId ? (
-                    <Text style={{ fontSize: 10, color: '#22c55e', marginTop: 4, fontWeight: '600' }}>✓ Ride #{drvCmpRideId.slice(-8)} linked</Text>
+                    <Text style={{ fontSize: 10, color: '#10B981', marginTop: 4, fontWeight: '600' }}>✓ Ride #{drvCmpRideId.slice(-8)} linked</Text>
                   ) : (
-                    <Text style={{ fontSize: 10, color: '#f59e0b', marginTop: 4 }}>⚠️ Ride ID zaroori hai</Text>
+                    <Text style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>⚠️ Ride ID zaroori hai</Text>
                   )}
                 </View>
 
                 {/* Description */}
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#374151', marginBottom: 6 }}>📋 Kya Hua? (Zaroori)</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#CBD5E1', marginBottom: 6 }}>📋 Kya Hua? (Zaroori)</Text>
                 <TextInput
                   value={drvCmpDesc}
                   onChangeText={setDrvCmpDesc}
                   placeholder={`Puri baat batao — kya hua, kab hua, customer ne kya kiya...\nKam se kam 20 characters`}
                   multiline
-                  style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: drvCmpDesc.length >= 20 ? '#22c55e' : '#e5e7eb', height: 120, textAlignVertical: 'top', fontSize: 13, marginBottom: 16, color: '#1a1a2e', lineHeight: 18 }}
+                  style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: drvCmpDesc.length >= 20 ? '#10B981' : '#334155', height: 120, textAlignVertical: 'top', fontSize: 13, marginBottom: 16, color: '#F1F5F9', lineHeight: 18 }}
                   maxLength={2000}
-                  placeholderTextColor="#9ca3af"
+                  placeholderTextColor="#475569"
                 />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -12, marginBottom: 14, paddingHorizontal: 2 }}>
-                  <Text style={{ fontSize: 10, color: drvCmpDesc.length >= 20 ? '#22c55e' : '#9ca3af', fontWeight: '600' }}>
+                  <Text style={{ fontSize: 10, color: drvCmpDesc.length >= 20 ? '#10B981' : '#64748B', fontWeight: '600' }}>
                     {drvCmpDesc.length >= 20 ? '✓ Enough detail' : `${20 - drvCmpDesc.length} more chars needed`}
                   </Text>
-                  <Text style={{ fontSize: 10, color: '#d1d5db' }}>{drvCmpDesc.length}/2000</Text>
+                  <Text style={{ fontSize: 10, color: '#475569' }}>{drvCmpDesc.length}/2000</Text>
                 </View>
 
                 {/* SLA info */}
-                <View style={{ backgroundColor: 'rgba(233,69,96,0.07)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(233,69,96,0.15)', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                <View style={{ backgroundColor: 'rgba(233,69,96,0.07)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(233,69,96,0.18)', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
                   <Text style={{ fontSize: 16 }}>ℹ️</Text>
-                  <Text style={{ fontSize: 11, color: '#6b7280', flex: 1, lineHeight: 16 }}>
-                    <Text style={{ fontWeight: '700', color: '#e94560' }}>{selectedType.label}</Text>
-                    {' '}complaints usually resolve in <Text style={{ fontWeight: '700' }}>{selectedType.sla}</Text>.
+                  <Text style={{ fontSize: 11, color: '#94A3B8', flex: 1, lineHeight: 16 }}>
+                    <Text style={{ fontWeight: '700', color: '#E94560' }}>{selectedType.label}</Text>
+                    {' '}complaints usually resolve in <Text style={{ fontWeight: '700', color: '#F1F5F9' }}>{selectedType.sla}</Text>.
                     Hum aapke saath email/app se contact karenge.
                   </Text>
                 </View>
@@ -3889,13 +3890,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const isClosed = ['resolved','closed'].includes(c?.status);
       return (
         <View style={s.screen}>
-          <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <View style={{ backgroundColor: '#0F172A', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#1E293B' }}>
             <TouchableOpacity onPress={() => setDrSubScreen('complaints')}
-              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ color: '#fff', fontSize: 18 }}>‹</Text>
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E293B', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ color: '#F1F5F9', fontSize: 18 }}>‹</Text>
             </TouchableOpacity>
-            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 17, flex: 1 }}>Complaint Detail</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>#{c?.id?.slice(-8)}</Text>
+            <Text style={{ color: '#F1F5F9', fontWeight: '900', fontSize: 17, flex: 1 }}>Complaint Detail</Text>
+            <Text style={{ color: '#475569', fontSize: 10 }}>#{c?.id?.slice(-8)}</Text>
           </View>
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
@@ -3911,21 +3912,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
 
             {/* Complaint summary card */}
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(233,69,96,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(233,69,96,0.1)', alignItems: 'center', justifyContent: 'center' }}>
                   <Text style={{ fontSize: 18 }}>{typeEmoji[c.complaint_type] || '📋'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#1a1a2e' }}>{c.title}</Text>
-                  <Text style={{ fontSize: 11, color: '#e94560', fontWeight: '700', marginTop: 2 }}>{c.complaint_type?.replace(/_/g,' ')}</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#F1F5F9' }}>{c.title}</Text>
+                  <Text style={{ fontSize: 11, color: '#E94560', fontWeight: '700', marginTop: 2 }}>{c.complaint_type?.replace(/_/g,' ')}</Text>
                 </View>
               </View>
-              <View style={{ height: 1, backgroundColor: '#f3f4f6', marginBottom: 12 }} />
-              <Text style={{ fontSize: 13, color: '#374151', lineHeight: 20 }}>{c.description}</Text>
+              <View style={{ height: 1, backgroundColor: '#334155', marginBottom: 12 }} />
+              <Text style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 20 }}>{c.description}</Text>
               {c.ride_id && (
-                <View style={{ marginTop: 10, backgroundColor: '#f9fafb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 11, color: '#6b7280' }}>🚗 Linked ride: <Text style={{ fontWeight: '700', color: '#374151' }}>#{c.ride_id.slice(-8)}</Text></Text>
+                <View style={{ marginTop: 10, backgroundColor: '#0F172A', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#334155' }}>
+                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>🚗 Linked ride: <Text style={{ fontWeight: '700', color: '#F1F5F9' }}>#{c.ride_id.slice(-8)}</Text></Text>
                 </View>
               )}
             </View>
@@ -3933,19 +3934,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Resolution */}
             {c.resolution && (
               <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.25)' }}>
-                <Text style={{ fontSize: 14, fontWeight: '900', color: '#16a34a', marginBottom: 6 }}>✅ Resolution</Text>
-                <Text style={{ fontSize: 13, color: '#15803d', fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
-                {c.resolution_note && <Text style={{ fontSize: 13, color: '#374151', marginTop: 8, lineHeight: 18 }}>{c.resolution_note}</Text>}
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#10B981', marginBottom: 6 }}>✅ Resolution</Text>
+                <Text style={{ fontSize: 13, color: '#6EE7B7', fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
+                {c.resolution_note && <Text style={{ fontSize: 13, color: '#CBD5E1', marginTop: 8, lineHeight: 18 }}>{c.resolution_note}</Text>}
               </View>
             )}
 
             {/* Messages thread */}
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: '#1a1a2e', marginBottom: 12 }}>💬 Messages</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#F1F5F9', marginBottom: 12 }}>💬 Messages</Text>
               {msgs.length === 0 && (
                 <View style={{ alignItems: 'center', paddingVertical: 16 }}>
                   <Text style={{ fontSize: 28 }}>💬</Text>
-                  <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 6 }}>Team abhi review kar rahi hai</Text>
+                  <Text style={{ color: '#64748B', fontSize: 12, marginTop: 6 }}>Team abhi review kar rahi hai</Text>
                 </View>
               )}
               {msgs.map((m: any, i: number) => {
@@ -3954,15 +3955,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <View key={i} style={{ marginBottom: 10, alignItems: isAdmin ? 'flex-start' : 'flex-end' }}>
                     <View style={{
                       maxWidth: '85%', padding: 12, borderRadius: 14,
-                      backgroundColor: isAdmin ? '#eff6ff' : '#fff1f2',
-                      borderWidth: 1, borderColor: isAdmin ? '#bfdbfe' : '#fecdd3',
+                      backgroundColor: isAdmin ? 'rgba(59,130,246,0.15)' : 'rgba(233,69,96,0.15)',
+                      borderWidth: 1, borderColor: isAdmin ? 'rgba(59,130,246,0.3)' : 'rgba(233,69,96,0.3)',
                       borderBottomLeftRadius: isAdmin ? 4 : 14, borderBottomRightRadius: isAdmin ? 14 : 4,
                     }}>
-                      <Text style={{ fontSize: 10, fontWeight: '800', color: isAdmin ? '#1d4ed8' : '#e11d48', marginBottom: 4 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: isAdmin ? '#60A5FA' : '#E94560', marginBottom: 4 }}>
                         {isAdmin ? '👤 Sppero Support' : '🚗 You'}
                       </Text>
-                      <Text style={{ fontSize: 13, color: '#1a1a2e', lineHeight: 18 }}>{m.message}</Text>
-                      <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 4, textAlign: isAdmin ? 'left' : 'right' }}>
+                      <Text style={{ fontSize: 13, color: '#F1F5F9', lineHeight: 18 }}>{m.message}</Text>
+                      <Text style={{ fontSize: 9, color: '#64748B', marginTop: 4, textAlign: isAdmin ? 'left' : 'right' }}>
                         {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
                       </Text>
                     </View>
@@ -3973,15 +3974,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
             {/* Reply box */}
             {!isClosed && (
-              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6b7280', marginBottom: 8 }}>ADD REPLY</Text>
+              <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8, letterSpacing: 0.5 }}>ADD REPLY</Text>
                 <TextInput
                   value={drvCmpMsg}
                   onChangeText={setDrvCmpMsg}
                   placeholder="Aur kuch batana hai? Admin ko reply karein..."
                   multiline
-                  style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, height: 80, textAlignVertical: 'top', fontSize: 13, marginBottom: 10, color: '#1a1a2e', borderWidth: 1, borderColor: '#e5e7eb', lineHeight: 18 }}
-                  placeholderTextColor="#9ca3af"
+                  style={{ backgroundColor: '#0F172A', borderRadius: 12, padding: 12, height: 80, textAlignVertical: 'top', fontSize: 13, marginBottom: 10, color: '#F1F5F9', borderWidth: 1, borderColor: '#334155', lineHeight: 18 }}
+                  placeholderTextColor="#475569"
                 />
                 <TouchableOpacity
                   onPress={async () => {
@@ -3997,7 +3998,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       setDrvCmpDetail(await r2.json());
                     } catch { Alert.alert('Error', 'Message nahi bheja — retry karo'); }
                   }}
-                  style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 2 }}>
+                  style={{ backgroundColor: '#E94560', borderRadius: 12, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 2, shadowColor: '#E94560', shadowOpacity: 0.3, shadowRadius: 6 }}>
                   <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>📤 Bhejo</Text>
                 </TouchableOpacity>
               </View>
@@ -4005,17 +4006,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
             {/* Timeline */}
             {timeline.length > 0 && (
-              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#1a1a2e', marginBottom: 14 }}>📅 Timeline</Text>
+              <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#F1F5F9', marginBottom: 14 }}>📅 Timeline</Text>
                 {timeline.map((t: any, i: number) => (
                   <View key={i} style={{ flexDirection: 'row', marginBottom: i < timeline.length - 1 ? 12 : 0 }}>
                     <View style={{ width: 28, alignItems: 'center' }}>
-                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#e94560', marginTop: 2 }} />
-                      {i < timeline.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: '#f3f4f6', marginTop: 4 }} />}
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#E94560', marginTop: 2 }} />
+                      {i < timeline.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: '#334155', marginTop: 4 }} />}
                     </View>
                     <View style={{ flex: 1, paddingLeft: 10, paddingBottom: i < timeline.length - 1 ? 8 : 0 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e', lineHeight: 18 }}>{t.description}</Text>
-                      <Text style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#CBD5E1', lineHeight: 18 }}>{t.description}</Text>
+                      <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>
                         {new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
                       </Text>
                     </View>
@@ -4034,46 +4035,46 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={s.screen}>
           <SubHeader title="⚙️ Settings" />
           <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14 }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>🔔 Notifications</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 16 }}>🔔 Notifications</Text>
               {[
                 { label: 'Ride Requests', sub: 'Nayi ride ki notification', key: 'notif_rides', def: true },
                 { label: 'Wallet Updates', sub: 'Payment credit/debit alerts', key: 'notif_wallet', def: true },
                 { label: 'Promotional Offers', sub: 'Bonus aur offers', key: 'notif_promo', def: true },
               ].map((item, i) => (
-                <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#334155' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>{item.label}</Text>
-                    <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{item.sub}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>{item.label}</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{item.sub}</Text>
                   </View>
-                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Notifications settings OS settings se manage karo:\nSettings → Apps → Sppero Buddy → Notifications')} trackColor={{ false: '#ccc', true: '#e94560' }} thumbColor="#fff" />
+                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Notifications settings OS settings se manage karo:\nSettings → Apps → Sppero Buddy → Notifications')} trackColor={{ false: '#334155', true: '#10B981' }} thumbColor="#fff" />
                 </View>
               ))}
             </View>
 
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14 }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 16 }}>📱 App Info</Text>
+            <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#334155' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 16 }}>📱 App Info</Text>
               {[
                 ['App Version', '1.0.0'],
                 ['Driver ID', phone ? `DRV-${phone.slice(-4)}` : '—'],
                 ['Platform', 'Android'],
               ].map(([k, v], i) => (
-                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
-                  <Text style={{ fontSize: 13, color: '#888' }}>{k}</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{v}</Text>
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#334155' }}>
+                  <Text style={{ fontSize: 13, color: '#94A3B8' }}>{k}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F1F5F9' }}>{v}</Text>
                 </View>
               ))}
             </View>
 
             <TouchableOpacity
               onPress={() => Alert.alert('Cache Clear', 'App cache clear ho gaya!')}
-              style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 1 }}>
+              style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 1, borderWidth: 1, borderColor: '#334155' }}>
               <Text style={{ fontSize: 18, marginRight: 12 }}>🗑️</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#1a1a2e' }}>Clear Cache</Text>
-                <Text style={{ fontSize: 11, color: '#888' }}>App data clear karo</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>Clear Cache</Text>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>App data clear karo</Text>
               </View>
-              <Text style={{ fontSize: 18, color: '#ddd' }}>›</Text>
+              <Text style={{ fontSize: 18, color: '#475569' }}>›</Text>
             </TouchableOpacity>
           </ScrollView>
           <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
@@ -4091,26 +4092,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return (
     <View style={s.screen}>
       {/* Dark header */}
-      <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
+      <View style={{ backgroundColor: '#0F172A', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: '#1E293B' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', flex: 1 }}>💰 Wallet & Earnings</Text>
-          <TouchableOpacity onPress={() => loadDriverWallet(phone)} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+          <Text style={{ color: '#F1F5F9', fontSize: 20, fontWeight: '800', flex: 1 }}>💰 Wallet & Earnings</Text>
+          <TouchableOpacity onPress={() => loadDriverWallet(phone)} style={{ padding: 8, backgroundColor: '#1E293B', borderRadius: 10, borderWidth: 1, borderColor: '#334155' }}>
             <Text style={{ fontSize: 16 }}>⟳</Text>
           </TouchableOpacity>
         </View>
         {/* 3-stat grid */}
         <View style={{ flexDirection: 'row', gap: 8 }}>
-          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' }}>
-            <Text style={{ color: '#4CAF50', fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.balance || 0).toFixed(0)}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Wallet Balance</Text>
+          <View style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ color: '#10B981', fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.balance || 0).toFixed(0)}</Text>
+            <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Wallet Balance</Text>
           </View>
-          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' }}>
+          <View style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
             <Text style={{ color: '#FFD700', fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.total_earned || 0).toFixed(0)}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Life Earned</Text>
+            <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Life Earned</Text>
           </View>
-          <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, alignItems: 'center' }}>
-            <CountUp value={earnings} style={{ color: '#e94560', fontSize: 22, fontWeight: '900' }} />
-            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Aaj Ki Kamai</Text>
+          <View style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+            <CountUp value={earnings} style={{ color: '#E94560', fontSize: 22, fontWeight: '900' }} />
+            <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Aaj Ki Kamai</Text>
           </View>
         </View>
       </View>
@@ -4126,8 +4127,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={{ flexDirection: 'row', margin: 14, gap: 6 }}>
         {(['summary', 'rides', 'hourly', 'commission'] as const).map(t => (
           <TouchableOpacity key={t} onPress={() => setWalletEarningsTab(t)}
-            style={{ flex: 1, borderRadius: 20, paddingVertical: 8, alignItems: 'center', backgroundColor: walletEarningsTab === t ? '#1a1a2e' : '#f0f0f0', position: 'relative' }}>
-            <Text style={{ fontSize: 10, fontWeight: '700', color: walletEarningsTab === t ? '#fff' : '#888' }}>
+            style={{ flex: 1, borderRadius: 20, paddingVertical: 8, alignItems: 'center', backgroundColor: walletEarningsTab === t ? '#10B981' : '#1E293B', position: 'relative', borderWidth: 1, borderColor: walletEarningsTab === t ? '#10B981' : '#334155' }}>
+            <Text style={{ fontSize: 10, fontWeight: '700', color: walletEarningsTab === t ? '#fff' : '#64748B' }}>
               {t === 'summary' ? 'Summary' : t === 'rides' ? 'Rides' : t === 'hourly' ? 'Hourly' : 'Commission'}
             </Text>
             {t === 'commission' && commissionData.pending_commission > 0 && (
@@ -4148,22 +4149,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Row k="Platform Fee (15%)" v={'₹' + (earnings * 0.15).toFixed(0)} />
             <Row k="Aaj Ki Net Kamai" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
           </View>
-          <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 14, marginBottom: 14 }}>
-            <Text style={{ fontSize: 13, color: '#2e7d32', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
-            <Text style={{ fontSize: 12, color: '#4CAF50', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
+          <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' }}>
+            <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
+            <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
           </View>
           {/* Pending Commission Card */}
           {commissionData.pending_commission > 0 && (
-            <View style={{ backgroundColor: '#fff8e1', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1.5, borderColor: '#f9a825' }}>
+            <View style={{ backgroundColor: 'rgba(230,81,0,0.08)', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(230,81,0,0.3)' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                 <Text style={{ fontSize: 18, marginRight: 8 }}>💰</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '800', color: '#e65100' }}>Pending Commission</Text>
-                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Cash rides ki platform fee pending hai</Text>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Cash rides ki platform fee pending hai</Text>
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#e65100' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ fontSize: 20, fontWeight: '900', color: '#E94560' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
               </View>
-              <Text style={{ fontSize: 11, color: '#888', marginBottom: 10 }}>
+              <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 10 }}>
                 Wallet/online rides pe jo bhi earn karte ho, usme se auto-deduct hota hai. Ya seedha pay kar do.
               </Text>
               <TouchableOpacity
@@ -4211,36 +4212,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           )}
 
           {/* Payout */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14 }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>💸 Payout Request</Text>
-            <Text style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>Available: ₹{parseFloat(driverWallet.balance || 0).toFixed(0)} · Min ₹100</Text>
+          <View style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#334155' }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#F1F5F9', marginBottom: 12 }}>💸 Payout Request</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Available: ₹{parseFloat(driverWallet.balance || 0).toFixed(0)} · Min ₹100</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TextInput
-                style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15, color: '#1a1a2e' }}
+                style={{ flex: 1, borderWidth: 1, borderColor: '#334155', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15, color: '#F1F5F9', backgroundColor: '#0F172A' }}
                 placeholder="Enter amount (₹)"
                 keyboardType="numeric"
                 value={payoutInput}
                 onChangeText={setPayoutInput}
-                placeholderTextColor="#bbb"
+                placeholderTextColor="#475569"
               />
               <TouchableOpacity onPress={requestPayout}
-                style={{ backgroundColor: payoutLoading ? '#ccc' : '#4CAF50', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
+                style={{ backgroundColor: payoutLoading ? '#334155' : '#10B981', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Request</Text>
               </TouchableOpacity>
             </View>
-            {result ? <Text style={{ color: result.includes('✅') ? '#4CAF50' : '#e94560', marginTop: 8, fontWeight: '600' }}>{result}</Text> : null}
+            {result ? <Text style={{ color: result.includes('✅') ? '#10B981' : '#E94560', marginTop: 8, fontWeight: '600' }}>{result}</Text> : null}
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             {[100, 200, 500, 1000].map(a => (
               <TouchableOpacity key={a} onPress={() => setPayoutInput(a.toString())}
-                style={{ flex: 1, backgroundColor: '#f5f5f5', borderRadius: 10, paddingVertical: 9, alignItems: 'center' }}>
-                <Text style={{ color: '#1a1a2e', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
+                style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 10, paddingVertical: 9, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#CBD5E1', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
           {/* ── How Hourly Works ── */}
-          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, marginTop: 10 }}>
+          <View style={{ backgroundColor: '#0F172A', borderRadius: 14, padding: 16, marginTop: 10, borderWidth: 1, borderColor: '#1E293B' }}>
             <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>ℹ️ Hourly / Daily Booking — Rules</Text>
             {[
               ['⏱️ Package', '2h/4h/6h/Full Day / 1 Day / 2 Day / 3 Day available'],
@@ -4263,18 +4264,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {driverRideHistory.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
               <Text style={{ fontSize: 36 }}>🛺</Text>
-              <Text style={{ color: '#bbb', marginTop: 10 }}>Koi completed ride nahi mili</Text>
+              <Text style={{ color: '#475569', marginTop: 10 }}>Koi completed ride nahi mili</Text>
             </View>
           ) : driverRideHistory.map((r: any, i: number) => (
-            <View key={r.id || i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1 }}>
+            <View key={r.id || i} style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1, borderWidth: 1, borderColor: '#334155' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{r.passenger_name || 'Passenger'}</Text>
-                  <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{fmtDate(r.created_at)} · {r.payment_method}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F1F5F9' }}>{r.passenger_name || 'Passenger'}</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{fmtDate(r.created_at)} · {r.payment_method}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: '#4CAF50', fontSize: 16, fontWeight: '800' }}>₹{parseFloat(r.fare || 0).toFixed(0)}</Text>
-                  <Text style={{ color: '#bbb', fontSize: 10 }}>Net: ₹{(parseFloat(r.fare || 0) * 0.85).toFixed(0)}</Text>
+                  <Text style={{ color: '#10B981', fontSize: 16, fontWeight: '800' }}>₹{parseFloat(r.fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#475569', fontSize: 10 }}>Net: ₹{(parseFloat(r.fare || 0) * 0.85).toFixed(0)}</Text>
                 </View>
               </View>
             </View>
@@ -4285,18 +4286,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {driverHourlyHistory.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
               <Text style={{ fontSize: 36 }}>⏱️</Text>
-              <Text style={{ color: '#bbb', marginTop: 10 }}>Koi hourly ride nahi mili</Text>
+              <Text style={{ color: '#475569', marginTop: 10 }}>Koi hourly ride nahi mili</Text>
             </View>
           ) : driverHourlyHistory.map((h: any, i: number) => (
-            <View key={h.id || i} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1 }}>
+            <View key={h.id || i} style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1, borderWidth: 1, borderColor: '#334155' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{h.vehicle_type} · {h.package_hours}h Package</Text>
-                  <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{h.customer_phone} · {fmtDate(h.created_at)}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#F1F5F9' }}>{h.vehicle_type} · {h.package_hours}h Package</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{h.customer_phone} · {fmtDate(h.created_at)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: '#4CAF50', fontSize: 16, fontWeight: '800' }}>₹{parseFloat(h.driver_earning || h.base_fare || 0).toFixed(0)}</Text>
-                  <Text style={{ color: '#bbb', fontSize: 10 }}>Base: ₹{parseFloat(h.base_fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#10B981', fontSize: 16, fontWeight: '800' }}>₹{parseFloat(h.driver_earning || h.base_fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#475569', fontSize: 10 }}>Base: ₹{parseFloat(h.base_fare || 0).toFixed(0)}</Text>
                 </View>
               </View>
             </View>
@@ -4305,20 +4306,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
         {walletEarningsTab === 'commission' && (<>
           {/* Commission Overview */}
-          <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 16, marginBottom: 12 }}>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 12 }}>Commission Overview</Text>
+          <View style={{ backgroundColor: '#0F172A', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#1E293B' }}>
+            <Text style={{ color: '#F1F5F9', fontSize: 14, fontWeight: '800', marginBottom: 12 }}>Commission Overview</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, alignItems: 'center' }}>
-                <Text style={{ color: '#e94560', fontSize: 18, fontWeight: '900' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Pending</Text>
+              <View style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#E94560', fontSize: 18, fontWeight: '900' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Pending</Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, alignItems: 'center' }}>
-                <Text style={{ color: '#4CAF50', fontSize: 18, fontWeight: '900' }}>₹{commissionData.settled_commission.toFixed(0)}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Paid / Settled</Text>
+              <View style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#10B981', fontSize: 18, fontWeight: '900' }}>₹{commissionData.settled_commission.toFixed(0)}</Text>
+                <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Paid / Settled</Text>
               </View>
-              <View style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 10, padding: 12, alignItems: 'center' }}>
+              <View style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
                 <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: '900' }}>₹{commissionData.total_commission.toFixed(0)}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Total</Text>
+                <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Total</Text>
               </View>
             </View>
           </View>
@@ -4348,39 +4349,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   }).catch((_e: any) => { setCommResult('Payment cancelled ya failed'); setCommPayLoading(false); });
                 } catch (_e) { setCommResult('❌ Server error'); setCommPayLoading(false); }
               }}
-              style={{ backgroundColor: commPayLoading ? '#ccc' : '#e65100', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 4 }}>
+              style={{ backgroundColor: commPayLoading ? '#334155' : '#E94560', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 4 }}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
             </TouchableOpacity>
           )}
-          {commResult ? <Text style={{ color: commResult.includes('✅') ? '#4CAF50' : '#bf360c', marginBottom: 10, fontSize: 12, fontWeight: '600', textAlign: 'center' }}>{commResult}</Text> : null}
+          {commResult ? <Text style={{ color: commResult.includes('✅') ? '#10B981' : '#E94560', marginBottom: 10, fontSize: 12, fontWeight: '600', textAlign: 'center' }}>{commResult}</Text> : null}
 
           {/* Per-ride commission history */}
-          <Text style={{ fontSize: 13, fontWeight: '800', color: '#1a1a2e', marginTop: 8, marginBottom: 8 }}>Per-Ride Commission</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#F1F5F9', marginTop: 8, marginBottom: 8 }}>Per-Ride Commission</Text>
           {commissionData.records.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 30 }}>
               <Text style={{ fontSize: 32 }}>📋</Text>
-              <Text style={{ color: '#bbb', marginTop: 8 }}>Koi commission record nahi</Text>
+              <Text style={{ color: '#475569', marginTop: 8 }}>Koi commission record nahi</Text>
             </View>
           ) : commissionData.records.map((rec: any, i: number) => {
-            const statusColor = rec.status === 'collected' || rec.status === 'settled' || rec.status === 'auto_settled' ? '#4CAF50' : '#e65100';
+            const statusColor = rec.status === 'collected' || rec.status === 'settled' || rec.status === 'auto_settled' ? '#10B981' : '#F59E0B';
             const statusLabel = rec.status === 'collected' ? 'Collected' : rec.status === 'settled' ? 'Paid' : rec.status === 'auto_settled' ? 'Auto-Settled' : rec.status === 'cash_owed' ? 'Pending' : rec.status;
             return (
-              <View key={rec.id || i} style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, elevation: 1, borderLeftWidth: 3, borderLeftColor: statusColor }}>
+              <View key={rec.id || i} style={{ backgroundColor: '#1E293B', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#334155', borderLeftWidth: 3, borderLeftColor: statusColor }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <View style={{ backgroundColor: statusColor + '20', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
+                      <View style={{ backgroundColor: statusColor + '22', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 2 }}>
                         <Text style={{ fontSize: 10, fontWeight: '700', color: statusColor }}>{statusLabel}</Text>
                       </View>
-                      <Text style={{ fontSize: 11, color: '#aaa' }}>
+                      <Text style={{ fontSize: 11, color: '#64748B' }}>
                         {rec.payment_method === 'cash' ? '💵 Cash' : rec.payment_method === 'wallet' ? '👛 Wallet' : '💳 Online'}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: '#888' }}>Ride #{rec.ride_id?.slice(-6)} · {fmtDate(rec.created_at)}</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Ride #{rec.ride_id?.slice(-6)} · {fmtDate(rec.created_at)}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e' }}>₹{parseFloat(rec.commission).toFixed(0)}</Text>
-                    <Text style={{ fontSize: 10, color: '#aaa' }}>Fare ₹{parseFloat(rec.fare).toFixed(0)}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9' }}>₹{parseFloat(rec.commission).toFixed(0)}</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B' }}>Fare ₹{parseFloat(rec.fare).toFixed(0)}</Text>
                   </View>
                 </View>
               </View>
@@ -4389,16 +4390,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* Manual payment history */}
           {commissionData.payments.length > 0 && (<>
-            <Text style={{ fontSize: 13, fontWeight: '800', color: '#1a1a2e', marginTop: 12, marginBottom: 8 }}>Manual Payments (Razorpay)</Text>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#F1F5F9', marginTop: 12, marginBottom: 8 }}>Manual Payments (Razorpay)</Text>
             {commissionData.payments.map((p: any, i: number) => (
-              <View key={p.id || i} style={{ backgroundColor: '#f9fbe7', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#c5e1a5' }}>
+              <View key={p.id || i} style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#334155' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <View>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#33691e' }}>₹{parseFloat(p.amount).toFixed(0)} Paid</Text>
-                    <Text style={{ fontSize: 10, color: '#888', marginTop: 2 }}>{fmtDate(p.created_at)}</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#10B981' }}>₹{parseFloat(p.amount).toFixed(0)} Paid</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>{fmtDate(p.created_at)}</Text>
                   </View>
-                  <View style={{ backgroundColor: p.status === 'paid' ? '#e8f5e9' : '#fff3e0', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'center' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.status === 'paid' ? '#4CAF50' : '#e65100' }}>{p.status === 'paid' ? '✅ Paid' : '⏳ Pending'}</Text>
+                  <View style={{ backgroundColor: p.status === 'paid' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'center' }}>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.status === 'paid' ? '#10B981' : '#F59E0B' }}>{p.status === 'paid' ? '✅ Paid' : '⏳ Pending'}</Text>
                   </View>
                 </View>
               </View>
@@ -4686,7 +4687,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ PROFILE TAB ═══
   return (
     <View style={s.screen}>
-      <View style={s.topBar}><Text style={s.greeting}>👤 Profile</Text></View>
+      <View style={[s.topBar, { paddingBottom: 16 }]}><Text style={s.greeting}>👤 Profile</Text></View>
       {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('home')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         <View style={s.profileHero}>
@@ -4694,7 +4695,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={s.profileName}>{driverInfo?.name || phone}</Text>
           <Text style={s.profilePhone}>+91 {phone}</Text>
           <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} · {driverInfo?.vehicle_no || ''}</Text>
-          <View style={s.badge}><Text style={{ color: '#fff', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
+          <View style={s.badge}><Text style={{ color: '#F59E0B', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
         {/* ── Favourite Buddy Count Card ── */}
         {(() => {
@@ -4706,10 +4707,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             n <= 5  ? `${n} loyal customers hain aapke — great job! 🔥` :
             n <= 20 ? `${n} customers aapke diwane hain! ⭐ Top Driver!` :
                       `${n} customers! Aap ek legend hain! 🏆`;
-          const cardBg   = n >= 20 ? '#1a1a2e' : n >= 6 ? '#fff8e1' : n >= 1 ? '#e8f5e9' : '#f5f5f5';
-          const numColor = n >= 20 ? '#ffd700' : n >= 6 ? '#e65100' : n >= 1 ? '#2e7d32' : '#bbb';
-          const txtColor = n >= 20 ? '#fff' : '#1a1a2e';
-          const subColor = n >= 20 ? '#aaa' : '#666';
+          const cardBg   = n >= 20 ? '#0F172A' : n >= 6 ? 'rgba(245,158,11,0.1)' : n >= 1 ? 'rgba(16,185,129,0.1)' : '#1E293B';
+          const numColor = n >= 20 ? '#FFD700' : n >= 6 ? '#F59E0B' : n >= 1 ? '#10B981' : '#475569';
+          const txtColor = '#F1F5F9';
+          const subColor = '#94A3B8';
           return (
             <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 18, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
@@ -4725,7 +4726,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ fontSize: 13, color: subColor, marginTop: 4, textAlign: 'center' }}>{msg}</Text>
                   </View>
                   {n > 0 && (
-                    <View style={{ marginTop: 10, backgroundColor: n >= 20 ? 'rgba(255,215,0,0.12)' : 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ marginTop: 10, backgroundColor: n >= 20 ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
                       <Text style={{ fontSize: 14, marginRight: 8 }}>💡</Text>
                       <Text style={{ fontSize: 12, color: subColor, flex: 1 }}>
                         Jab ye customers directly aapko request bhejengen, aapko ⭐ badge ke saath notification aayega!
@@ -4739,64 +4740,64 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         })()}
 
         {/* UPI ID Section */}
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>📱 Mera UPI ID</Text>
-          <Text style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Customer aapka QR scan karke seedha pay karega</Text>
+        <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 4 }}>📱 Mera UPI ID</Text>
+          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Customer aapka QR scan karke seedha pay karega</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
-              style={{ flex: 1, borderWidth: 1, borderColor: '#e0e0e0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: '#1a1a2e' }}
+              style={{ flex: 1, borderWidth: 1, borderColor: '#334155', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 14, color: '#F1F5F9', backgroundColor: '#0F172A' }}
               placeholder="yourname@upi / 9999@paytm"
               value={upiInput}
               onChangeText={setUpiInput}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholderTextColor="#bbb"
+              placeholderTextColor="#475569"
             />
             <TouchableOpacity onPress={saveUpiId}
-              style={{ backgroundColor: upiSaving ? '#ccc' : '#1a1a2e', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
+              style={{ backgroundColor: upiSaving ? '#334155' : '#10B981', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 11, justifyContent: 'center' }}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>Save</Text>
             </TouchableOpacity>
           </View>
           {driverUpiId ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 6, backgroundColor: '#e8f5e9', borderRadius: 8, padding: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 6, backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
               <Text style={{ fontSize: 14 }}>✅</Text>
-              <Text style={{ fontSize: 12, color: '#2e7d32', fontWeight: '600', flex: 1 }}>{driverUpiId}</Text>
+              <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '600', flex: 1 }}>{driverUpiId}</Text>
             </View>
           ) : null}
-          {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? '#4CAF50' : '#e94560', marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
+          {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? '#10B981' : '#E94560', marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
         </View>
 
         {/* Referral Section */}
-        <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 4 }}>🎁 Refer & Earn</Text>
-          <Text style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>Dosto ko refer karo — dono ko ₹50 wallet bonus milega</Text>
+        <View style={{ backgroundColor: '#1E293B', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#334155' }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#F1F5F9', marginBottom: 4 }}>🎁 Refer & Earn</Text>
+          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Dosto ko refer karo — dono ko ₹50 wallet bonus milega</Text>
           {referralInfo ? (
             <View>
-              <View style={{ backgroundColor: '#1a1a2e', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ color: '#aaa', fontSize: 11, marginBottom: 4 }}>Aapka Referral Code</Text>
-                <Text style={{ color: '#FFD700', fontSize: 24, fontWeight: '900', letterSpacing: 4 }}>{referralInfo.code}</Text>
+              <View style={{ backgroundColor: '#0F172A', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#334155' }}>
+                <Text style={{ color: '#64748B', fontSize: 11, marginBottom: 4, letterSpacing: 1 }}>AAPKA REFERRAL CODE</Text>
+                <Text style={{ color: '#FFD700', fontSize: 28, fontWeight: '900', letterSpacing: 6 }}>{referralInfo.code}</Text>
               </View>
               <View style={{ flexDirection: 'row', marginBottom: 10 }}>
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#1a1a2e' }}>{referralInfo.total_referrals}</Text>
-                  <Text style={{ fontSize: 10, color: '#999' }}>Referrals</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#F1F5F9' }}>{referralInfo.total_referrals}</Text>
+                  <Text style={{ fontSize: 10, color: '#64748B' }}>Referrals</Text>
                 </View>
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#4CAF50' }}>₹{referralInfo.total_earned}</Text>
-                  <Text style={{ fontSize: 10, color: '#999' }}>Earned</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#10B981' }}>₹{referralInfo.total_earned}</Text>
+                  <Text style={{ fontSize: 10, color: '#64748B' }}>Earned</Text>
                 </View>
               </View>
               <TouchableOpacity
-                style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 12, alignItems: 'center' }}
+                style={{ backgroundColor: '#E94560', borderRadius: 10, padding: 12, alignItems: 'center', elevation: 4, shadowColor: '#E94560', shadowOpacity: 0.35, shadowRadius: 8 }}
                 onPress={() => Share.share({ message: `Sppero Buddy pe join karo! Mera referral code use karo: ${referralInfo.code}\nDono ko ₹50 wallet bonus milega! 🎁`, title: 'Sppero Buddy Referral' })}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>📤 Code Share Karo</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity
-              style={{ backgroundColor: '#f5f5f5', borderRadius: 10, padding: 12, alignItems: 'center' }}
+              style={{ backgroundColor: '#334155', borderRadius: 10, padding: 12, alignItems: 'center' }}
               onPress={loadReferralInfo}>
-              <Text style={{ color: '#666', fontSize: 13 }}>🔑 Code Generate Karo</Text>
+              <Text style={{ color: '#94A3B8', fontSize: 13 }}>🔑 Code Generate Karo</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -4809,8 +4810,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
           <Bouncy key={key} style={s.menuItem} onPress={() => { setDrSubScreen(key as any); setBankMsg(''); }}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
-            <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#1a1a2e', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#999', marginTop: 2 }}>{sub}</Text></View>
-            <Text style={{ fontSize: 20, color: '#ccc' }}>›</Text>
+            <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#F1F5F9', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{sub}</Text></View>
+            <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
           </Bouncy>
         ))}
         <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
@@ -4851,7 +4852,7 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
     <View style={s.nav}>
       {tabs.map(({ t, ion, lbl }) => {
         const active = activeTab === t;
-        const col = active ? '#e94560' : '#bbb';
+        const col = active ? '#10B981' : '#475569';
         return (
           <TouchableOpacity key={t} style={s.navItem} onPress={() => setActiveTab(t)} activeOpacity={0.65}>
             <View style={{ position: 'relative', alignItems: 'center' }}>
@@ -4868,107 +4869,107 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
 }
 
 const s = StyleSheet.create({
-  screen:          { flex:1, backgroundColor:'#f5f5f5' },
-  mapFit:          { height: 220, width: '100%', backgroundColor: '#e8eaed' },
+  screen:          { flex:1, backgroundColor:'#0F172A' },
+  mapFit:          { height: 220, width: '100%', backgroundColor: '#1E293B' },
   navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
-  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#e94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
-  hero:            { backgroundColor:'#1a1a2e', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
+  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#E94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
+  hero:            { backgroundColor:'#0F172A', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
   heroIcon:        { fontSize:60 },
-  heroTitle:       { color:'#fff', fontSize:28, fontWeight:'bold', marginTop:10 },
-  heroSub:         { color:'#aaa', fontSize:14, marginTop:6 },
-  sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#1a1a2e', marginBottom:12 },
-  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:2, borderColor:'transparent' },
-  btn:             { backgroundColor:'#e94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:10 },
+  heroTitle:       { color:'#F1F5F9', fontSize:28, fontWeight:'bold', marginTop:10 },
+  heroSub:         { color:'#94A3B8', fontSize:14, marginTop:6 },
+  sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#F1F5F9', marginBottom:12 },
+  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#334155' },
+  btn:             { backgroundColor:'#E94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:10 },
   btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
-  err:             { textAlign:'center', color:'#e94560', marginVertical:10 },
-  topBar:          { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
-  greeting:        { color:'#fff', fontSize:18, fontWeight:'bold' },
-  subTxt:          { color:'#aaa', fontSize:12, marginTop:2 },
-  notifBanner:     { backgroundColor:'#e94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  err:             { textAlign:'center', color:'#E94560', marginVertical:10 },
+  topBar:          { backgroundColor:'#0F172A', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:1, borderBottomColor:'#1E293B' },
+  greeting:        { color:'#F1F5F9', fontSize:18, fontWeight:'bold' },
+  subTxt:          { color:'#64748B', fontSize:12, marginTop:2 },
+  notifBanner:     { backgroundColor:'#E94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
   statsRow:        { flexDirection:'row', gap:10, marginBottom:16 },
-  statCard:        { flex:1, backgroundColor:'#fff', borderRadius:16, padding:16, alignItems:'center', elevation:3, shadowColor:'#000', shadowOpacity:0.06, shadowRadius:8 },
+  statCard:        { flex:1, backgroundColor:'#1E293B', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#000', shadowOpacity:0.4, shadowRadius:8, borderWidth:1, borderColor:'#334155' },
   statIcon:        { fontSize:22 },
-  statValue:       { fontSize:22, fontWeight:'bold', color:'#1a1a2e', marginTop:4 },
-  statLabel:       { fontSize:10, color:'#999', marginTop:3, letterSpacing:0.3 },
-  targetCard:      { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:14, elevation:2 },
-  statusCard:      { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:16, elevation:2 },
-  statusText:      { fontSize:14, color:'#333', textAlign:'center' },
-  tripCard:        { backgroundColor:'#fff', borderRadius:16, padding:16, marginBottom:16, elevation:4, borderWidth:2, borderColor:'#4CAF50' },
-  tripBadge:       { backgroundColor:'#4CAF50', borderRadius:8, padding:8, marginBottom:12 },
+  statValue:       { fontSize:22, fontWeight:'bold', color:'#F1F5F9', marginTop:4 },
+  statLabel:       { fontSize:10, color:'#64748B', marginTop:3, letterSpacing:0.3 },
+  targetCard:      { backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#334155' },
+  statusCard:      { backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#334155' },
+  statusText:      { fontSize:14, color:'#CBD5E1', textAlign:'center' },
+  tripCard:        { backgroundColor:'#1E293B', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#10B981' },
+  tripBadge:       { backgroundColor:'#10B981', borderRadius:10, padding:9, marginBottom:12 },
   tripBadgeTxt:    { color:'#fff', textAlign:'center', fontWeight:'bold', fontSize:14 },
   tripCustomer:    { flexDirection:'row', alignItems:'center', marginBottom:12 },
-  tripAvatar:      { width:44, height:44, borderRadius:22, backgroundColor:'#1a1a2e', alignItems:'center', justifyContent:'center', marginRight:12 },
-  tripCustName:    { fontSize:16, fontWeight:'bold', color:'#1a1a2e' },
-  tripCustPhone:   { fontSize:13, color:'#666', marginTop:2 },
-  tripFare:        { fontSize:20, fontWeight:'bold', color:'#4CAF50' },
-  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#f0f0f0', borderRadius:10, padding:10 },
-  tripRoute:       { backgroundColor:'#f9f9f9', borderRadius:10, padding:12, marginBottom:12 },
-  tripFrom:        { fontSize:14, color:'#4CAF50', fontWeight:'600' },
-  tripArrow:       { fontSize:16, textAlign:'center', color:'#999', marginVertical:4 },
-  tripTo:          { fontSize:14, color:'#e94560', fontWeight:'600' },
-  tripBtn:         { backgroundColor:'#1a1a2e', borderRadius:10, padding:16, alignItems:'center', marginBottom:8 },
+  tripAvatar:      { width:46, height:46, borderRadius:23, backgroundColor:'#E94560', alignItems:'center', justifyContent:'center', marginRight:12 },
+  tripCustName:    { fontSize:16, fontWeight:'bold', color:'#F1F5F9' },
+  tripCustPhone:   { fontSize:13, color:'#94A3B8', marginTop:2 },
+  tripFare:        { fontSize:22, fontWeight:'bold', color:'#10B981' },
+  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#0F172A', borderRadius:12, padding:11, borderWidth:1, borderColor:'#334155' },
+  tripRoute:       { backgroundColor:'#0F172A', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#334155' },
+  tripFrom:        { fontSize:14, color:'#10B981', fontWeight:'600' },
+  tripArrow:       { fontSize:16, textAlign:'center', color:'#475569', marginVertical:4 },
+  tripTo:          { fontSize:14, color:'#E94560', fontWeight:'600' },
+  tripBtn:         { backgroundColor:'#E94560', borderRadius:12, padding:16, alignItems:'center', marginBottom:8, elevation:4, shadowColor:'#E94560', shadowOpacity:0.35, shadowRadius:8 },
   tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:15 },
-  navBtn:          { backgroundColor:'#2196F3', borderRadius:10, padding:12, alignItems:'center', marginBottom:10 },
+  navBtn:          { backgroundColor:'#3B82F6', borderRadius:12, padding:12, alignItems:'center', marginBottom:10 },
   cancelBtn:       { padding:12, alignItems:'center' },
-  cancelTxt:       { color:'#e94560', fontWeight:'600' },
-  rideCard:        { backgroundColor:'#fff', borderRadius:20, padding:18, marginBottom:16, elevation:8, borderWidth:0, shadowColor:'#e94560', shadowOpacity:0.15, shadowRadius:16 },
+  cancelTxt:       { color:'#E94560', fontWeight:'600' },
+  rideCard:        { backgroundColor:'#1E293B', borderRadius:22, padding:18, marginBottom:16, elevation:10, borderWidth:1, borderColor:'#334155', shadowColor:'#E94560', shadowOpacity:0.25, shadowRadius:20 },
   rideHeader:      { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:10 },
-  rideTitle:       { fontSize:16, fontWeight:'bold', color:'#1a1a2e' },
-  rideFare:        { fontSize:22, fontWeight:'bold', color:'#e94560' },
-  rideDetails:     { backgroundColor:'#f9f9f9', borderRadius:10, padding:12, marginBottom:4 },
-  rideFrom:        { fontSize:14, color:'#4CAF50', fontWeight:'600' },
-  rideDivider:     { fontSize:16, textAlign:'center', color:'#999', marginVertical:4 },
-  rideTo:          { fontSize:14, color:'#e94560', fontWeight:'600' },
+  rideTitle:       { fontSize:16, fontWeight:'bold', color:'#F1F5F9' },
+  rideFare:        { fontSize:24, fontWeight:'bold', color:'#10B981' },
+  rideDetails:     { backgroundColor:'#0F172A', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#334155' },
+  rideFrom:        { fontSize:14, color:'#10B981', fontWeight:'600' },
+  rideDivider:     { fontSize:16, textAlign:'center', color:'#475569', marginVertical:4 },
+  rideTo:          { fontSize:14, color:'#E94560', fontWeight:'600' },
   rideActions:     { flexDirection:'row', gap:10 },
-  rejectBtn:       { flex:1, padding:14, borderRadius:10, borderWidth:1, borderColor:'#e0e0e0', alignItems:'center' },
-  rejectTxt:       { color:'#e94560', fontWeight:'bold' },
-  acceptBtn:       { flex:2, padding:14, borderRadius:10, backgroundColor:'#4CAF50', alignItems:'center' },
-  acceptTxt:       { color:'#fff', fontWeight:'bold', fontSize:15 },
-  result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
-  nav:             { flexDirection:'row', backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:8, elevation:16, shadowColor:'#000', shadowOpacity:0.1, shadowRadius:12 },
+  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#475569', alignItems:'center', backgroundColor:'#0F172A' },
+  rejectTxt:       { color:'#94A3B8', fontWeight:'bold' },
+  acceptBtn:       { flex:2, padding:14, borderRadius:12, backgroundColor:'#10B981', alignItems:'center', elevation:4, shadowColor:'#10B981', shadowOpacity:0.4, shadowRadius:8 },
+  acceptTxt:       { color:'#fff', fontWeight:'900', fontSize:16 },
+  result:          { textAlign:'center', color:'#10B981', fontSize:14, marginTop:10, fontWeight:'600' },
+  nav:             { flexDirection:'row', backgroundColor:'#0F172A', borderTopWidth:1, borderTopColor:'#1E293B', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
   navItem:         { flex:1, alignItems:'center', justifyContent:'center', paddingTop:2 },
-  navIcon:         { fontSize:22, color:'#ccc' },
-  navIconActive:   { color:'#e94560' },
-  navLbl:          { fontSize:10, color:'#bbb', marginTop:3, letterSpacing:0.3 },
-  navActive:       { color:'#e94560', fontWeight:'bold' },
-  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#e94560', borderWidth:1.5, borderColor:'#fff' },
-  navLine:         { width:20, height:3, borderRadius:2, backgroundColor:'#e94560', marginTop:4 },
-  earningsCard:    { backgroundColor:'#fff', borderRadius:14, padding:16, marginBottom:16, elevation:2 },
-  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#f0f0f0' },
-  earningsKey:     { fontSize:14, color:'#666' },
-  earningsVal:     { fontSize:14, color:'#333', fontWeight:'500' },
-  profileHero:     { backgroundColor:'#1a1a2e', borderRadius:16, padding:24, alignItems:'center', marginBottom:16 },
-  profileAvatar:   { width:80, height:80, borderRadius:40, backgroundColor:'#e94560', alignItems:'center', justifyContent:'center', marginBottom:12 },
-  profileName:     { color:'#fff', fontSize:22, fontWeight:'bold' },
-  profilePhone:    { color:'#aaa', fontSize:14, marginTop:4 },
-  profileVehicle:  { color:'#aaa', fontSize:13, marginTop:4 },
-  badge:           { backgroundColor:'#f0a500', borderRadius:12, paddingVertical:4, paddingHorizontal:12, marginTop:8 },
-  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:12, padding:14, marginBottom:8, elevation:1 },
-  logoutBtn:       { borderWidth:1, borderColor:'#e94560', borderRadius:12, padding:14, alignItems:'center', marginTop:8, marginBottom:30 },
+  navIcon:         { fontSize:22, color:'#475569' },
+  navIconActive:   { color:'#10B981' },
+  navLbl:          { fontSize:10, color:'#475569', marginTop:3, letterSpacing:0.3 },
+  navActive:       { color:'#10B981', fontWeight:'bold' },
+  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#E94560', borderWidth:1.5, borderColor:'#0F172A' },
+  navLine:         { width:24, height:3, borderRadius:2, backgroundColor:'#10B981', marginTop:5 },
+  earningsCard:    { backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#334155' },
+  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#334155' },
+  earningsKey:     { fontSize:14, color:'#94A3B8' },
+  earningsVal:     { fontSize:14, color:'#E2E8F0', fontWeight:'500' },
+  profileHero:     { backgroundColor:'#1E293B', borderRadius:20, padding:24, alignItems:'center', marginBottom:16, borderWidth:1, borderColor:'#334155' },
+  profileAvatar:   { width:84, height:84, borderRadius:42, backgroundColor:'#E94560', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:3, borderColor:'rgba(233,69,96,0.3)' },
+  profileName:     { color:'#F1F5F9', fontSize:22, fontWeight:'bold' },
+  profilePhone:    { color:'#64748B', fontSize:14, marginTop:4 },
+  profileVehicle:  { color:'#64748B', fontSize:13, marginTop:4 },
+  badge:           { backgroundColor:'rgba(245,158,11,0.15)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(245,158,11,0.35)' },
+  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#1E293B', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#334155' },
+  logoutBtn:       { borderWidth:1, borderColor:'#E94560', borderRadius:12, padding:14, alignItems:'center', marginTop:8, marginBottom:30, backgroundColor:'rgba(233,69,96,0.07)' },
 });
 
 const rs = StyleSheet.create({
-  regHeader:   { backgroundColor:'#1a1a2e', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
-  regTitle:    { color:'#fff', fontSize:16, fontWeight:'bold' },
-  bigTitle:    { fontSize:26, fontWeight:'bold', color:'#1a1a2e', marginTop:10 },
-  subTitle:    { fontSize:14, color:'#888', marginTop:6, marginBottom:10 },
-  fieldLabel:  { fontSize:14, fontWeight:'600', color:'#333', marginTop:16, marginBottom:8 },
-  input:       { borderWidth:1, borderColor:'#e0e0e0', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#fff' },
-  photoBox:    { borderWidth:2, borderColor:'#e0e0e0', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#fafafa' },
-  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#fff', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:2, borderColor:'transparent' },
-  vehBoxActive:{ backgroundColor:'#1a1a2e', borderColor:'#e94560' },
-  uploadBtn:   { flex:1, backgroundColor:'#1a1a2e', borderRadius:8, padding:10, alignItems:'center' },
+  regHeader:   { backgroundColor:'#0F172A', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
+  regTitle:    { color:'#F1F5F9', fontSize:16, fontWeight:'bold' },
+  bigTitle:    { fontSize:26, fontWeight:'bold', color:'#F1F5F9', marginTop:10 },
+  subTitle:    { fontSize:14, color:'#94A3B8', marginTop:6, marginBottom:10 },
+  fieldLabel:  { fontSize:14, fontWeight:'600', color:'#CBD5E1', marginTop:16, marginBottom:8 },
+  input:       { borderWidth:1, borderColor:'#334155', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#1E293B', color:'#F1F5F9' },
+  photoBox:    { borderWidth:2, borderColor:'#334155', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#1E293B' },
+  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#1E293B', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#334155' },
+  vehBoxActive:{ backgroundColor:'#0F172A', borderColor:'#E94560', borderWidth:2 },
+  uploadBtn:   { flex:1, backgroundColor:'#10B981', borderRadius:8, padding:10, alignItems:'center' },
   uploadBtnTxt:{ color:'#fff', fontWeight:'600', fontSize:13 },
-  adviceBox:   { backgroundColor:'#e3f2fd', borderRadius:12, padding:14, marginTop:14, marginBottom:6 },
-  adviceTitle: { fontSize:14, fontWeight:'bold', color:'#1565c0', marginBottom:6 },
-  adviceText:  { fontSize:13, color:'#1976d2', marginTop:2 },
+  adviceBox:   { backgroundColor:'rgba(59,130,246,0.1)', borderRadius:12, padding:14, marginTop:14, marginBottom:6, borderWidth:1, borderColor:'rgba(59,130,246,0.25)' },
+  adviceTitle: { fontSize:14, fontWeight:'bold', color:'#60A5FA', marginBottom:6 },
+  adviceText:  { fontSize:13, color:'#93C5FD', marginTop:2 },
 });
 
 const cs = StyleSheet.create({
   bubble:    { maxWidth:'75%', borderRadius:14, padding:12, marginBottom:8 },
-  mine:      { backgroundColor:'#e94560', alignSelf:'flex-end', borderBottomRightRadius:4 },
-  theirs:    { backgroundColor:'#fff', alignSelf:'flex-start', borderBottomLeftRadius:4, elevation:1 },
-  inputRow:  { flexDirection:'row', alignItems:'center', padding:10, paddingBottom:28, backgroundColor:'#fff', borderTopWidth:1, borderTopColor:'#f0f0f0' },
-  input:     { flex:1, backgroundColor:'#f5f5f5', borderRadius:24, paddingHorizontal:16, paddingVertical:10, fontSize:14, marginRight:8 },
-  send:      { width:44, height:44, borderRadius:22, backgroundColor:'#e94560', alignItems:'center', justifyContent:'center' },
+  mine:      { backgroundColor:'#E94560', alignSelf:'flex-end', borderBottomRightRadius:4 },
+  theirs:    { backgroundColor:'#1E293B', alignSelf:'flex-start', borderBottomLeftRadius:4, elevation:1, borderWidth:1, borderColor:'#334155' },
+  inputRow:  { flexDirection:'row', alignItems:'center', padding:10, paddingBottom:28, backgroundColor:'#0F172A', borderTopWidth:1, borderTopColor:'#1E293B' },
+  input:     { flex:1, backgroundColor:'#1E293B', borderRadius:24, paddingHorizontal:16, paddingVertical:10, fontSize:14, marginRight:8, color:'#F1F5F9', borderWidth:1, borderColor:'#334155' },
+  send:      { width:44, height:44, borderRadius:22, backgroundColor:'#E94560', alignItems:'center', justifyContent:'center' },
 });
