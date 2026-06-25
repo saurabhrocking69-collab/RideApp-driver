@@ -3574,7 +3574,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         appealed:           { color: '#e94560', bg: 'rgba(233,69,96,0.12)',  label: 'APPEALED',          icon: '⚖️' },
         escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'ESCALATED',         icon: '🚨' },
       };
-      const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🚗', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
+      const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🔧', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
       return (
         <View style={s.screen}>
           <SubHeader title="📋 Meri Complaints" />
