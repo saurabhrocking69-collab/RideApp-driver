@@ -3528,7 +3528,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
           </View>
           {[
-            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#E94560', action: async () => { setDrvCmpLoading(true); try { const t = await AsyncStorage.getItem('driverToken'); const r = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${t}` } }); const d = await r.json(); setDrvComplaints(d.complaints||[]); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
+            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#E94560', action: async () => { setDrvCmpLoading(true); try { const r = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`); const d = await r.json(); setDrvComplaints(d.complaints||[]); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
             { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
             { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
             { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#E94560', action: () => Linking.openURL('mailto:driver.support@sppero.com') },
@@ -3630,8 +3630,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <TouchableOpacity key={c.id} onPress={async () => {
                       setDrvCmpLoading(true);
                       try {
-                        const t = await AsyncStorage.getItem('driverToken');
-                        const r = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${t}` } });
+                        const r = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                         const d = await r.json();
                         setDrvCmpDetail(d);
                         setDrSubScreen('complaint-detail');
@@ -3835,17 +3834,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     if (drvCmpDesc.trim().length < 20) return Alert.alert('Description', 'Thoda aur detail chahiye (20+ characters)');
                     setDrvCmpLoading(true);
                     try {
-                      const token = await AsyncStorage.getItem('driverToken');
                       const autoTitle = drvCmpTitle || autoTitleMap[drvCmpType] || drvCmpType.replace(/_/g,' ');
-                      const body: any = { complaint_type: drvCmpType, title: autoTitle, description: drvCmpDesc.trim(), ride_id: drvCmpRideId.trim() };
+                      const body: any = { phone, complaint_type: drvCmpType, title: autoTitle, description: drvCmpDesc.trim(), ride_id: drvCmpRideId.trim() };
                       const res = await fetch(`${API}/api/complaints`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(body),
                       });
                       const data = await res.json();
                       if (data.complaint) {
-                        const lr = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${token}` } });
+                        const lr = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`);
                         const ld = await lr.json();
                         setDrvComplaints(ld.complaints || []);
                         Alert.alert(
@@ -3988,13 +3986,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   onPress={async () => {
                     if (!drvCmpMsg.trim()) return;
                     try {
-                      const token = await AsyncStorage.getItem('driverToken');
                       await fetch(`${API}/api/complaints/${c.id}/messages`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                        body: JSON.stringify({ message: drvCmpMsg.trim() }),
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ phone, message: drvCmpMsg.trim() }),
                       });
                       setDrvCmpMsg('');
-                      const r2 = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${token}` } });
+                      const r2 = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                       setDrvCmpDetail(await r2.json());
                     } catch { Alert.alert('Error', 'Message nahi bheja — retry karo'); }
                   }}
