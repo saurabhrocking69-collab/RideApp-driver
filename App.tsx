@@ -532,6 +532,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [drvCmpMsg, setDrvCmpMsg]           = useState('');
   const [drvCmpLoading, setDrvCmpLoading]   = useState(false);
   const [drvCmpDetail, setDrvCmpDetail]     = useState<any>(null);
+  const [drvCmpStep, setDrvCmpStep]         = useState(1);
+  const [drvCmpRideId, setDrvCmpRideId]     = useState('');
+  const [lastRideId, setLastRideId]         = useState<string>('');
 
 
   // ── Splash + Auto login ────────────────────────
@@ -1516,6 +1519,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setPaymentWaiting(true);
         setEarnings(e => e + parseFloat(rideFare));
         setRides(r => r + 1);
+        setLastRideId(rideId);
         setActiveRide(null);
         setOtpInput(''); setShowChat(false); setUnreadChat(0); setChatMsgs([]);
       } else {
@@ -2696,7 +2700,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 14, fontWeight: '700', color: '#2e7d32' }}>Customer rating submit ho gaya!</Text>
           </View>
         )}
-        <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrSubScreen('complaint-new'); setTripSummary(null); }}
+        <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(tripSummary?.ride_id || lastRideId || ''); setDrvCmpStep(1); setDrSubScreen('complaint-new'); setTripSummary(null); }}
           style={{ backgroundColor: '#fff8f8', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: '#e94560', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <Text style={{ fontSize: 18 }}>⚠️</Text>
           <Text style={{ color: '#e94560', fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
@@ -3560,107 +3564,307 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
     // ─── Driver: My Complaints ───
     if (driverSubScreen === 'complaints') {
-      const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', evidence_requested:'#ff5722', resolved:'#4CAF50', closed:'#9e9e9e', appealed:'#e91e63', escalated:'#f44336' };
+      const statusMeta: any = {
+        open:               { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'OPEN',              icon: '🕐' },
+        under_review:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'UNDER REVIEW',      icon: '🔍' },
+        awaiting_response:  { color: '#a855f7', bg: 'rgba(168,85,247,0.12)', label: 'YOUR REPLY NEEDED', icon: '💬' },
+        evidence_requested: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'EVIDENCE NEEDED',   icon: '📎' },
+        resolved:           { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'RESOLVED',          icon: '✅' },
+        closed:             { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', label: 'CLOSED',           icon: '🔒' },
+        appealed:           { color: '#e94560', bg: 'rgba(233,69,96,0.12)',  label: 'APPEALED',          icon: '⚖️' },
+        escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'ESCALATED',         icon: '🚨' },
+      };
+      const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🚗', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
       return (
         <View style={s.screen}>
-          <SubHeader title="📋 My Complaints" />
-          <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
-            <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrSubScreen('complaint-new'); }}
-              style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>+ Nayi Complaint File Karo</Text>
-            </TouchableOpacity>
-            {drvComplaints.length === 0 && (
-              <View style={{ alignItems: 'center', paddingTop: 40 }}>
-                <Text style={{ fontSize: 40 }}>📭</Text>
-                <Text style={{ fontSize: 15, fontWeight: '700', color: '#1a1a2e', marginTop: 12 }}>Koi complaint nahi</Text>
-                <Text style={{ fontSize: 13, color: '#888', marginTop: 6 }}>Customer issue tha? Complaint file karo</Text>
+          <SubHeader title="📋 Meri Complaints" />
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
+            {/* CTA */}
+            <TouchableOpacity
+              onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(lastRideId || ''); setDrvCmpStep(1); setDrSubScreen('complaint-new'); }}
+              style={{ backgroundColor: '#e94560', borderRadius: 16, padding: 16, marginBottom: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, elevation: 4, shadowColor: '#e94560', shadowOpacity: 0.3, shadowRadius: 8 }}>
+              <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>+</Text>
               </View>
-            )}
-            {drvComplaints.map((c: any) => (
-              <TouchableOpacity key={c.id} onPress={async () => {
-                setDrvCmpLoading(true);
-                try { const t = await AsyncStorage.getItem('driverToken'); const r = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${t}` } }); const d = await r.json(); setDrvCmpDetail(d); setDrSubScreen('complaint-detail'); } catch{}
-                setDrvCmpLoading(false);
-              }} style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 12, elevation: 2 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', flex: 1, marginRight: 8 }}>{c.title}</Text>
-                  <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{c.status.replace('_',' ').toUpperCase()}</Text>
-                  </View>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Nayi Complaint File Karo</Text>
+            </TouchableOpacity>
+
+            {/* Quick categories */}
+            {drvComplaints.length === 0 && (
+              <>
+                <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24 }}>
+                  <Text style={{ fontSize: 48 }}>📭</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#1a1a2e', marginTop: 14 }}>Koi complaint nahi abhi</Text>
+                  <Text style={{ fontSize: 13, color: '#6b7280', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Koi issue tha? Hum 24-72 ghante mein{'\n'}resolve karte hain</Text>
                 </View>
-                <Text style={{ fontSize: 12, color: '#888', marginTop: 4 }}>{c.complaint_type?.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN')}</Text>
-                {c.resolution && <Text style={{ fontSize: 12, color: '#4CAF50', marginTop: 4, fontWeight: '600' }}>✅ {c.resolution.replace(/_/g,' ')}</Text>}
-              </TouchableOpacity>
-            ))}
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 1, marginBottom: 10, marginLeft: 2 }}>COMMON ISSUES</Text>
+                {[
+                  { id: 'customer_no_show', icon: '🚫', label: 'Customer No Show', sla: '2-4h' },
+                  { id: 'abusive_behavior', icon: '😠', label: 'Abusive Customer', sla: '2-4h' },
+                  { id: 'payment_issue', icon: '💸', label: 'Payment Refused', sla: '24h' },
+                ].map(q => (
+                  <TouchableOpacity key={q.id}
+                    onPress={() => { setDrvCmpType(q.id); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(lastRideId || ''); setDrvCmpStep(2); setDrSubScreen('complaint-new'); }}
+                    style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: '#f0f0f0', elevation: 2 }}>
+                    <View style={{ width: 42, height: 42, borderRadius: 21, backgroundColor: 'rgba(233,69,96,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Text style={{ fontSize: 20 }}>{q.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e' }}>{q.label}</Text>
+                      <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>Usually resolved in {q.sla}</Text>
+                    </View>
+                    <Text style={{ color: '#e94560', fontSize: 16 }}>›</Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* Complaints list */}
+            {drvComplaints.length > 0 && (
+              <>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 1, marginBottom: 10, marginLeft: 2 }}>COMPLAINTS ({drvComplaints.length})</Text>
+                {drvComplaints.map((c: any) => {
+                  const sm = statusMeta[c.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c.status.replace(/_/g,' ').toUpperCase(), icon: '📋' };
+                  const needsAction = ['awaiting_response', 'evidence_requested'].includes(c.status);
+                  return (
+                    <TouchableOpacity key={c.id} onPress={async () => {
+                      setDrvCmpLoading(true);
+                      try {
+                        const t = await AsyncStorage.getItem('driverToken');
+                        const r = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${t}` } });
+                        const d = await r.json();
+                        setDrvCmpDetail(d);
+                        setDrSubScreen('complaint-detail');
+                      } catch {}
+                      setDrvCmpLoading(false);
+                    }} style={{ backgroundColor: '#fff', borderRadius: 16, marginBottom: 10, overflow: 'hidden', elevation: 3, borderWidth: needsAction ? 2 : 1, borderColor: needsAction ? '#e94560' : '#f0f0f0' }}>
+                      {needsAction && (
+                        <View style={{ backgroundColor: '#e94560', paddingHorizontal: 14, paddingVertical: 5, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                          <Text style={{ fontSize: 10, color: '#fff', fontWeight: '900', letterSpacing: 0.5 }}>ACTION REQUIRED</Text>
+                        </View>
+                      )}
+                      <View style={{ padding: 14 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: sm.bg, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                            <Text style={{ fontSize: 16 }}>{typeEmoji[c.complaint_type] || '📋'}</Text>
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#1a1a2e', lineHeight: 18 }} numberOfLines={2}>{c.title}</Text>
+                            <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
+                              {c.complaint_type?.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
+                            </Text>
+                          </View>
+                          <View style={{ backgroundColor: sm.bg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, marginLeft: 6 }}>
+                            <Text style={{ fontSize: 9, color: sm.color, fontWeight: '900' }}>{sm.icon} {sm.label}</Text>
+                          </View>
+                        </View>
+                        {c.resolution && (
+                          <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
+                            <Text style={{ fontSize: 11, color: '#16a34a', fontWeight: '700' }}>✅ {c.resolution.replace(/_/g,' ')}</Text>
+                          </View>
+                        )}
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </>
+            )}
           </ScrollView>
           <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
         </View>
       );
     }
 
-    // ─── Driver: New Complaint ───
+    // ─── Driver: New Complaint (2-step) ───
     if (driverSubScreen === 'complaint-new') {
       const driverTypes = [
-        { id: 'customer_no_show', label: '🚫 Customer No Show', desc: 'Customer pickup pe nahi aaya' },
-        { id: 'property_damage', label: '🚗 Vehicle Damage', desc: 'Customer ne vehicle ko damage kiya' },
-        { id: 'abusive_behavior', label: '😠 Abusive Behavior', desc: 'Customer ne gali/dhamki di' },
-        { id: 'false_accusation', label: '⚖️ False Accusation', desc: 'Customer ne galat complaint ki' },
-        { id: 'wrong_location', label: '📍 Wrong Location', desc: 'Galat pickup location diya' },
-        { id: 'payment_issue', label: '💸 Payment Issue', desc: 'Payment karne se mana kiya' },
-        { id: 'other', label: '📝 Other', desc: 'Koi aur problem' },
+        { id: 'customer_no_show', icon: '🚫', label: 'Customer No Show',    desc: 'Customer pickup pe nahi aaya ya bahut der se aaya', sla: '2-4h',  urgent: true  },
+        { id: 'abusive_behavior', icon: '😠', label: 'Abusive Behavior',    desc: 'Customer ne gali di, dhamki di, ya haath utha',       sla: '2-4h',  urgent: true  },
+        { id: 'payment_issue',    icon: '💸', label: 'Payment Refused',     desc: 'Customer ne payment karne se mana kiya',             sla: '24h',   urgent: false },
+        { id: 'property_damage',  icon: '🔧', label: 'Vehicle Damage',      desc: 'Customer ne gaadi ya samaan ko damage kiya',         sla: '72h',   urgent: false },
+        { id: 'false_accusation', icon: '⚖️', label: 'False Accusation',    desc: 'Customer ne mujhpe galat complaint ki hai',          sla: '48h',   urgent: false },
+        { id: 'wrong_location',   icon: '📍', label: 'Wrong Location',      desc: 'Customer ne galat pickup/drop location diya',        sla: '48h',   urgent: false },
+        { id: 'other',            icon: '📝', label: 'Other Issue',         desc: 'Koi aur problem jo upar nahi hai',                   sla: '72h',   urgent: false },
       ];
+      const selectedType = driverTypes.find(t => t.id === drvCmpType);
+      const autoTitleMap: any = {
+        customer_no_show: 'Customer pickup pe nahi aaya',
+        abusive_behavior: 'Customer ne abusive behavior kiya',
+        payment_issue: 'Customer ne payment refuse kiya',
+        property_damage: 'Customer ne vehicle damage kiya',
+        false_accusation: 'Customer ne galat complaint ki',
+        wrong_location: 'Customer ne wrong location diya',
+      };
       return (
         <View style={s.screen}>
-          <SubHeader title="⚠️ File Complaint" />
-          <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 40 }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 12 }}>Issue type select karo</Text>
-            {driverTypes.map(t => (
-              <TouchableOpacity key={t.id} onPress={() => setDrvCmpType(t.id)}
-                style={{ backgroundColor: drvCmpType === t.id ? '#1a1a2e' : '#fff', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 2, borderColor: drvCmpType === t.id ? '#e94560' : '#f0f0f0', flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16, marginRight: 10 }}>{t.label.split(' ')[0]}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '700', fontSize: 13, color: drvCmpType === t.id ? '#fff' : '#1a1a2e' }}>{t.label.substring(t.label.indexOf(' ')+1)}</Text>
-                  <Text style={{ fontSize: 11, color: drvCmpType === t.id ? '#aaa' : '#888', marginTop: 2 }}>{t.desc}</Text>
-                </View>
-                {drvCmpType === t.id && <Text style={{ color: '#e94560', fontSize: 18 }}>✓</Text>}
+          <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <TouchableOpacity onPress={() => drvCmpStep === 1 ? setDrSubScreen('complaints') : setDrvCmpStep(1)}
+                style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                <Text style={{ color: '#fff', fontSize: 18 }}>‹</Text>
               </TouchableOpacity>
-            ))}
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 14, marginBottom: 8 }}>Title</Text>
-            <TextInput value={drvCmpTitle} onChangeText={setDrvCmpTitle} placeholder="Complaint ka short title..."
-              style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0', fontSize: 14, marginBottom: 14 }} maxLength={200} />
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 8 }}>Details</Text>
-            <TextInput value={drvCmpDesc} onChangeText={setDrvCmpDesc} placeholder="Kya hua — puri detail mein batao..."
-              multiline style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e0e0e0', height: 110, textAlignVertical: 'top', fontSize: 13, marginBottom: 20 }} maxLength={2000} />
-            <TouchableOpacity
-              onPress={async () => {
-                if (!drvCmpType) return Alert.alert('Issue Type', 'Complaint type select karo');
-                if (!drvCmpTitle.trim()) return Alert.alert('Title', 'Title daalo');
-                if (drvCmpDesc.trim().length < 20) return Alert.alert('Description', 'Kam se kam 20 characters likho');
-                setDrvCmpLoading(true);
-                try {
-                  const token = await AsyncStorage.getItem('driverToken');
-                  const res = await fetch(`${API}/api/complaints`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                    body: JSON.stringify({ complaint_type: drvCmpType, title: drvCmpTitle.trim(), description: drvCmpDesc.trim() }),
-                  });
-                  const data = await res.json();
-                  if (data.complaint) {
-                    const t = await AsyncStorage.getItem('driverToken');
-                    const lr = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${t}` } });
-                    const ld = await lr.json();
-                    setDrvComplaints(ld.complaints || []);
-                    Alert.alert('✅ Submitted', 'Complaint submit ho gayi. 24-48 ghante mein review hogi.', [{ text: 'OK', onPress: () => setDrSubScreen('complaints') }]);
-                  } else Alert.alert('Error', data.error || 'Submit failed');
-                } catch { Alert.alert('Error', 'Network error'); }
-                setDrvCmpLoading(false);
-              }}
-              style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', opacity: drvCmpLoading ? 0.6 : 1 }}
-              disabled={drvCmpLoading}>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{drvCmpLoading ? 'Submitting...' : '📤 Submit Complaint'}</Text>
-            </TouchableOpacity>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 17, flex: 1 }}>
+                {drvCmpStep === 1 ? '⚠️ Issue Type Chunno' : '📝 Details Bharein'}
+              </Text>
+              <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12 }}>Step {drvCmpStep}/2</Text>
+            </View>
+            {/* Step indicator */}
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: '#e94560' }} />
+              <View style={{ flex: 1, height: 3, borderRadius: 2, backgroundColor: drvCmpStep === 2 ? '#e94560' : 'rgba(255,255,255,0.15)' }} />
+            </View>
+          </View>
+
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
+            {drvCmpStep === 1 && (
+              <>
+                <Text style={{ fontSize: 13, color: '#6b7280', marginBottom: 14, lineHeight: 18 }}>
+                  Sahi category se complaint jaldi resolve hoti hai
+                </Text>
+                {driverTypes.map(t => (
+                  <TouchableOpacity key={t.id} onPress={() => { setDrvCmpType(t.id); if (!drvCmpTitle) setDrvCmpTitle(autoTitleMap[t.id] || ''); }}
+                    style={{
+                      backgroundColor: drvCmpType === t.id ? '#1a1a2e' : '#fff',
+                      borderRadius: 14, padding: 14, marginBottom: 8,
+                      borderWidth: 2, borderColor: drvCmpType === t.id ? '#e94560' : '#f3f4f6',
+                      flexDirection: 'row', alignItems: 'center',
+                      elevation: drvCmpType === t.id ? 4 : 2,
+                    }}>
+                    <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: drvCmpType === t.id ? 'rgba(233,69,96,0.2)' : 'rgba(233,69,96,0.07)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
+                      <Text style={{ fontSize: 20 }}>{t.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 7 }}>
+                        <Text style={{ fontWeight: '800', fontSize: 13, color: drvCmpType === t.id ? '#fff' : '#1a1a2e' }}>{t.label}</Text>
+                        {t.urgent && (
+                          <View style={{ backgroundColor: 'rgba(239,68,68,0.15)', borderRadius: 4, paddingHorizontal: 5, paddingVertical: 1 }}>
+                            <Text style={{ fontSize: 9, color: '#ef4444', fontWeight: '800' }}>URGENT</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={{ fontSize: 11, color: drvCmpType === t.id ? 'rgba(255,255,255,0.6)' : '#9ca3af', marginTop: 2, lineHeight: 15 }}>{t.desc}</Text>
+                      <Text style={{ fontSize: 10, color: drvCmpType === t.id ? '#e94560' : '#d1d5db', marginTop: 3, fontWeight: '700' }}>⏱ SLA: {t.sla}</Text>
+                    </View>
+                    {drvCmpType === t.id && (
+                      <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: '#e94560', alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>✓</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity
+                  onPress={() => { if (!drvCmpType) return Alert.alert('Issue Type', 'Pehle ek category chunen'); setDrvCmpStep(2); }}
+                  style={{ backgroundColor: '#e94560', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8, opacity: drvCmpType ? 1 : 0.5 }}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Aage Badhein →</Text>
+                </TouchableOpacity>
+              </>
+            )}
+
+            {drvCmpStep === 2 && selectedType && (
+              <>
+                {/* Selected type recap */}
+                <View style={{ backgroundColor: '#1a1a2e', borderRadius: 14, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 24 }}>{selectedType.icon}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{selectedType.label}</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 2 }}>SLA: {selectedType.sla} · {selectedType.urgent ? 'Priority case' : 'Standard review'}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => setDrvCmpStep(1)}>
+                    <Text style={{ color: '#e94560', fontSize: 12, fontWeight: '700' }}>Badlo</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Ride link (required) */}
+                <View style={{ backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#f3f4f6' }}>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#374151', marginBottom: 4 }}>🚗 Ride ID (Zaroori)</Text>
+                  <Text style={{ fontSize: 10, color: '#9ca3af', marginBottom: 8 }}>Complaint kisi ride ke baare mein honi chahiye</Text>
+                  {lastRideId && drvCmpRideId !== lastRideId && (
+                    <TouchableOpacity onPress={() => setDrvCmpRideId(lastRideId)}
+                      style={{ backgroundColor: 'rgba(233,69,96,0.07)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,69,96,0.2)' }}>
+                      <Text style={{ fontSize: 12, color: '#e94560', fontWeight: '700' }}>⚡ Last ride use karo</Text>
+                      <Text style={{ fontSize: 11, color: '#9ca3af' }}>#{lastRideId.slice(-8)}</Text>
+                    </TouchableOpacity>
+                  )}
+                  <TextInput
+                    value={drvCmpRideId}
+                    onChangeText={setDrvCmpRideId}
+                    placeholder="Ride ID daalo..."
+                    style={{ backgroundColor: '#f9fafb', borderRadius: 10, padding: 10, borderWidth: 1.5, borderColor: drvCmpRideId ? '#22c55e' : '#e5e7eb', fontSize: 13, color: '#1a1a2e' }}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+                  {drvCmpRideId ? (
+                    <Text style={{ fontSize: 10, color: '#22c55e', marginTop: 4, fontWeight: '600' }}>✓ Ride #{drvCmpRideId.slice(-8)} linked</Text>
+                  ) : (
+                    <Text style={{ fontSize: 10, color: '#f59e0b', marginTop: 4 }}>⚠️ Ride ID zaroori hai</Text>
+                  )}
+                </View>
+
+                {/* Description */}
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#374151', marginBottom: 6 }}>📋 Kya Hua? (Zaroori)</Text>
+                <TextInput
+                  value={drvCmpDesc}
+                  onChangeText={setDrvCmpDesc}
+                  placeholder={`Puri baat batao — kya hua, kab hua, customer ne kya kiya...\nKam se kam 20 characters`}
+                  multiline
+                  style={{ backgroundColor: '#fff', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: drvCmpDesc.length >= 20 ? '#22c55e' : '#e5e7eb', height: 120, textAlignVertical: 'top', fontSize: 13, marginBottom: 16, color: '#1a1a2e', lineHeight: 18 }}
+                  maxLength={2000}
+                  placeholderTextColor="#9ca3af"
+                />
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -12, marginBottom: 14, paddingHorizontal: 2 }}>
+                  <Text style={{ fontSize: 10, color: drvCmpDesc.length >= 20 ? '#22c55e' : '#9ca3af', fontWeight: '600' }}>
+                    {drvCmpDesc.length >= 20 ? '✓ Enough detail' : `${20 - drvCmpDesc.length} more chars needed`}
+                  </Text>
+                  <Text style={{ fontSize: 10, color: '#d1d5db' }}>{drvCmpDesc.length}/2000</Text>
+                </View>
+
+                {/* SLA info */}
+                <View style={{ backgroundColor: 'rgba(233,69,96,0.07)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(233,69,96,0.15)', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
+                  <Text style={{ fontSize: 16 }}>ℹ️</Text>
+                  <Text style={{ fontSize: 11, color: '#6b7280', flex: 1, lineHeight: 16 }}>
+                    <Text style={{ fontWeight: '700', color: '#e94560' }}>{selectedType.label}</Text>
+                    {' '}complaints usually resolve in <Text style={{ fontWeight: '700' }}>{selectedType.sla}</Text>.
+                    Hum aapke saath email/app se contact karenge.
+                  </Text>
+                </View>
+
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!drvCmpRideId.trim()) return Alert.alert('Ride ID', 'Ride ID zaroori hai — kis ride ke baare mein complaint hai?');
+                    if (drvCmpDesc.trim().length < 20) return Alert.alert('Description', 'Thoda aur detail chahiye (20+ characters)');
+                    setDrvCmpLoading(true);
+                    try {
+                      const token = await AsyncStorage.getItem('driverToken');
+                      const autoTitle = drvCmpTitle || autoTitleMap[drvCmpType] || drvCmpType.replace(/_/g,' ');
+                      const body: any = { complaint_type: drvCmpType, title: autoTitle, description: drvCmpDesc.trim(), ride_id: drvCmpRideId.trim() };
+                      const res = await fetch(`${API}/api/complaints`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify(body),
+                      });
+                      const data = await res.json();
+                      if (data.complaint) {
+                        const lr = await fetch(`${API}/api/complaints`, { headers: { Authorization: `Bearer ${token}` } });
+                        const ld = await lr.json();
+                        setDrvComplaints(ld.complaints || []);
+                        Alert.alert(
+                          '✅ Complaint Submit Ho Gayi',
+                          `ID: #${data.complaint.id?.slice(-8) || 'N/A'}\n\nAapki complaint receive hui. Team ${selectedType.sla} mein review karegi.`,
+                          [{ text: 'Theek Hai', onPress: () => setDrSubScreen('complaints') }]
+                        );
+                      } else Alert.alert('Error', data.error || 'Submit failed — retry karo');
+                    } catch { Alert.alert('Error', 'Network error — internet check karo'); }
+                    setDrvCmpLoading(false);
+                  }}
+                  style={{ backgroundColor: drvCmpLoading ? '#9ca3af' : '#e94560', borderRadius: 16, padding: 18, alignItems: 'center', elevation: 4, shadowColor: '#e94560', shadowOpacity: 0.3, shadowRadius: 8 }}
+                  disabled={drvCmpLoading}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>
+                    {drvCmpLoading ? '⏳ Submit Ho Raha Hai...' : '📤 Complaint Submit Karo'}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </ScrollView>
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} />
         </View>
       );
     }
@@ -3670,69 +3874,150 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const c = drvCmpDetail.complaint;
       const msgs = drvCmpDetail.messages || [];
       const timeline = drvCmpDetail.timeline || [];
-      const statusColor: any = { open:'#ff9800', under_review:'#2196F3', awaiting_response:'#9c27b0', resolved:'#4CAF50', closed:'#9e9e9e', escalated:'#f44336' };
+      const statusMeta: any = {
+        open:               { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'Open — Under Triage',      icon: '🕐' },
+        under_review:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',   label: 'Being Reviewed',           icon: '🔍' },
+        awaiting_response:  { color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   label: 'Your Reply Needed',        icon: '💬' },
+        evidence_requested: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    label: 'Evidence Requested',       icon: '📎' },
+        resolved:           { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',    label: 'Resolved',                 icon: '✅' },
+        closed:             { color: '#6b7280', bg: 'rgba(107,114,128,0.1)',  label: 'Closed',                   icon: '🔒' },
+        appealed:           { color: '#e94560', bg: 'rgba(233,69,96,0.1)',    label: 'Under Appeal',             icon: '⚖️' },
+        escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    label: 'Escalated to Senior Team', icon: '🚨' },
+      };
+      const sm = statusMeta[c?.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c?.status, icon: '📋' };
+      const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🔧', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
       const isClosed = ['resolved','closed'].includes(c?.status);
       return (
         <View style={s.screen}>
-          <SubHeader title="Complaint Detail" />
+          <View style={{ backgroundColor: '#1a1a2e', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <TouchableOpacity onPress={() => setDrSubScreen('complaints')}
+              style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 18 }}>‹</Text>
+            </TouchableOpacity>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 17, flex: 1 }}>Complaint Detail</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10 }}>#{c?.id?.slice(-8)}</Text>
+          </View>
+
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
-            <View style={{ backgroundColor: statusColor[c.status] || '#999', borderRadius: 12, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Text style={{ fontSize: 24 }}>{c.status === 'resolved' ? '✅' : '🔍'}</Text>
-              <View>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{c.status?.replace(/_/g,' ').toUpperCase()}</Text>
-                {c.assigned_admin && <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 12 }}>Assigned: {c.assigned_admin}</Text>}
+            {/* Status banner */}
+            <View style={{ backgroundColor: sm.bg, borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: sm.color + '40', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: sm.color + '20', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 22 }}>{sm.icon}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: sm.color, fontWeight: '900', fontSize: 15 }}>{sm.label}</Text>
+                {c.assigned_admin && <Text style={{ color: '#6b7280', fontSize: 11, marginTop: 2 }}>Reviewed by: {c.assigned_admin}</Text>}
               </View>
             </View>
-            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
-              <Text style={{ fontSize: 17, fontWeight: '800', color: '#1a1a2e' }}>{c.title}</Text>
-              <Text style={{ fontSize: 12, color: '#e94560', fontWeight: '600', marginTop: 4 }}>{c.complaint_type?.replace(/_/g,' ')}</Text>
-              <Text style={{ fontSize: 13, color: '#555', marginTop: 10, lineHeight: 20 }}>{c.description}</Text>
+
+            {/* Complaint summary card */}
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(233,69,96,0.08)', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ fontSize: 18 }}>{typeEmoji[c.complaint_type] || '📋'}</Text>
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 16, fontWeight: '900', color: '#1a1a2e' }}>{c.title}</Text>
+                  <Text style={{ fontSize: 11, color: '#e94560', fontWeight: '700', marginTop: 2 }}>{c.complaint_type?.replace(/_/g,' ')}</Text>
+                </View>
+              </View>
+              <View style={{ height: 1, backgroundColor: '#f3f4f6', marginBottom: 12 }} />
+              <Text style={{ fontSize: 13, color: '#374151', lineHeight: 20 }}>{c.description}</Text>
+              {c.ride_id && (
+                <View style={{ marginTop: 10, backgroundColor: '#f9fafb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 11, color: '#6b7280' }}>🚗 Linked ride: <Text style={{ fontWeight: '700', color: '#374151' }}>#{c.ride_id.slice(-8)}</Text></Text>
+                </View>
+              )}
             </View>
+
+            {/* Resolution */}
             {c.resolution && (
-              <View style={{ backgroundColor: '#e8f5e9', borderRadius: 14, padding: 16, marginBottom: 14 }}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: '#2e7d32' }}>✅ Resolution: {c.resolution?.replace(/_/g,' ')}</Text>
-                {c.resolution_note && <Text style={{ fontSize: 13, color: '#2e7d32', marginTop: 6 }}>{c.resolution_note}</Text>}
+              <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.25)' }}>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: '#16a34a', marginBottom: 6 }}>✅ Resolution</Text>
+                <Text style={{ fontSize: 13, color: '#15803d', fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
+                {c.resolution_note && <Text style={{ fontSize: 13, color: '#374151', marginTop: 8, lineHeight: 18 }}>{c.resolution_note}</Text>}
               </View>
             )}
-            <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>💬 Messages</Text>
-              {msgs.length === 0 && <Text style={{ color: '#aaa', textAlign: 'center', fontSize: 12, paddingVertical: 10 }}>Koi message nahi</Text>}
-              {msgs.map((m: any, i: number) => (
-                <View key={i} style={{ marginBottom: 12, padding: 12, backgroundColor: m.sender_role === 'admin' ? '#e3f2fd' : '#fff8e1', borderRadius: 10 }}>
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#1565c0', marginBottom: 4 }}>{m.sender_name} · {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
-                  <Text style={{ fontSize: 13, color: '#333' }}>{m.message}</Text>
+
+            {/* Messages thread */}
+            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#1a1a2e', marginBottom: 12 }}>💬 Messages</Text>
+              {msgs.length === 0 && (
+                <View style={{ alignItems: 'center', paddingVertical: 16 }}>
+                  <Text style={{ fontSize: 28 }}>💬</Text>
+                  <Text style={{ color: '#9ca3af', fontSize: 12, marginTop: 6 }}>Team abhi review kar rahi hai</Text>
                 </View>
-              ))}
+              )}
+              {msgs.map((m: any, i: number) => {
+                const isAdmin = m.sender_role === 'admin';
+                return (
+                  <View key={i} style={{ marginBottom: 10, alignItems: isAdmin ? 'flex-start' : 'flex-end' }}>
+                    <View style={{
+                      maxWidth: '85%', padding: 12, borderRadius: 14,
+                      backgroundColor: isAdmin ? '#eff6ff' : '#fff1f2',
+                      borderWidth: 1, borderColor: isAdmin ? '#bfdbfe' : '#fecdd3',
+                      borderBottomLeftRadius: isAdmin ? 4 : 14, borderBottomRightRadius: isAdmin ? 14 : 4,
+                    }}>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: isAdmin ? '#1d4ed8' : '#e11d48', marginBottom: 4 }}>
+                        {isAdmin ? '👤 Sppero Support' : '🚗 You'}
+                      </Text>
+                      <Text style={{ fontSize: 13, color: '#1a1a2e', lineHeight: 18 }}>{m.message}</Text>
+                      <Text style={{ fontSize: 9, color: '#9ca3af', marginTop: 4, textAlign: isAdmin ? 'left' : 'right' }}>
+                        {new Date(m.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
             </View>
+
+            {/* Reply box */}
             {!isClosed && (
-              <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
-                <TextInput value={drvCmpMsg} onChangeText={setDrvCmpMsg} placeholder="Reply karein..."
-                  multiline style={{ backgroundColor: '#f8f8f8', borderRadius: 10, padding: 12, height: 80, textAlignVertical: 'top', fontSize: 13, marginBottom: 10 }} />
-                <TouchableOpacity onPress={async () => {
-                  if (!drvCmpMsg.trim()) return;
-                  try {
-                    const token = await AsyncStorage.getItem('driverToken');
-                    await fetch(`${API}/api/complaints/${c.id}/messages`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ message: drvCmpMsg.trim() }) });
-                    setDrvCmpMsg('');
-                    const r2 = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${token}` } });
-                    setDrvCmpDetail(await r2.json());
-                  } catch { Alert.alert('Error', 'Message nahi bheja'); }
-                }} style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: '#fff', fontWeight: '700' }}>📤 Bhejo</Text>
+              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#6b7280', marginBottom: 8 }}>ADD REPLY</Text>
+                <TextInput
+                  value={drvCmpMsg}
+                  onChangeText={setDrvCmpMsg}
+                  placeholder="Aur kuch batana hai? Admin ko reply karein..."
+                  multiline
+                  style={{ backgroundColor: '#f9fafb', borderRadius: 12, padding: 12, height: 80, textAlignVertical: 'top', fontSize: 13, marginBottom: 10, color: '#1a1a2e', borderWidth: 1, borderColor: '#e5e7eb', lineHeight: 18 }}
+                  placeholderTextColor="#9ca3af"
+                />
+                <TouchableOpacity
+                  onPress={async () => {
+                    if (!drvCmpMsg.trim()) return;
+                    try {
+                      const token = await AsyncStorage.getItem('driverToken');
+                      await fetch(`${API}/api/complaints/${c.id}/messages`, {
+                        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                        body: JSON.stringify({ message: drvCmpMsg.trim() }),
+                      });
+                      setDrvCmpMsg('');
+                      const r2 = await fetch(`${API}/api/complaints/${c.id}`, { headers: { Authorization: `Bearer ${token}` } });
+                      setDrvCmpDetail(await r2.json());
+                    } catch { Alert.alert('Error', 'Message nahi bheja — retry karo'); }
+                  }}
+                  style={{ backgroundColor: '#e94560', borderRadius: 12, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 2 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>📤 Bhejo</Text>
                 </TouchableOpacity>
               </View>
             )}
+
+            {/* Timeline */}
             {timeline.length > 0 && (
-              <View style={{ backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 14, elevation: 2 }}>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginBottom: 10 }}>📅 Timeline</Text>
+              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: '#f3f4f6' }}>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#1a1a2e', marginBottom: 14 }}>📅 Timeline</Text>
                 {timeline.map((t: any, i: number) => (
-                  <View key={i} style={{ flexDirection: 'row', marginBottom: 10 }}>
+                  <View key={i} style={{ flexDirection: 'row', marginBottom: i < timeline.length - 1 ? 12 : 0 }}>
                     <View style={{ width: 28, alignItems: 'center' }}>
-                      <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#e94560', marginTop: 3 }} />
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#e94560', marginTop: 2 }} />
+                      {i < timeline.length - 1 && <View style={{ width: 2, flex: 1, backgroundColor: '#f3f4f6', marginTop: 4 }} />}
                     </View>
-                    <View style={{ flex: 1, paddingLeft: 10 }}>
-                      <Text style={{ fontSize: 12, fontWeight: '700', color: '#1a1a2e' }}>{t.description}</Text>
-                      <Text style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
+                    <View style={{ flex: 1, paddingLeft: 10, paddingBottom: i < timeline.length - 1 ? 8 : 0 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e', lineHeight: 18 }}>{t.description}</Text>
+                      <Text style={{ fontSize: 10, color: '#9ca3af', marginTop: 2 }}>
+                        {new Date(t.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                      </Text>
                     </View>
                   </View>
                 ))}
