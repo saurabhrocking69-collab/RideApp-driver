@@ -1,3 +1,12 @@
+import * as Sentry from '@sentry/react-native';
+
+Sentry.init({
+  dsn: 'https://4367c95061c05f0f9a5768bffdd05dec@o4511631997796352.ingest.us.sentry.io/4511632039804933',
+  environment: 'production',
+  tracesSampleRate: 0.1,
+  enableNativeFramesTracking: true,
+});
+
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image, Alert,
@@ -400,7 +409,7 @@ async function stopBgLocation(): Promise<void> {
   } catch (_e) {}
 }
 
-export default function App() {
+function App() {
   const [screen, setScreen]         = useState<Screen>('splash');
   const splashLogo  = useRef(new Animated.Value(0)).current;
   const splashScale = useRef(new Animated.Value(0.3)).current;
@@ -5013,6 +5022,8 @@ const rs = StyleSheet.create({
   adviceTitle: { fontSize:14, fontWeight:'bold', color:'#60A5FA', marginBottom:6 },
   adviceText:  { fontSize:13, color:'#93C5FD', marginTop:2 },
 });
+
+export default Sentry.wrap(App);
 
 const cs = StyleSheet.create({
   bubble:    { maxWidth:'75%', borderRadius:14, padding:12, marginBottom:8 },
