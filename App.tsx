@@ -1,4 +1,3 @@
-import * as Sentry from '@sentry/react-native';
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image, Alert,
@@ -15,11 +14,6 @@ import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
 
-Sentry.init({
-  dsn: 'https://4367c95061c05f0f9a5768bffdd05dec@o4511631997796352.ingest.us.sentry.io/4511632039804933',
-  environment: 'production',
-  tracesSampleRate: 0.1,
-});
 // Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
 // evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
 // registered yet. The try/catch prevents this from killing the app on startup.
@@ -5021,7 +5015,7 @@ const rs = StyleSheet.create({
   adviceText:  { fontSize:13, color:'#93C5FD', marginTop:2 },
 });
 
-export default Sentry.wrap(App);
+export default App;
 
 const cs = StyleSheet.create({
   bubble:    { maxWidth:'75%', borderRadius:14, padding:12, marginBottom:8 },
