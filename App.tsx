@@ -3969,6 +3969,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const sm = statusMeta[c?.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c?.status, icon: '📋' };
       const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🔧', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
       const isClosed = ['resolved','closed'].includes(c?.status);
+      const [drvEvidenceUploading, setDrvEvidenceUploading] = React.useState(false);
+      const uploadDrvEvidence = async () => {
+        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!perm.granted) { Alert.alert('Permission', 'Gallery access chahiye'); return; }
+        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, base64: true, quality: 0.6 });
+        if (result.canceled || !result.assets?.[0]) return;
+        const dataUri = `data:image/jpeg;base64,${result.assets[0].base64}`;
+        setDrvEvidenceUploading(true);
+        try {
+          const r = await fetch(`${API}/api/complaints/${c.id}/evidence`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, image: dataUri, caption: 'Driver evidence' }),
+          });
+          const data = await r.json();
+          if (data.url) {
+            const r2 = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
+            setDrvCmpDetail(await r2.json());
+            Alert.alert('✅ Uploaded', 'Evidence submit ho gaya!');
+          } else Alert.alert('Error', data.error || 'Upload fail hua');
+        } catch { Alert.alert('Error', 'Upload fail hua'); }
+        setDrvEvidenceUploading(false);
+      };
       return (
         <View style={s.screen}>
           <View style={{ backgroundColor: '#FFFFFF', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
@@ -3992,6 +4014,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
             </View>
 
+            {c.status === 'evidence_requested' && (
+              <View style={{ backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#FB923C', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
+                <Text style={{ fontSize: 24 }}>📎</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#EA580C', marginBottom: 4 }}>Admin ne Proof Manga Hai!</Text>
+                  <Text style={{ fontSize: 12, color: '#9A3412', lineHeight: 18 }}>Screenshot ya photo upload karo jo aapki baat prove kare</Text>
+                  <TouchableOpacity onPress={uploadDrvEvidence} disabled={drvEvidenceUploading}
+                    style={{ backgroundColor: '#EA580C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignItems: 'center', opacity: drvEvidenceUploading ? 0.6 : 1 }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{drvEvidenceUploading ? '⏳ Uploading...' : '📸 Photo Upload Karo'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+
             {/* Complaint summary card */}
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
@@ -4003,8 +4039,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ fontSize: 11, color: '#E91E63', fontWeight: '700', marginTop: 2 }}>{c.complaint_type?.replace(/_/g,' ')}</Text>
                 </View>
               </View>
-              <View style={{ height: 1, backgroundColor: '#334155', marginBottom: 12 }} />
-              <Text style={{ fontSize: 13, color: '#CBD5E1', lineHeight: 20 }}>{c.description}</Text>
+              <View style={{ height: 1, backgroundColor: '#E2E8F0', marginBottom: 12 }} />
+              <Text style={{ fontSize: 13, color: '#64748B', lineHeight: 20 }}>{c.description}</Text>
               {c.ride_id && (
                 <View style={{ marginTop: 10, backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
                   <Text style={{ fontSize: 11, color: '#94A3B8' }}>🚗 Linked ride: <Text style={{ fontWeight: '700', color: '#0F172A' }}>#{c.ride_id.slice(-8)}</Text></Text>
@@ -4016,8 +4052,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {c.resolution && (
               <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.25)' }}>
                 <Text style={{ fontSize: 14, fontWeight: '900', color: '#10B981', marginBottom: 6 }}>✅ Resolution</Text>
-                <Text style={{ fontSize: 13, color: '#6EE7B7', fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
-                {c.resolution_note && <Text style={{ fontSize: 13, color: '#CBD5E1', marginTop: 8, lineHeight: 18 }}>{c.resolution_note}</Text>}
+                <Text style={{ fontSize: 13, color: '#16A34A', fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
+                {c.resolution_note && <Text style={{ fontSize: 13, color: '#64748B', marginTop: 8, lineHeight: 18 }}>{c.resolution_note}</Text>}
+                {(parseFloat(c.refund_amount||0) > 0) && (
+                  <View style={{ marginTop: 10, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(22,163,74,0.3)' }}>
+                    <Text style={{ fontSize: 16 }}>💰</Text>
+                    <View>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: '#16A34A' }}>₹{parseFloat(c.refund_amount).toFixed(0)} Refund Processed</Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Customer ke wallet mein credited</Text>
+                    </View>
+                  </View>
+                )}
               </View>
             )}
 
@@ -4080,6 +4125,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   }}
                   style={{ backgroundColor: '#E91E63', borderRadius: 12, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 2, shadowColor: '#E91E63', shadowOpacity: 0.3, shadowRadius: 6 }}>
                   <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>📤 Bhejo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {!isClosed && (
+              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: 1.5, borderColor: c.status === 'evidence_requested' ? '#FB923C' : '#E2E8F0' }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8, letterSpacing: 0.5 }}>📎 EVIDENCE UPLOAD</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', marginBottom: 10, lineHeight: 16 }}>Screenshot ya photo upload karo — max 5</Text>
+                <TouchableOpacity onPress={uploadDrvEvidence} disabled={drvEvidenceUploading}
+                  style={{ backgroundColor: c.status === 'evidence_requested' ? '#EA580C' : '#E91E63', borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: drvEvidenceUploading ? 0.6 : 1 }}>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{drvEvidenceUploading ? '⏳ Uploading...' : '📸 Photo/Screenshot Upload'}</Text>
                 </TouchableOpacity>
               </View>
             )}
