@@ -1,12 +1,4 @@
 import * as Sentry from '@sentry/react-native';
-
-Sentry.init({
-  dsn: 'https://4367c95061c05f0f9a5768bffdd05dec@o4511631997796352.ingest.us.sentry.io/4511632039804933',
-  environment: 'production',
-  tracesSampleRate: 0.1,
-  enableNativeFramesTracking: true,
-});
-
 import { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Image, Alert,
@@ -22,6 +14,12 @@ import * as Notifications from 'expo-notifications';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
+
+Sentry.init({
+  dsn: 'https://4367c95061c05f0f9a5768bffdd05dec@o4511631997796352.ingest.us.sentry.io/4511632039804933',
+  environment: 'production',
+  tracesSampleRate: 0.1,
+});
 // Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
 // evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
 // registered yet. The try/catch prevents this from killing the app on startup.
