@@ -428,6 +428,9 @@ export default function App() {
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
   const [eta, setEta]               = useState('');
+  const [distToPickup, setDistToPickup] = useState('');
+  const [tripRemainingEta, setTripRemainingEta] = useState('');
+  const driverGpsRef                = useRef<any>(null);
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
   const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'complaints' | 'complaint-new' | 'complaint-detail'>('');
@@ -922,6 +925,38 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     })();
     return () => { mounted = false; sub?.remove(); };
   }, [isOnline, phone]);
+
+  // ── Keep gpsRef in sync (for use inside intervals) ──
+  useEffect(() => { driverGpsRef.current = driverGps; }, [driverGps]);
+
+  // ── Live distance to pickup (matched / arrived) ──
+  useEffect(() => {
+    if (!activeRide || !driverGps) { setDistToPickup(''); return; }
+    if ((activeRide.status === 'matched' || activeRide.status === 'arrived') && activeRide.pickup_lat && activeRide.pickup_lng) {
+      const km = haversineKm(driverGps.lat, driverGps.lng, parseFloat(activeRide.pickup_lat), parseFloat(activeRide.pickup_lng));
+      setDistToPickup(km < 1 ? `${Math.round(km * 1000)} m se pickup` : `${km.toFixed(1)} km se pickup`);
+    } else {
+      setDistToPickup('');
+    }
+  }, [driverGps?.lat, driverGps?.lng, activeRide?.status]);
+
+  // ── Live remaining time/distance during trip (started) ──
+  useEffect(() => {
+    if (activeRide?.status !== 'started') { setTripRemainingEta(''); return; }
+    const fetchRemaining = async () => {
+      const gps = driverGpsRef.current;
+      if (!gps || !activeRide?.drop_lat || !activeRide?.drop_lng) return;
+      try {
+        const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${gps.lat},${gps.lng}&destinations=${activeRide.drop_lat},${activeRide.drop_lng}&key=${MAPS_KEY}`);
+        const data = await res.json();
+        const el = data.rows?.[0]?.elements?.[0];
+        if (el?.status === 'OK') setTripRemainingEta(el.duration.text + ' · ' + el.distance.text + ' baaki');
+      } catch (_e) {}
+    };
+    fetchRemaining();
+    const iv = setInterval(fetchRemaining, 30000);
+    return () => clearInterval(iv);
+  }, [activeRide?.status, activeRide?.id]);
 
   // ── Chat polling ───────────────────────────────
   useEffect(() => {
@@ -1911,7 +1946,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {loginOtpDigits.map((digit, i) => (
                 <TextInput key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#E94560' : '#334155', backgroundColor: digit ? 'rgba(233,69,96,0.1)' : '#1E293B', color: '#F1F5F9' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#FF6318' : '#1D3A61', backgroundColor: digit ? 'rgba(255,99,24,0.15)' : '#152540', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2342,7 +2377,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={s.btnTxt}>📄 Documents Resubmit Karo</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={[s.btn, { backgroundColor: '#1a1a2e', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
+          <TouchableOpacity style={[s.btn, { backgroundColor: '#152540', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
             <Text style={s.btnTxt}>← Wapas Login pe jao</Text>
           </TouchableOpacity>
         </View>
@@ -2354,8 +2389,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (screen === 'login') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.hero}>
-        <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(233,69,96,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 6 }}>
-          <Ionicons name="car" size={48} color="#e94560" />
+        <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' }}>
+          <Ionicons name="car" size={48} color="#FFFFFF" />
         </View>
         <Text style={s.heroTitle}>Sppero Buddy</Text>
         <Text style={s.heroSub}>Captain Login</Text>
@@ -2373,8 +2408,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Bouncy style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
               <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
             </Bouncy>
-            <Bouncy style={{ borderWidth: 2, borderColor: '#e94560', borderRadius: 12, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
-              <Text style={{ color: '#e94560', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
+            <Bouncy style={{ borderWidth: 2, borderColor: '#FF6318', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
+              <Text style={{ color: '#FF6318', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
             </Bouncy>
           </View>
         ) : (
@@ -2397,7 +2432,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TextInput
                   key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2, borderColor: digit ? '#E94560' : '#334155', backgroundColor: digit ? 'rgba(233,69,96,0.1)' : '#1E293B', color: '#F1F5F9' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#FF6318' : '#1D3A61', backgroundColor: digit ? 'rgba(255,99,24,0.15)' : '#152540', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2797,7 +2832,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
       {/* Content */}
-      <View style={{ flex: 1, backgroundColor: '#111827', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
+      <View style={{ flex: 1, backgroundColor: '#0A1628', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
@@ -2894,12 +2929,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                 <TouchableOpacity style={s.chatCallBtn} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
                   <View>
-                    <Ionicons name="chatbubble" size={18} color="#10B981" />
+                    <Ionicons name="chatbubble" size={18} color="#22C55E" />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#10B981" /><Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
+                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#22C55E" /><Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
@@ -2912,7 +2947,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={s.tripArrow}>↓</Text>
                 <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
               </View>
-              {eta ? <View style={{ backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 8, padding: 8, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}><Text style={{ color: '#10B981', fontWeight: '600', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+              {eta ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+
+              {distToPickup && (activeRide.status === 'matched' || activeRide.status === 'arrived') && (
+                <View style={{ backgroundColor: 'rgba(59,130,246,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+                  <Text style={{ color: '#60A5FA', fontWeight: '700', fontSize: 14 }}>📍 {distToPickup}</Text>
+                </View>
+              )}
+              {tripRemainingEta && activeRide.status === 'started' && (
+                <View style={{ backgroundColor: 'rgba(255,99,24,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,99,24,0.3)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+                  <Text style={{ color: '#FF6318', fontWeight: '700', fontSize: 14 }}>🛣️ {tripRemainingEta}</Text>
+                </View>
+              )}
 
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}>
@@ -2933,9 +2979,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {activeRide.status === 'arrived' && (
                 <View>
-                  <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>🔐 Passenger se OTP poocho</Text>
-                  <TextInput style={{ borderWidth: 2, borderColor: '#10B981', borderRadius: 12, padding: 14, fontSize: 28, textAlign: 'center', letterSpacing: 10, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#0F172A', color: '#F1F5F9' }} placeholder="0000" placeholderTextColor="#475569" keyboardType="number-pad" maxLength={4} value={otpInput} onChangeText={setOtpInput} />
-                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                  <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12, textAlign: 'center', fontWeight: '600' }}>🔐 Passenger se OTP poocho aur enter karo</Text>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
+                    {[0,1,2,3].map(i => (
+                      <TextInput
+                        key={i}
+                        style={{ flex: 1, height: 60, borderRadius: 14, textAlign: 'center', fontSize: 26, fontWeight: '900', borderWidth: 2.5, borderColor: otpInput[i] ? '#22C55E' : '#1D3A61', backgroundColor: otpInput[i] ? 'rgba(34,197,94,0.15)' : '#0B1929', color: '#F1F5F9' }}
+                        keyboardType="number-pad" maxLength={1}
+                        value={otpInput[i] || ''}
+                        onChangeText={t => {
+                          const arr = otpInput.split('');
+                          arr[i] = t.slice(-1);
+                          setOtpInput(arr.join(''));
+                        }}
+                      />
+                    ))}
+                  </View>
+                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading || otpInput.length < 4}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
                 </View>
               )}
 
@@ -2954,77 +3014,94 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* ─── FULL-SCREEN RIDE REQUEST MODAL ─── */}
           <Modal visible={!!rideReq && !activeRide} animationType="slide" transparent={false} statusBarTranslucent>
-            <View style={{ flex: 1, backgroundColor: '#0d0d1a', justifyContent: 'center', padding: 20 }}>
-              {/* Header */}
-              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+            <View style={{ flex: 1, backgroundColor: '#FF6318' }}>
+              {/* Orange header */}
+              <View style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight||28)+16 : 56, paddingHorizontal: 20, paddingBottom: 28, alignItems: 'center' }}>
                 {rideReq?.is_favourite_request && (
-                  <View style={{ backgroundColor: '#f0a500', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 7, marginBottom: 8, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: '#0F172A', fontSize: 13, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
+                  <View style={{ backgroundColor: '#FBBF24', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 6, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
+                    <Text style={{ color: '#1A1A2E', fontSize: 12, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
                   </View>
                 )}
-                <View style={{ backgroundColor: rideReq?.is_favourite_request ? '#2e7d32' : '#e94560', borderRadius: 16, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 10 }}>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', letterSpacing: 2 }}>{rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE REQUEST'}</Text>
-                </View>
-                <Text style={{ fontSize: 64 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '900', letterSpacing: 2.5, marginBottom: 8 }}>
+                  {rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE AAYI!'}
+                </Text>
+                <Text style={{ fontSize: 72, marginBottom: 4 }}>
                   {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
                 </Text>
-                <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold', marginTop: 6 }}>
+                <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '900', letterSpacing: 0.5 }}>
                   {rideReq?.passenger_name || 'Passenger'}
                 </Text>
                 {surgeMultiplier > 1.0 && (
-                  <View style={{ backgroundColor: '#ff9800', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 5, marginTop: 6 }}>
-                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>⚡ {surgeMultiplier}x SURGE</Text>
+                  <View style={{ backgroundColor: '#FBBF24', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 5, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                    <Text style={{ color: '#1A1A2E', fontWeight: '900', fontSize: 14 }}>⚡ {surgeMultiplier}x SURGE</Text>
                   </View>
                 )}
               </View>
 
-              {/* Fare */}
-              <View style={{ backgroundColor: '#111827', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#1E293B' }}>
-                <Text style={{ color: '#64748B', fontSize: 13, marginBottom: 4, letterSpacing: 0.5 }}>AAPKI KAMAI</Text>
-                <Text style={{ color: '#10B981', fontSize: 52, fontWeight: '900', lineHeight: 58 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
-                <Text style={{ color: '#475569', fontSize: 13 }}>Total fare: ₹{rideReq?.fare} · 12% commission</Text>
-              </View>
+              {/* White bottom sheet */}
+              <View style={{ flex: 1, backgroundColor: '#F0F4FF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 18, paddingTop: 22, paddingBottom: 16 }}>
+                {/* Big fare card */}
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, alignItems: 'center', elevation: 4, shadowColor: '#22C55E', shadowOpacity: 0.18, shadowRadius: 10 }}>
+                  <Text style={{ color: '#6B7280', fontSize: 11, marginBottom: 4, fontWeight: '700', letterSpacing: 1.5 }}>AAPKI KAMAI</Text>
+                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                  <Text style={{ color: '#9CA3AF', fontSize: 12 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>
+                </View>
 
-              {/* Route info */}
-              <View style={{ backgroundColor: '#111827', borderRadius: 20, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#1E293B' }}>
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                {/* Distance badges */}
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
                   {driverGps && rideReq?.pickup_lat && (
-                    <View style={{ backgroundColor: 'rgba(59,130,246,0.15)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flex: 1, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(59,130,246,0.3)' }}>
-                      <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '700' }}>📍 Pickup se</Text>
-                      <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km</Text>
+                    <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#BFDBFE' }}>
+                      <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '800' }}>📍 Aap se Pickup</Text>
+                      <Text style={{ color: '#1D4ED8', fontSize: 24, fontWeight: '900', marginTop: 3 }}>
+                        {haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km
+                      </Text>
                     </View>
                   )}
                   {rideReq?.distance && (
-                    <View style={{ backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, flex: 1, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)' }}>
-                      <Text style={{ color: '#10B981', fontSize: 11, fontWeight: '700' }}>🛣️ Trip</Text>
-                      <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold' }}>{rideReq.distance} km</Text>
+                    <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#BBF7D0' }}>
+                      <Text style={{ color: '#16A34A', fontSize: 11, fontWeight: '800' }}>🛣️ Trip Distance</Text>
+                      <Text style={{ color: '#15803D', fontSize: 24, fontWeight: '900', marginTop: 3 }}>{rideReq.distance} km</Text>
                     </View>
                   )}
                 </View>
-                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                  <View style={{ width: 12, alignItems: 'center', paddingTop: 4 }}>
-                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#10B981' }} />
-                    <View style={{ width: 2, height: 28, backgroundColor: '#334155', marginTop: 3 }} />
-                    <View style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: '#E94560' }} />
-                  </View>
-                  <View style={{ flex: 1, marginLeft: 10 }}>
-                    <Text style={{ color: '#94A3B8', fontSize: 15, marginBottom: 8 }}>{rideReq?.pickup}</Text>
-                    <Text style={{ color: '#F1F5F9', fontSize: 15, fontWeight: '600' }}>{rideReq?.drop_location}</Text>
+
+                {/* Route card */}
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 1, borderColor: '#E5E7EB', elevation: 2 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                    <View style={{ alignItems: 'center', marginRight: 12, paddingTop: 3 }}>
+                      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#86EFAC' }} />
+                      <View style={{ width: 2, height: 30, backgroundColor: '#D1D5DB', marginVertical: 2 }} />
+                      <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#FF6318' }} />
+                    </View>
+                    <View style={{ flex: 1, gap: 14 }}>
+                      <View>
+                        <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '700', letterSpacing: 0.8 }}>PICKUP</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginTop: 2 }} numberOfLines={2}>{rideReq?.pickup}</Text>
+                      </View>
+                      <View>
+                        <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '700', letterSpacing: 0.8 }}>DROP</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginTop: 2 }} numberOfLines={2}>{rideReq?.drop_location}</Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
-              </View>
 
-              {/* Countdown */}
-              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />}
+                {/* Countdown */}
+                {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />}
 
-              {/* Accept / Reject */}
-              <View style={{ flexDirection: 'row', gap: 14, marginTop: 20 }}>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: '#1E293B', borderRadius: 18, padding: 20, alignItems: 'center', borderWidth: 1, borderColor: '#475569' }} onPress={rejectRide}>
-                  <Text style={{ color: '#94A3B8', fontSize: 18, fontWeight: 'bold' }}>✕ Reject</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={{ flex: 2, backgroundColor: '#10B981', borderRadius: 18, padding: 20, alignItems: 'center', elevation: 8, shadowColor: '#10B981', shadowOpacity: 0.5, shadowRadius: 12 }} onPress={acceptRide} disabled={loading}>
-                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900' }}>{loading ? '⏳...' : '✓ ACCEPT'}</Text>
-                </TouchableOpacity>
+                {/* Accept / Reject buttons */}
+                <View style={{ flexDirection: 'row', gap: 14, marginTop: 14 }}>
+                  <TouchableOpacity style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB', elevation: 2 }} onPress={rejectRide}>
+                    <Text style={{ fontSize: 22 }}>✕</Text>
+                    <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 13, marginTop: 2 }}>Reject</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={{ flex: 2, backgroundColor: '#22C55E', borderRadius: 16, padding: 18, alignItems: 'center', elevation: 6, shadowColor: '#22C55E', shadowOpacity: 0.45, shadowRadius: 12 }} onPress={acceptRide} disabled={loading}>
+                    <Text style={{ fontSize: 22 }}>✓</Text>
+                    <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 15, marginTop: 2 }}>
+                      {loading ? 'Accept ho raha...' : 'ACCEPT KARO'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           </Modal>
@@ -4871,96 +4948,96 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
 }
 
 const s = StyleSheet.create({
-  screen:          { flex:1, backgroundColor:'#0F172A' },
-  mapFit:          { height: 220, width: '100%', backgroundColor: '#1E293B' },
+  screen:          { flex:1, backgroundColor:'#0B1929' },
+  mapFit:          { height: 220, width: '100%', backgroundColor: '#071321' },
   navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
-  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#E94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
-  hero:            { backgroundColor:'#0F172A', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
+  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#EF4444', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
+  hero:            { backgroundColor:'#FF6318', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
   heroIcon:        { fontSize:60 },
-  heroTitle:       { color:'#F1F5F9', fontSize:28, fontWeight:'bold', marginTop:10 },
-  heroSub:         { color:'#94A3B8', fontSize:14, marginTop:6 },
+  heroTitle:       { color:'#FFFFFF', fontSize:28, fontWeight:'bold', marginTop:10 },
+  heroSub:         { color:'rgba(255,255,255,0.85)', fontSize:14, marginTop:6 },
   sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#F1F5F9', marginBottom:12 },
-  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#334155' },
-  btn:             { backgroundColor:'#E94560', borderRadius:12, padding:16, alignItems:'center', marginTop:16, marginBottom:10 },
+  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
+  btn:             { backgroundColor:'#FF6318', borderRadius:14, padding:16, alignItems:'center', marginTop:16, marginBottom:10, elevation:4, shadowColor:'#FF6318', shadowOpacity:0.4, shadowRadius:10 },
   btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
-  err:             { textAlign:'center', color:'#E94560', marginVertical:10 },
-  topBar:          { backgroundColor:'#0F172A', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:1, borderBottomColor:'#1E293B' },
-  greeting:        { color:'#F1F5F9', fontSize:18, fontWeight:'bold' },
-  subTxt:          { color:'#64748B', fontSize:12, marginTop:2 },
-  notifBanner:     { backgroundColor:'#E94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  err:             { textAlign:'center', color:'#F87171', marginVertical:10 },
+  topBar:          { backgroundColor:'#FF6318', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:0 },
+  greeting:        { color:'#FFFFFF', fontSize:18, fontWeight:'bold' },
+  subTxt:          { color:'rgba(255,255,255,0.8)', fontSize:12, marginTop:2 },
+  notifBanner:     { backgroundColor:'#EF4444', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
   statsRow:        { flexDirection:'row', gap:10, marginBottom:16 },
-  statCard:        { flex:1, backgroundColor:'#1E293B', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#000', shadowOpacity:0.4, shadowRadius:8, borderWidth:1, borderColor:'#334155' },
+  statCard:        { flex:1, backgroundColor:'#152540', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#FF6318', shadowOpacity:0.12, shadowRadius:10, borderWidth:1, borderColor:'#1D3A61' },
   statIcon:        { fontSize:22 },
   statValue:       { fontSize:22, fontWeight:'bold', color:'#F1F5F9', marginTop:4 },
   statLabel:       { fontSize:10, color:'#64748B', marginTop:3, letterSpacing:0.3 },
-  targetCard:      { backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#334155' },
-  statusCard:      { backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#334155' },
+  targetCard:      { backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
+  statusCard:      { backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
   statusText:      { fontSize:14, color:'#CBD5E1', textAlign:'center' },
-  tripCard:        { backgroundColor:'#1E293B', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#10B981' },
-  tripBadge:       { backgroundColor:'#10B981', borderRadius:10, padding:9, marginBottom:12 },
+  tripCard:        { backgroundColor:'#152540', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#22C55E', shadowColor:'#22C55E', shadowOpacity:0.2, shadowRadius:16 },
+  tripBadge:       { backgroundColor:'#22C55E', borderRadius:10, padding:9, marginBottom:12 },
   tripBadgeTxt:    { color:'#fff', textAlign:'center', fontWeight:'bold', fontSize:14 },
   tripCustomer:    { flexDirection:'row', alignItems:'center', marginBottom:12 },
-  tripAvatar:      { width:46, height:46, borderRadius:23, backgroundColor:'#E94560', alignItems:'center', justifyContent:'center', marginRight:12 },
+  tripAvatar:      { width:46, height:46, borderRadius:23, backgroundColor:'#FF6318', alignItems:'center', justifyContent:'center', marginRight:12 },
   tripCustName:    { fontSize:16, fontWeight:'bold', color:'#F1F5F9' },
   tripCustPhone:   { fontSize:13, color:'#94A3B8', marginTop:2 },
-  tripFare:        { fontSize:22, fontWeight:'bold', color:'#10B981' },
-  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#0F172A', borderRadius:12, padding:11, borderWidth:1, borderColor:'#334155' },
-  tripRoute:       { backgroundColor:'#0F172A', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#334155' },
-  tripFrom:        { fontSize:14, color:'#10B981', fontWeight:'600' },
-  tripArrow:       { fontSize:16, textAlign:'center', color:'#475569', marginVertical:4 },
-  tripTo:          { fontSize:14, color:'#E94560', fontWeight:'600' },
-  tripBtn:         { backgroundColor:'#E94560', borderRadius:12, padding:16, alignItems:'center', marginBottom:8, elevation:4, shadowColor:'#E94560', shadowOpacity:0.35, shadowRadius:8 },
+  tripFare:        { fontSize:22, fontWeight:'bold', color:'#22C55E' },
+  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#0B1929', borderRadius:12, padding:11, borderWidth:1, borderColor:'#1D3A61' },
+  tripRoute:       { backgroundColor:'#0B1929', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#1D3A61' },
+  tripFrom:        { fontSize:14, color:'#22C55E', fontWeight:'600' },
+  tripArrow:       { fontSize:16, textAlign:'center', color:'#334155', marginVertical:4 },
+  tripTo:          { fontSize:14, color:'#FF6318', fontWeight:'600' },
+  tripBtn:         { backgroundColor:'#FF6318', borderRadius:14, padding:16, alignItems:'center', marginBottom:8, elevation:5, shadowColor:'#FF6318', shadowOpacity:0.45, shadowRadius:10 },
   tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:15 },
-  navBtn:          { backgroundColor:'#3B82F6', borderRadius:12, padding:12, alignItems:'center', marginBottom:10 },
+  navBtn:          { backgroundColor:'#0EA5E9', borderRadius:12, padding:12, alignItems:'center', marginBottom:10 },
   cancelBtn:       { padding:12, alignItems:'center' },
-  cancelTxt:       { color:'#E94560', fontWeight:'600' },
-  rideCard:        { backgroundColor:'#1E293B', borderRadius:22, padding:18, marginBottom:16, elevation:10, borderWidth:1, borderColor:'#334155', shadowColor:'#E94560', shadowOpacity:0.25, shadowRadius:20 },
+  cancelTxt:       { color:'#F87171', fontWeight:'600' },
+  rideCard:        { backgroundColor:'#152540', borderRadius:22, padding:18, marginBottom:16, elevation:10, borderWidth:1, borderColor:'#1D3A61', shadowColor:'#FF6318', shadowOpacity:0.2, shadowRadius:20 },
   rideHeader:      { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:10 },
   rideTitle:       { fontSize:16, fontWeight:'bold', color:'#F1F5F9' },
-  rideFare:        { fontSize:24, fontWeight:'bold', color:'#10B981' },
-  rideDetails:     { backgroundColor:'#0F172A', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#334155' },
-  rideFrom:        { fontSize:14, color:'#10B981', fontWeight:'600' },
-  rideDivider:     { fontSize:16, textAlign:'center', color:'#475569', marginVertical:4 },
-  rideTo:          { fontSize:14, color:'#E94560', fontWeight:'600' },
+  rideFare:        { fontSize:24, fontWeight:'bold', color:'#22C55E' },
+  rideDetails:     { backgroundColor:'#0B1929', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#1D3A61' },
+  rideFrom:        { fontSize:14, color:'#22C55E', fontWeight:'600' },
+  rideDivider:     { fontSize:16, textAlign:'center', color:'#1D3A61', marginVertical:4 },
+  rideTo:          { fontSize:14, color:'#FF6318', fontWeight:'600' },
   rideActions:     { flexDirection:'row', gap:10 },
-  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#475569', alignItems:'center', backgroundColor:'#0F172A' },
+  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#1D3A61', alignItems:'center', backgroundColor:'#0B1929' },
   rejectTxt:       { color:'#94A3B8', fontWeight:'bold' },
-  acceptBtn:       { flex:2, padding:14, borderRadius:12, backgroundColor:'#10B981', alignItems:'center', elevation:4, shadowColor:'#10B981', shadowOpacity:0.4, shadowRadius:8 },
+  acceptBtn:       { flex:2, padding:14, borderRadius:12, backgroundColor:'#22C55E', alignItems:'center', elevation:4, shadowColor:'#22C55E', shadowOpacity:0.4, shadowRadius:8 },
   acceptTxt:       { color:'#fff', fontWeight:'900', fontSize:16 },
-  result:          { textAlign:'center', color:'#10B981', fontSize:14, marginTop:10, fontWeight:'600' },
-  nav:             { flexDirection:'row', backgroundColor:'#0F172A', borderTopWidth:1, borderTopColor:'#1E293B', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
+  result:          { textAlign:'center', color:'#22C55E', fontSize:14, marginTop:10, fontWeight:'600' },
+  nav:             { flexDirection:'row', backgroundColor:'#0D1F36', borderTopWidth:1, borderTopColor:'#1A3058', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
   navItem:         { flex:1, alignItems:'center', justifyContent:'center', paddingTop:2 },
   navIcon:         { fontSize:22, color:'#475569' },
-  navIconActive:   { color:'#10B981' },
+  navIconActive:   { color:'#FF6318' },
   navLbl:          { fontSize:10, color:'#475569', marginTop:3, letterSpacing:0.3 },
-  navActive:       { color:'#10B981', fontWeight:'bold' },
-  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#E94560', borderWidth:1.5, borderColor:'#0F172A' },
-  navLine:         { width:24, height:3, borderRadius:2, backgroundColor:'#10B981', marginTop:5 },
-  earningsCard:    { backgroundColor:'#1E293B', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#334155' },
-  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#334155' },
+  navActive:       { color:'#FF6318', fontWeight:'bold' },
+  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#EF4444', borderWidth:1.5, borderColor:'#0D1F36' },
+  navLine:         { width:24, height:3, borderRadius:2, backgroundColor:'#FF6318', marginTop:5 },
+  earningsCard:    { backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
+  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#1D3A61' },
   earningsKey:     { fontSize:14, color:'#94A3B8' },
   earningsVal:     { fontSize:14, color:'#E2E8F0', fontWeight:'500' },
-  profileHero:     { backgroundColor:'#1E293B', borderRadius:20, padding:24, alignItems:'center', marginBottom:16, borderWidth:1, borderColor:'#334155' },
-  profileAvatar:   { width:84, height:84, borderRadius:42, backgroundColor:'#E94560', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:3, borderColor:'rgba(233,69,96,0.3)' },
-  profileName:     { color:'#F1F5F9', fontSize:22, fontWeight:'bold' },
-  profilePhone:    { color:'#64748B', fontSize:14, marginTop:4 },
-  profileVehicle:  { color:'#64748B', fontSize:13, marginTop:4 },
-  badge:           { backgroundColor:'rgba(245,158,11,0.15)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(245,158,11,0.35)' },
-  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#1E293B', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#334155' },
-  logoutBtn:       { borderWidth:1, borderColor:'#E94560', borderRadius:12, padding:14, alignItems:'center', marginTop:8, marginBottom:30, backgroundColor:'rgba(233,69,96,0.07)' },
+  profileHero:     { backgroundColor:'#FF6318', borderRadius:24, padding:28, alignItems:'center', marginBottom:16, elevation:6, shadowColor:'#FF6318', shadowOpacity:0.35, shadowRadius:14 },
+  profileAvatar:   { width:84, height:84, borderRadius:42, backgroundColor:'rgba(255,255,255,0.25)', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:3, borderColor:'rgba(255,255,255,0.5)' },
+  profileName:     { color:'#FFFFFF', fontSize:22, fontWeight:'bold' },
+  profilePhone:    { color:'rgba(255,255,255,0.85)', fontSize:14, marginTop:4 },
+  profileVehicle:  { color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:4 },
+  badge:           { backgroundColor:'rgba(255,255,255,0.2)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(255,255,255,0.35)' },
+  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#152540', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
+  logoutBtn:       { borderWidth:1.5, borderColor:'#EF4444', borderRadius:14, padding:14, alignItems:'center', marginTop:8, marginBottom:30, backgroundColor:'rgba(239,68,68,0.1)' },
 });
 
 const rs = StyleSheet.create({
-  regHeader:   { backgroundColor:'#0F172A', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
-  regTitle:    { color:'#F1F5F9', fontSize:16, fontWeight:'bold' },
+  regHeader:   { backgroundColor:'#FF6318', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
+  regTitle:    { color:'#FFFFFF', fontSize:16, fontWeight:'bold' },
   bigTitle:    { fontSize:26, fontWeight:'bold', color:'#F1F5F9', marginTop:10 },
   subTitle:    { fontSize:14, color:'#94A3B8', marginTop:6, marginBottom:10 },
   fieldLabel:  { fontSize:14, fontWeight:'600', color:'#CBD5E1', marginTop:16, marginBottom:8 },
-  input:       { borderWidth:1, borderColor:'#334155', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#1E293B', color:'#F1F5F9' },
-  photoBox:    { borderWidth:2, borderColor:'#334155', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#1E293B' },
-  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#1E293B', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#334155' },
-  vehBoxActive:{ backgroundColor:'#0F172A', borderColor:'#E94560', borderWidth:2 },
-  uploadBtn:   { flex:1, backgroundColor:'#10B981', borderRadius:8, padding:10, alignItems:'center' },
+  input:       { borderWidth:1, borderColor:'#1D3A61', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#152540', color:'#F1F5F9' },
+  photoBox:    { borderWidth:2, borderColor:'#1D3A61', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#152540' },
+  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#152540', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
+  vehBoxActive:{ backgroundColor:'#0B1929', borderColor:'#FF6318', borderWidth:2 },
+  uploadBtn:   { flex:1, backgroundColor:'#22C55E', borderRadius:8, padding:10, alignItems:'center' },
   uploadBtnTxt:{ color:'#fff', fontWeight:'600', fontSize:13 },
   adviceBox:   { backgroundColor:'rgba(59,130,246,0.1)', borderRadius:12, padding:14, marginTop:14, marginBottom:6, borderWidth:1, borderColor:'rgba(59,130,246,0.25)' },
   adviceTitle: { fontSize:14, fontWeight:'bold', color:'#60A5FA', marginBottom:6 },
