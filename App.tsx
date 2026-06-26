@@ -449,7 +449,6 @@ export default function App() {
   const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
-  const [target, setTarget]         = useState<any>(null);
   const [chatMsgs, setChatMsgs]         = useState<any[]>([]);
   const [chatInput, setChatInput]       = useState('');
   const [showChat, setShowChat]         = useState(false);
@@ -1114,18 +1113,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [activeRide?.id, showChat]);
 
-  // ── Load daily target ──────────────────────────
-  useEffect(() => {
-    if (screen !== 'home' || !phone) return;
-    (async () => {
-      try {
-        const r = await fetch(`${API}/api/driver/target?phone=${phone}`);
-        const d = await r.json();
-        setTarget(d);
-        if (d?.completed && rides === 0) setRides(d.completed);
-      } catch (_e) {}
-    })();
-  }, [screen, phone]);
 
   // ── Surge + Admin Notifications polling ───────────────
   useEffect(() => {
@@ -1946,7 +1933,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {loginOtpDigits.map((digit, i) => (
                 <TextInput key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#FF6318' : '#1D3A61', backgroundColor: digit ? 'rgba(255,99,24,0.15)' : '#152540', color: '#F1F5F9' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#D4A520', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#FFF9E6', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2035,7 +2022,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 : <Ionicons name={v.ion as any} size={28} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#94A3B8')} />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#F1F5F9' }, regData.vehicle_type === v.id && { color: '#fff' }]}>{v.label}</Text>
+              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1A1200' }, regData.vehicle_type === v.id && { color: '#1A1200' }]}>{v.label}</Text>
               {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#64748B'), marginTop: 2 }}>{v.sub}</Text> : null}
             </View>
             {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
@@ -2377,7 +2364,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={s.btnTxt}>📄 Documents Resubmit Karo</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={[s.btn, { backgroundColor: '#152540', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
+          <TouchableOpacity style={[s.btn, { backgroundColor: '#FFF9E6', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
             <Text style={s.btnTxt}>← Wapas Login pe jao</Text>
           </TouchableOpacity>
         </View>
@@ -2389,8 +2376,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (screen === 'login') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.hero}>
-        <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 2, borderColor: 'rgba(255,255,255,0.35)' }}>
-          <Ionicons name="car" size={48} color="#FFFFFF" />
+        <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(26,18,0,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 2, borderColor: 'rgba(26,18,0,0.2)' }}>
+          <Ionicons name="car" size={48} color="#1A1200" />
         </View>
         <Text style={s.heroTitle}>Sppero Buddy</Text>
         <Text style={s.heroSub}>Captain Login</Text>
@@ -2408,8 +2395,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Bouncy style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
               <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
             </Bouncy>
-            <Bouncy style={{ borderWidth: 2, borderColor: '#FF6318', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
-              <Text style={{ color: '#FF6318', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
+            <Bouncy style={{ borderWidth: 2, borderColor: '#F5C518', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
+              <Text style={{ color: '#F5C518', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
             </Bouncy>
           </View>
         ) : (
@@ -2432,7 +2419,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TextInput
                   key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#FF6318' : '#1D3A61', backgroundColor: digit ? 'rgba(255,99,24,0.15)' : '#152540', color: '#F1F5F9' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#D4A520', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#FFF9E6', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2832,7 +2819,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
       {/* Content */}
-      <View style={{ flex: 1, backgroundColor: '#0A1628', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
+      <View style={{ flex: 1, backgroundColor: '#FFF3CC', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
@@ -2870,7 +2857,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ fontSize: 22, marginRight: 10 }}>📩</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '800', fontSize: 12, color: '#60A5FA', marginBottom: 2 }}>Sppero Admin</Text>
-                <Text style={{ fontSize: 12, color: '#CBD5E1' }}>{adminNotif.body || adminNotif.title}</Text>
+                <Text style={{ fontSize: 12, color: '#7B6A1A' }}>{adminNotif.body || adminNotif.title}</Text>
               </View>
               <TouchableOpacity onPress={() => setAdminNotifDismissed(adminNotif.created_at)} style={{ padding: 6 }}>
                 <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
@@ -2884,8 +2871,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
                 <Text style={{ fontSize: 22, marginRight: 10 }}>{offer.type === 'incentive' ? '💰' : '📢'}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#F1F5F9' }}>{offer.title}</Text>
-                  {offer.body ? <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{offer.body}</Text> : null}
+                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#1A1200' }}>{offer.title}</Text>
+                  {offer.body ? <Text style={{ fontSize: 11, color: '#8B6914', marginTop: 2 }}>{offer.body}</Text> : null}
                 </View>
                 <TouchableOpacity onPress={() => setOfferDismissed(s => new Set([...s, offer.id]))} style={{ padding: 6 }}>
                   <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
@@ -2894,18 +2881,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           ))}
 
-          {target && !activeRide && (
-            <View style={s.targetCard}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#F1F5F9' }}>🎯 Daily Target</Text>
-                <Text style={{ fontSize: 14, fontWeight: 'bold', color: target.achieved ? '#10B981' : '#E94560' }}>{target.achieved ? '✅ Bonus ₹' + target.bonus + ' mila!' : '₹' + target.bonus + ' bonus'}</Text>
-              </View>
-              <View style={{ height: 8, backgroundColor: '#334155', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
-                <AnimatedBar pct={Math.min(100, (target.completed / target.target) * 100)} color={target.achieved ? '#10B981' : '#E94560'} />
-              </View>
-              <Text style={{ fontSize: 12, color: '#94A3B8' }}>{target.completed}/{target.target} rides complete {target.achieved ? '' : `· ${target.remaining} aur baaki`}</Text>
-            </View>
-          )}
 
           {activeRide && (
             <View style={s.tripCard}>
@@ -2932,9 +2907,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Ionicons name="chatbubble" size={18} color="#22C55E" />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
+                  <Text style={{ fontSize: 12, color: '#8B6914', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#22C55E" /><Text style={{ fontSize: 12, color: '#94A3B8', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
+                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#22C55E" /><Text style={{ fontSize: 12, color: '#8B6914', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
@@ -2956,7 +2931,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )}
               {tripRemainingEta && activeRide.status === 'started' && (
                 <View style={{ backgroundColor: 'rgba(255,99,24,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,99,24,0.3)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-                  <Text style={{ color: '#FF6318', fontWeight: '700', fontSize: 14 }}>🛣️ {tripRemainingEta}</Text>
+                  <Text style={{ color: '#F5C518', fontWeight: '700', fontSize: 14 }}>🛣️ {tripRemainingEta}</Text>
                 </View>
               )}
 
@@ -2978,25 +2953,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )}
 
               {activeRide.status === 'arrived' && (
-                <View>
-                  <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12, textAlign: 'center', fontWeight: '600' }}>🔐 Passenger se OTP poocho aur enter karo</Text>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14, gap: 8 }}>
-                    {[0,1,2,3].map(i => (
-                      <TextInput
-                        key={i}
-                        style={{ flex: 1, height: 60, borderRadius: 14, textAlign: 'center', fontSize: 26, fontWeight: '900', borderWidth: 2.5, borderColor: otpInput[i] ? '#22C55E' : '#1D3A61', backgroundColor: otpInput[i] ? 'rgba(34,197,94,0.15)' : '#0B1929', color: '#F1F5F9' }}
-                        keyboardType="number-pad" maxLength={1}
-                        value={otpInput[i] || ''}
-                        onChangeText={t => {
-                          const arr = otpInput.split('');
-                          arr[i] = t.slice(-1);
-                          setOtpInput(arr.join(''));
-                        }}
-                      />
-                    ))}
-                  </View>
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                  <Text style={{ fontSize: 13, color: '#8B6914', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>🔐 Passenger se 4-digit OTP poocho</Text>
+                  <TextInput
+                    style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? '#22C55E' : '#D4A520', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#FFF9E6', color: '#1A1200' }}
+                    keyboardType="number-pad"
+                    maxLength={4}
+                    value={otpInput}
+                    onChangeText={setOtpInput}
+                    placeholder="○ ○ ○ ○"
+                    placeholderTextColor="#D4A520"
+                    autoFocus
+                  />
                   <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading || otpInput.length < 4}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
-                </View>
+                </KeyboardAvoidingView>
               )}
 
               {activeRide.status === 'started' && (
@@ -3014,7 +2984,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* ─── FULL-SCREEN RIDE REQUEST MODAL ─── */}
           <Modal visible={!!rideReq && !activeRide} animationType="slide" transparent={false} statusBarTranslucent>
-            <View style={{ flex: 1, backgroundColor: '#FF6318' }}>
+            <View style={{ flex: 1, backgroundColor: '#F5C518' }}>
               {/* Orange header */}
               <View style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight||28)+16 : 56, paddingHorizontal: 20, paddingBottom: 28, alignItems: 'center' }}>
                 {rideReq?.is_favourite_request && (
@@ -3022,13 +2992,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ color: '#1A1A2E', fontSize: 12, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
                   </View>
                 )}
-                <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 11, fontWeight: '900', letterSpacing: 2.5, marginBottom: 8 }}>
+                <Text style={{ color: 'rgba(26,18,0,0.8)', fontSize: 11, fontWeight: '900', letterSpacing: 2.5, marginBottom: 8 }}>
                   {rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE AAYI!'}
                 </Text>
                 <Text style={{ fontSize: 72, marginBottom: 4 }}>
                   {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
                 </Text>
-                <Text style={{ color: '#FFFFFF', fontSize: 26, fontWeight: '900', letterSpacing: 0.5 }}>
+                <Text style={{ color: '#1A1200', fontSize: 26, fontWeight: '900', letterSpacing: 0.5 }}>
                   {rideReq?.passenger_name || 'Passenger'}
                 </Text>
                 {surgeMultiplier > 1.0 && (
@@ -3071,7 +3041,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <View style={{ alignItems: 'center', marginRight: 12, paddingTop: 3 }}>
                       <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: '#22C55E', borderWidth: 2, borderColor: '#86EFAC' }} />
                       <View style={{ width: 2, height: 30, backgroundColor: '#D1D5DB', marginVertical: 2 }} />
-                      <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#FF6318' }} />
+                      <View style={{ width: 12, height: 12, borderRadius: 3, backgroundColor: '#F5C518' }} />
                     </View>
                     <View style={{ flex: 1, gap: 14 }}>
                       <View>
@@ -4893,7 +4863,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
           </Bouncy>
         ))}
-        <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setLoginPhone(''); setLoginOtpSent(false); setRegStep(0); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
           <Text style={{ color: '#e94560', fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
@@ -4948,95 +4918,95 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
 }
 
 const s = StyleSheet.create({
-  screen:          { flex:1, backgroundColor:'#0B1929' },
-  mapFit:          { height: 220, width: '100%', backgroundColor: '#071321' },
+  screen:          { flex:1, backgroundColor:'#FEFCE8' },
+  mapFit:          { height: 220, width: '100%', backgroundColor: '#FFF3CC' },
   navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
   chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#EF4444', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
-  hero:            { backgroundColor:'#FF6318', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
+  hero:            { backgroundColor:'#F5C518', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
   heroIcon:        { fontSize:60 },
-  heroTitle:       { color:'#FFFFFF', fontSize:28, fontWeight:'bold', marginTop:10 },
-  heroSub:         { color:'rgba(255,255,255,0.85)', fontSize:14, marginTop:6 },
-  sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#F1F5F9', marginBottom:12 },
-  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
-  btn:             { backgroundColor:'#FF6318', borderRadius:14, padding:16, alignItems:'center', marginTop:16, marginBottom:10, elevation:4, shadowColor:'#FF6318', shadowOpacity:0.4, shadowRadius:10 },
-  btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
+  heroTitle:       { color:'#1A1200', fontSize:28, fontWeight:'bold', marginTop:10 },
+  heroSub:         { color:'rgba(26,18,0,0.75)', fontSize:14, marginTop:6 },
+  sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#1A1200', marginBottom:12 },
+  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#D4A520' },
+  btn:             { backgroundColor:'#F5C518', borderRadius:14, padding:16, alignItems:'center', marginTop:16, marginBottom:10, elevation:4, shadowColor:'#F5C518', shadowOpacity:0.4, shadowRadius:10 },
+  btnTxt:          { color:'#1A1200', fontSize:16, fontWeight:'bold' },
   err:             { textAlign:'center', color:'#F87171', marginVertical:10 },
-  topBar:          { backgroundColor:'#FF6318', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:0 },
-  greeting:        { color:'#FFFFFF', fontSize:18, fontWeight:'bold' },
-  subTxt:          { color:'rgba(255,255,255,0.8)', fontSize:12, marginTop:2 },
+  topBar:          { backgroundColor:'#F5C518', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:0 },
+  greeting:        { color:'#1A1200', fontSize:18, fontWeight:'bold' },
+  subTxt:          { color:'rgba(26,18,0,0.65)', fontSize:12, marginTop:2 },
   notifBanner:     { backgroundColor:'#EF4444', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
   statsRow:        { flexDirection:'row', gap:10, marginBottom:16 },
-  statCard:        { flex:1, backgroundColor:'#152540', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#FF6318', shadowOpacity:0.12, shadowRadius:10, borderWidth:1, borderColor:'#1D3A61' },
+  statCard:        { flex:1, backgroundColor:'#FFF9E6', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#D4A520', shadowOpacity:0.2, shadowRadius:10, borderWidth:1, borderColor:'#D4A520' },
   statIcon:        { fontSize:22 },
-  statValue:       { fontSize:22, fontWeight:'bold', color:'#F1F5F9', marginTop:4 },
-  statLabel:       { fontSize:10, color:'#64748B', marginTop:3, letterSpacing:0.3 },
-  targetCard:      { backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
-  statusCard:      { backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
-  statusText:      { fontSize:14, color:'#CBD5E1', textAlign:'center' },
-  tripCard:        { backgroundColor:'#152540', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#22C55E', shadowColor:'#22C55E', shadowOpacity:0.2, shadowRadius:16 },
+  statValue:       { fontSize:22, fontWeight:'bold', color:'#1A1200', marginTop:4 },
+  statLabel:       { fontSize:10, color:'#8B6914', marginTop:3, letterSpacing:0.3 },
+  targetCard:      { backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#D4A520' },
+  statusCard:      { backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#D4A520' },
+  statusText:      { fontSize:14, color:'#7B6A1A', textAlign:'center' },
+  tripCard:        { backgroundColor:'#FFF9E6', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#22C55E', shadowColor:'#22C55E', shadowOpacity:0.2, shadowRadius:16 },
   tripBadge:       { backgroundColor:'#22C55E', borderRadius:10, padding:9, marginBottom:12 },
   tripBadgeTxt:    { color:'#fff', textAlign:'center', fontWeight:'bold', fontSize:14 },
   tripCustomer:    { flexDirection:'row', alignItems:'center', marginBottom:12 },
-  tripAvatar:      { width:46, height:46, borderRadius:23, backgroundColor:'#FF6318', alignItems:'center', justifyContent:'center', marginRight:12 },
-  tripCustName:    { fontSize:16, fontWeight:'bold', color:'#F1F5F9' },
-  tripCustPhone:   { fontSize:13, color:'#94A3B8', marginTop:2 },
+  tripAvatar:      { width:46, height:46, borderRadius:23, backgroundColor:'#F5C518', alignItems:'center', justifyContent:'center', marginRight:12 },
+  tripCustName:    { fontSize:16, fontWeight:'bold', color:'#1A1200' },
+  tripCustPhone:   { fontSize:13, color:'#8B6914', marginTop:2 },
   tripFare:        { fontSize:22, fontWeight:'bold', color:'#22C55E' },
-  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#0B1929', borderRadius:12, padding:11, borderWidth:1, borderColor:'#1D3A61' },
-  tripRoute:       { backgroundColor:'#0B1929', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#1D3A61' },
+  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#FFFBF0', borderRadius:12, padding:11, borderWidth:1, borderColor:'#D4A520' },
+  tripRoute:       { backgroundColor:'#FFFBF0', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#D4A520' },
   tripFrom:        { fontSize:14, color:'#22C55E', fontWeight:'600' },
-  tripArrow:       { fontSize:16, textAlign:'center', color:'#334155', marginVertical:4 },
-  tripTo:          { fontSize:14, color:'#FF6318', fontWeight:'600' },
-  tripBtn:         { backgroundColor:'#FF6318', borderRadius:14, padding:16, alignItems:'center', marginBottom:8, elevation:5, shadowColor:'#FF6318', shadowOpacity:0.45, shadowRadius:10 },
-  tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:15 },
+  tripArrow:       { fontSize:16, textAlign:'center', color:'#B8921A', marginVertical:4 },
+  tripTo:          { fontSize:14, color:'#C49A00', fontWeight:'600' },
+  tripBtn:         { backgroundColor:'#F5C518', borderRadius:14, padding:16, alignItems:'center', marginBottom:8, elevation:5, shadowColor:'#F5C518', shadowOpacity:0.45, shadowRadius:10 },
+  tripBtnTxt:      { color:'#1A1200', fontWeight:'bold', fontSize:15 },
   navBtn:          { backgroundColor:'#0EA5E9', borderRadius:12, padding:12, alignItems:'center', marginBottom:10 },
   cancelBtn:       { padding:12, alignItems:'center' },
   cancelTxt:       { color:'#F87171', fontWeight:'600' },
-  rideCard:        { backgroundColor:'#152540', borderRadius:22, padding:18, marginBottom:16, elevation:10, borderWidth:1, borderColor:'#1D3A61', shadowColor:'#FF6318', shadowOpacity:0.2, shadowRadius:20 },
+  rideCard:        { backgroundColor:'#FFF9E6', borderRadius:22, padding:18, marginBottom:16, elevation:10, borderWidth:1, borderColor:'#D4A520', shadowColor:'#D4A520', shadowOpacity:0.25, shadowRadius:20 },
   rideHeader:      { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:10 },
-  rideTitle:       { fontSize:16, fontWeight:'bold', color:'#F1F5F9' },
+  rideTitle:       { fontSize:16, fontWeight:'bold', color:'#1A1200' },
   rideFare:        { fontSize:24, fontWeight:'bold', color:'#22C55E' },
-  rideDetails:     { backgroundColor:'#0B1929', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#1D3A61' },
+  rideDetails:     { backgroundColor:'#FFFBF0', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#D4A520' },
   rideFrom:        { fontSize:14, color:'#22C55E', fontWeight:'600' },
-  rideDivider:     { fontSize:16, textAlign:'center', color:'#1D3A61', marginVertical:4 },
-  rideTo:          { fontSize:14, color:'#FF6318', fontWeight:'600' },
+  rideDivider:     { fontSize:16, textAlign:'center', color:'#D4A520', marginVertical:4 },
+  rideTo:          { fontSize:14, color:'#C49A00', fontWeight:'600' },
   rideActions:     { flexDirection:'row', gap:10 },
-  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#1D3A61', alignItems:'center', backgroundColor:'#0B1929' },
-  rejectTxt:       { color:'#94A3B8', fontWeight:'bold' },
+  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#D4A520', alignItems:'center', backgroundColor:'#FFFBF0' },
+  rejectTxt:       { color:'#8B6914', fontWeight:'bold' },
   acceptBtn:       { flex:2, padding:14, borderRadius:12, backgroundColor:'#22C55E', alignItems:'center', elevation:4, shadowColor:'#22C55E', shadowOpacity:0.4, shadowRadius:8 },
   acceptTxt:       { color:'#fff', fontWeight:'900', fontSize:16 },
   result:          { textAlign:'center', color:'#22C55E', fontSize:14, marginTop:10, fontWeight:'600' },
-  nav:             { flexDirection:'row', backgroundColor:'#0D1F36', borderTopWidth:1, borderTopColor:'#1A3058', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
+  nav:             { flexDirection:'row', backgroundColor:'#1A1200', borderTopWidth:1, borderTopColor:'#3D2E00', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
   navItem:         { flex:1, alignItems:'center', justifyContent:'center', paddingTop:2 },
-  navIcon:         { fontSize:22, color:'#475569' },
-  navIconActive:   { color:'#FF6318' },
-  navLbl:          { fontSize:10, color:'#475569', marginTop:3, letterSpacing:0.3 },
-  navActive:       { color:'#FF6318', fontWeight:'bold' },
-  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#EF4444', borderWidth:1.5, borderColor:'#0D1F36' },
-  navLine:         { width:24, height:3, borderRadius:2, backgroundColor:'#FF6318', marginTop:5 },
-  earningsCard:    { backgroundColor:'#152540', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
-  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#1D3A61' },
-  earningsKey:     { fontSize:14, color:'#94A3B8' },
-  earningsVal:     { fontSize:14, color:'#E2E8F0', fontWeight:'500' },
-  profileHero:     { backgroundColor:'#FF6318', borderRadius:24, padding:28, alignItems:'center', marginBottom:16, elevation:6, shadowColor:'#FF6318', shadowOpacity:0.35, shadowRadius:14 },
-  profileAvatar:   { width:84, height:84, borderRadius:42, backgroundColor:'rgba(255,255,255,0.25)', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:3, borderColor:'rgba(255,255,255,0.5)' },
-  profileName:     { color:'#FFFFFF', fontSize:22, fontWeight:'bold' },
-  profilePhone:    { color:'rgba(255,255,255,0.85)', fontSize:14, marginTop:4 },
-  profileVehicle:  { color:'rgba(255,255,255,0.7)', fontSize:13, marginTop:4 },
-  badge:           { backgroundColor:'rgba(255,255,255,0.2)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(255,255,255,0.35)' },
-  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#152540', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
+  navIcon:         { fontSize:22, color:'#7B6A2A' },
+  navIconActive:   { color:'#F5C518' },
+  navLbl:          { fontSize:10, color:'#7B6A2A', marginTop:3, letterSpacing:0.3 },
+  navActive:       { color:'#F5C518', fontWeight:'bold' },
+  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#EF4444', borderWidth:1.5, borderColor:'#1A1200' },
+  navLine:         { width:24, height:3, borderRadius:2, backgroundColor:'#F5C518', marginTop:5 },
+  earningsCard:    { backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#D4A520' },
+  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#D4A520' },
+  earningsKey:     { fontSize:14, color:'#8B6914' },
+  earningsVal:     { fontSize:14, color:'#1A1200', fontWeight:'500' },
+  profileHero:     { backgroundColor:'#F5C518', borderRadius:24, padding:28, alignItems:'center', marginBottom:16, elevation:6, shadowColor:'#D4A520', shadowOpacity:0.35, shadowRadius:14 },
+  profileAvatar:   { width:84, height:84, borderRadius:42, backgroundColor:'rgba(26,18,0,0.1)', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:3, borderColor:'rgba(26,18,0,0.25)' },
+  profileName:     { color:'#1A1200', fontSize:22, fontWeight:'bold' },
+  profilePhone:    { color:'rgba(26,18,0,0.7)', fontSize:14, marginTop:4 },
+  profileVehicle:  { color:'rgba(26,18,0,0.6)', fontSize:13, marginTop:4 },
+  badge:           { backgroundColor:'rgba(26,18,0,0.08)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(26,18,0,0.2)' },
+  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#FFF9E6', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#D4A520' },
   logoutBtn:       { borderWidth:1.5, borderColor:'#EF4444', borderRadius:14, padding:14, alignItems:'center', marginTop:8, marginBottom:30, backgroundColor:'rgba(239,68,68,0.1)' },
 });
 
 const rs = StyleSheet.create({
-  regHeader:   { backgroundColor:'#FF6318', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
-  regTitle:    { color:'#FFFFFF', fontSize:16, fontWeight:'bold' },
-  bigTitle:    { fontSize:26, fontWeight:'bold', color:'#F1F5F9', marginTop:10 },
-  subTitle:    { fontSize:14, color:'#94A3B8', marginTop:6, marginBottom:10 },
-  fieldLabel:  { fontSize:14, fontWeight:'600', color:'#CBD5E1', marginTop:16, marginBottom:8 },
-  input:       { borderWidth:1, borderColor:'#1D3A61', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#152540', color:'#F1F5F9' },
-  photoBox:    { borderWidth:2, borderColor:'#1D3A61', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#152540' },
-  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#152540', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#1D3A61' },
-  vehBoxActive:{ backgroundColor:'#0B1929', borderColor:'#FF6318', borderWidth:2 },
+  regHeader:   { backgroundColor:'#F5C518', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
+  regTitle:    { color:'#1A1200', fontSize:16, fontWeight:'bold' },
+  bigTitle:    { fontSize:26, fontWeight:'bold', color:'#1A1200', marginTop:10 },
+  subTitle:    { fontSize:14, color:'#8B6914', marginTop:6, marginBottom:10 },
+  fieldLabel:  { fontSize:14, fontWeight:'600', color:'#7B6A1A', marginTop:16, marginBottom:8 },
+  input:       { borderWidth:1, borderColor:'#D4A520', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#FFF9E6', color:'#1A1200' },
+  photoBox:    { borderWidth:2, borderColor:'#D4A520', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#FFF9E6' },
+  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#FFF9E6', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#D4A520' },
+  vehBoxActive:{ backgroundColor:'#FFFBF0', borderColor:'#F5C518', borderWidth:2 },
   uploadBtn:   { flex:1, backgroundColor:'#22C55E', borderRadius:8, padding:10, alignItems:'center' },
   uploadBtnTxt:{ color:'#fff', fontWeight:'600', fontSize:13 },
   adviceBox:   { backgroundColor:'rgba(59,130,246,0.1)', borderRadius:12, padding:14, marginTop:14, marginBottom:6, borderWidth:1, borderColor:'rgba(59,130,246,0.25)' },
