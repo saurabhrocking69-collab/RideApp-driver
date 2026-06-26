@@ -3833,6 +3833,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     if (!drvCmpRideId.trim()) return Alert.alert('Ride ID', 'Ride ID zaroori hai — kis ride ke baare mein complaint hai?');
                     if (drvCmpDesc.trim().length < 20) return Alert.alert('Description', 'Thoda aur detail chahiye (20+ characters)');
                     setDrvCmpLoading(true);
+                    let submitOk = false;
                     try {
                       const autoTitle = drvCmpTitle || autoTitleMap[drvCmpType] || drvCmpType.replace(/_/g,' ');
                       const body: any = { phone, complaint_type: drvCmpType, title: autoTitle, description: drvCmpDesc.trim(), ride_id: drvCmpRideId.trim() };
@@ -3843,17 +3844,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       });
                       const data = await res.json();
                       if (data.complaint) {
-                        const lr = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`);
-                        const ld = await lr.json();
-                        setDrvComplaints(ld.complaints || []);
+                        submitOk = true;
+                        setDrvCmpLoading(false);
                         Alert.alert(
                           '✅ Complaint Submit Ho Gayi',
-                          `ID: #${data.complaint.id?.slice(-8) || 'N/A'}\n\nAapki complaint receive hui. Team ${selectedType.sla} mein review karegi.`,
+                          `ID: #${data.complaint.id?.slice(-8) || 'N/A'}\n\nAapki complaint receive hui. Team ${selectedType?.sla || '48h'} mein review karegi.`,
                           [{ text: 'Theek Hai', onPress: () => setDrSubScreen('complaints') }]
                         );
-                      } else Alert.alert('Error', data.error || 'Submit failed — retry karo');
-                    } catch { Alert.alert('Error', 'Network error — internet check karo'); }
-                    setDrvCmpLoading(false);
+                        // Reload list non-blocking
+                        fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`)
+                          .then(r => r.json()).then(ld => setDrvComplaints(ld.complaints || [])).catch(() => {});
+                      } else {
+                        Alert.alert('Error', data.error || 'Submit failed — retry karo');
+                      }
+                    } catch { Alert.alert('Error', 'Server se connect nahi ho pa raha — internet check karo'); }
+                    if (!submitOk) setDrvCmpLoading(false);
                   }}
                   style={{ backgroundColor: drvCmpLoading ? '#9ca3af' : '#e94560', borderRadius: 16, padding: 18, alignItems: 'center', elevation: 4, shadowColor: '#e94560', shadowOpacity: 0.3, shadowRadius: 8 }}
                   disabled={drvCmpLoading}>
