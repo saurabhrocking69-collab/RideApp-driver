@@ -1859,7 +1859,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
         alignItems: 'center', marginTop: 12,
       }}>
-        <Text style={{ color: '#6B7280', fontSize: 14, letterSpacing: 0.6 }}>Lucknow ka best earning partner</Text>
+        <Text style={{ color: '#6B7280', fontSize: 14, letterSpacing: 0.6 }}>India ka best earning partner</Text>
       </Animated.View>
 
       {/* Captain badge */}
@@ -1897,7 +1897,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {!loginOtpSent ? (
           <View>
             <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
-              <Ionicons name="phone-portrait" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+              <Ionicons name="phone-portrait" size={26} color="#4CAF50" style={{ marginRight:10 }} />
               <Text style={[rs.bigTitle, { marginTop:0 }]}>Phone Number</Text>
             </View>
             <Text style={rs.subTitle}>Aapka mobile number daalo — OTP se verify hoga</Text>
@@ -1934,7 +1934,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {loginOtpDigits.map((digit, i) => (
                 <TextInput key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#D4A520', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#FFF9E6', color: '#F1F5F9' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#2D4060', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#1E2A38', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2001,7 +2001,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '40%' }} /></View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
-          <Ionicons name="car-sport" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+          <Ionicons name="car-sport" size={26} color="#4CAF50" style={{ marginRight:10 }} />
           <Text style={[rs.bigTitle, { marginTop:0 }]}>Vehicle Type</Text>
         </View><Text style={rs.subTitle}>Aap kya chalate hain?</Text>
         {[
@@ -2023,7 +2023,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 : <Ionicons name={v.ion as any} size={28} color={regData.vehicle_type === v.id ? '#fff' : (v.color || '#94A3B8')} />}
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#1A1200' }, regData.vehicle_type === v.id && { color: '#1A1200' }]}>{v.label}</Text>
+              <Text style={[{ fontSize: 18, fontWeight: '600', color: '#E2E8F0' }, regData.vehicle_type === v.id && { color: '#4CAF50' }]}>{v.label}</Text>
               {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#64748B'), marginTop: 2 }}>{v.sub}</Text> : null}
             </View>
             {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
@@ -2049,7 +2049,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '60%' }} /></View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
-            <Ionicons name="document-text" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+            <Ionicons name="document-text" size={26} color="#4CAF50" style={{ marginRight:10 }} />
             <Text style={[rs.bigTitle, { marginTop:0 }]}>Driving License</Text>
           </View>
           <Text style={rs.subTitle}>DL ki details — naam, number aur photo</Text>
@@ -2135,7 +2135,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: '#e94560', width: '80%' }} /></View>
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 110 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
           <View style={{ flexDirection:'row', alignItems:'center', marginTop:10, marginBottom:6 }}>
-            <Ionicons name="car" size={26} color="#1a1a2e" style={{ marginRight:10 }} />
+            <Ionicons name="car" size={26} color="#4CAF50" style={{ marginRight:10 }} />
             <Text style={[rs.bigTitle, { marginTop:0 }]}>Vehicle Details</Text>
           </View>
           <Text style={rs.subTitle}>
@@ -2156,8 +2156,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     {LUXURY_BRANDS.map(b => (
                       <TouchableOpacity key={b}
                         onPress={() => { updateReg('vehicle_brand', b); updateReg('vehicle_model', ''); }}
-                        style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: regData.vehicle_brand === b ? '#1a1a2e' : '#fff8e1', borderWidth: 2, borderColor: regData.vehicle_brand === b ? '#c9a227' : '#ffe082' }}>
-                        <Text style={{ fontWeight: '700', color: regData.vehicle_brand === b ? '#ffd700' : '#b8860b', fontSize: 13 }}>{b}</Text>
+                        style={{ paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: regData.vehicle_brand === b ? '#1a1a2e' : '#1E2A38', borderWidth: 2, borderColor: regData.vehicle_brand === b ? '#4CAF50' : '#2D4060' }}>
+                        <Text style={{ fontWeight: '700', color: regData.vehicle_brand === b ? '#4CAF50' : '#9CA3AF', fontSize: 13 }}>{b}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -2185,8 +2185,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 6 }}>
                     {(LUXURY_MODELS[regData.vehicle_brand] || []).map((m: string) => (
                       <TouchableOpacity key={m} onPress={() => updateReg('vehicle_model', m)}
-                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: regData.vehicle_model === m ? '#1a1a2e' : '#f5f5f5', borderWidth: 1, borderColor: regData.vehicle_model === m ? '#e94560' : '#e0e0e0' }}>
-                        <Text style={{ fontWeight: '600', color: regData.vehicle_model === m ? '#fff' : '#333', fontSize: 13 }}>{m}</Text>
+                        style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: regData.vehicle_model === m ? '#1a1a2e' : '#1E2A38', borderWidth: 1, borderColor: regData.vehicle_model === m ? '#E94560' : '#2D4060' }}>
+                        <Text style={{ fontWeight: '600', color: regData.vehicle_model === m ? '#E94560' : '#9CA3AF', fontSize: 13 }}>{m}</Text>
                       </TouchableOpacity>
                     ))}
                   </View>
@@ -2365,8 +2365,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={s.btnTxt}>📄 Documents Resubmit Karo</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity style={[s.btn, { backgroundColor: '#FFF9E6', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
-            <Text style={s.btnTxt}>← Wapas Login pe jao</Text>
+          <TouchableOpacity style={[s.btn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#2D4060', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
+            <Text style={[s.btnTxt, { color: '#9CA3AF' }]}>← Wapas Login pe jao</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -2420,7 +2420,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TextInput
                   key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#D4A520', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#FFF9E6', color: '#F1F5F9' }}
+                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#2D4060', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#1E2A38', color: '#F1F5F9' }}
                   keyboardType="number-pad" maxLength={1} value={digit}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
@@ -2820,7 +2820,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#4CAF50', false: '#e0e0e0' }} />
       </View>
       {/* Content */}
-      <View style={{ flex: 1, backgroundColor: '#FFF3CC', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
+      <View style={{ flex: 1, backgroundColor: '#161B22', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
           <View style={s.statsRow}>
             <View style={s.statCard}><Text style={s.statIcon}>💰</Text><CountUp value={earnings} style={s.statValue} /><Text style={s.statLabel}>Aaj ki kamai</Text></View>
@@ -2858,7 +2858,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ fontSize: 22, marginRight: 10 }}>📩</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '800', fontSize: 12, color: '#60A5FA', marginBottom: 2 }}>Sppero Admin</Text>
-                <Text style={{ fontSize: 12, color: '#7B6A1A' }}>{adminNotif.body || adminNotif.title}</Text>
+                <Text style={{ fontSize: 12, color: '#93C5FD' }}>{adminNotif.body || adminNotif.title}</Text>
               </View>
               <TouchableOpacity onPress={() => setAdminNotifDismissed(adminNotif.created_at)} style={{ padding: 6 }}>
                 <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
@@ -2872,8 +2872,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
                 <Text style={{ fontSize: 22, marginRight: 10 }}>{offer.type === 'incentive' ? '💰' : '📢'}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#1A1200' }}>{offer.title}</Text>
-                  {offer.body ? <Text style={{ fontSize: 11, color: '#8B6914', marginTop: 2 }}>{offer.body}</Text> : null}
+                  <Text style={{ fontWeight: '800', fontSize: 13, color: '#E2E8F0' }}>{offer.title}</Text>
+                  {offer.body ? <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>{offer.body}</Text> : null}
                 </View>
                 <TouchableOpacity onPress={() => setOfferDismissed(s => new Set([...s, offer.id]))} style={{ padding: 6 }}>
                   <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
@@ -2908,9 +2908,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Ionicons name="chatbubble" size={18} color="#22C55E" />
                     {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                   </View>
-                  <Text style={{ fontSize: 12, color: '#8B6914', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
+                  <Text style={{ fontSize: 12, color: '#E2E8F0', fontWeight: '600', marginLeft: 6 }}>Chat</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#22C55E" /><Text style={{ fontSize: 12, color: '#8B6914', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
+                <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#22C55E" /><Text style={{ fontSize: 12, color: '#E2E8F0', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
               {unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: '#e94560', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
@@ -2955,9 +2955,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {activeRide.status === 'arrived' && (
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                  <Text style={{ fontSize: 13, color: '#8B6914', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>🔐 Passenger se 4-digit OTP poocho</Text>
+                  <Text style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>🔐 Passenger se 4-digit OTP poocho</Text>
                   <TextInput
-                    style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? '#22C55E' : '#D4A520', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#FFF9E6', color: '#1A1200' }}
+                    style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? '#4CAF50' : '#2D4060', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#1E2A38', color: '#E2E8F0' }}
                     keyboardType="number-pad"
                     maxLength={4}
                     value={otpInput}
@@ -4544,7 +4544,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         {bonusMsg ? (
-          <View style={{ backgroundColor: bonusMsg.startsWith('✅') ? '#e8f5e9' : '#ffebee', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+          <View style={{ backgroundColor: bonusMsg.startsWith('✅') ? 'rgba(76,175,80,0.15)' : 'rgba(233,69,96,0.12)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
             <Text style={{ color: bonusMsg.startsWith('✅') ? '#2e7d32' : '#c62828', fontWeight: '700', fontSize: 13 }}>{bonusMsg}</Text>
           </View>
         ) : null}
@@ -4557,12 +4557,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <>
           {/* ── Peak Hour Banner ── */}
           {peakRule && (
-            <View style={{ backgroundColor: isPeak ? '#FFF8E1' : '#fff', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: isPeak ? 2 : 0, borderColor: '#FF8F00' }}>
+            <View style={{ backgroundColor: isPeak ? 'rgba(255,143,0,0.1)' : '#1E2A38', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: isPeak ? 2 : 1, borderColor: isPeak ? '#FF8F00' : '#2D4060' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <Text style={{ fontSize: 28, marginRight: 12 }}>{isPeak ? '⚡' : '🕐'}</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>{peakRule.label}</Text>
-                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>+₹{peakRule.config.per_ride}/ride · 7-9 AM aur 5-8 PM</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#E2E8F0' }}>{peakRule.label}</Text>
+                  <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>+₹{peakRule.config.per_ride}/ride · 7-9 AM aur 5-8 PM</Text>
                 </View>
                 {isPeak && (
                   <View style={{ backgroundColor: '#FF8F00', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
@@ -4581,12 +4581,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* ── Daily Ride Challenge ── */}
           {dailyRule && (
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+            <View style={{ backgroundColor: '#1E2A38', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#2D4060' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                 <Text style={{ fontSize: 22, marginRight: 10 }}>🎯</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>{dailyRule.label}</Text>
-                  <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Aaj ki rides: {ridesCount} completed · Raat 12 baje reset</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#E2E8F0' }}>{dailyRule.label}</Text>
+                  <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 2 }}>Aaj ki rides: {ridesCount} completed · Raat 12 baje reset</Text>
                 </View>
               </View>
               {(dailyRule.config.tiers || []).map((tier: any, idx: number) => {
@@ -4599,11 +4599,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                         <Text style={{ fontSize: 16 }}>{isClaimed ? '✅' : isUnlocked ? '🔓' : '🔒'}</Text>
-                        <Text style={{ fontSize: 13, fontWeight: '700', color: isClaimed ? '#4CAF50' : '#1a1a2e' }}>{tier.rides} rides today</Text>
+                        <Text style={{ fontSize: 13, fontWeight: '700', color: isClaimed ? '#4CAF50' : '#E2E8F0' }}>{tier.rides} rides today</Text>
                       </View>
                       <Text style={{ fontSize: 14, fontWeight: '900', color: '#e94560' }}>₹{tier.amount}</Text>
                     </View>
-                    <View style={{ height: 8, backgroundColor: '#f0f0f0', borderRadius: 4, overflow: 'hidden' }}>
+                    <View style={{ height: 8, backgroundColor: '#1A2535', borderRadius: 4, overflow: 'hidden' }}>
                       <View style={{ height: 8, backgroundColor: isClaimed ? '#4CAF50' : isUnlocked ? '#FF8F00' : '#e94560', borderRadius: 4, width: pct + '%' }} />
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, alignItems: 'center' }}>
@@ -4627,15 +4627,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* ── Weekly Warrior ── */}
           {streakRule && (
-            <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
+            <View style={{ backgroundColor: '#1E2A38', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
                 <Text style={{ fontSize: 22, marginRight: 10 }}>🏆</Text>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1a1a2e' }}>Weekly Warrior</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#E2E8F0' }}>Weekly Warrior</Text>
                   <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{streakRule.config.target_days} days × {ridesPerDayTarget}+ rides/day → ₹{streakRule.config.amount}</Text>
                 </View>
-                <View style={{ backgroundColor: streakAchieved && !streakClaimed ? '#FFF3E0' : '#f5f5f5', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
-                  <Text style={{ fontSize: 13, fontWeight: '900', color: streakAchieved && !streakClaimed ? '#FF8F00' : '#999' }}>{qualifyingDays}/{streakTarget}</Text>
+                <View style={{ backgroundColor: streakAchieved && !streakClaimed ? 'rgba(255,143,0,0.15)' : '#1A2535', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: streakAchieved && !streakClaimed ? '#FF8F00' : '#6B7280' }}>{qualifyingDays}/{streakTarget}</Text>
                 </View>
               </View>
               {/* 7-day calendar */}
@@ -4648,7 +4648,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   return (
                     <View key={i} style={{ alignItems: 'center', flex: 1 }}>
                       <View style={{ width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: qualified ? '#4CAF50' : isToday ? '#FFF3E0' : isPast ? '#ffebee' : '#f5f5f5',
+                        backgroundColor: qualified ? '#4CAF50' : isToday ? 'rgba(255,143,0,0.2)' : isPast ? 'rgba(233,69,96,0.15)' : '#1A2535',
                         borderWidth: isToday ? 2 : 0, borderColor: '#FF8F00' }}>
                         <Text style={{ fontSize: 12, fontWeight: '800', color: qualified ? '#fff' : isPast ? '#e94560' : '#bbb' }}>
                           {qualified ? '✓' : cnt > 0 ? String(cnt) : weekDayLabels[i][0]}
@@ -4665,12 +4665,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 15 }}>🏆 Claim Weekly Warrior ₹{streakRule.config.amount}</Text>
                 </TouchableOpacity>
               ) : streakClaimed ? (
-                <View style={{ backgroundColor: '#e8f5e9', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: '#2e7d32', fontWeight: '800', fontSize: 13 }}>✅ Is hafte ka bonus claim ho gaya!</Text>
+                <View style={{ backgroundColor: 'rgba(76,175,80,0.15)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
+                  <Text style={{ color: '#4CAF50', fontWeight: '800', fontSize: 13 }}>✅ Is hafte ka bonus claim ho gaya!</Text>
                 </View>
               ) : (
-                <View style={{ backgroundColor: '#f5f5f5', borderRadius: 12, padding: 12 }}>
-                  <Text style={{ color: '#888', fontSize: 12, textAlign: 'center' }}>{streakTarget - qualifyingDays} aur qualifying days chahiye ({ridesPerDayTarget}+ rides/day)</Text>
+                <View style={{ backgroundColor: '#1A2535', borderRadius: 12, padding: 12 }}>
+                  <Text style={{ color: '#6B7280', fontSize: 12, textAlign: 'center' }}>{streakTarget - qualifyingDays} aur qualifying days chahiye ({ridesPerDayTarget}+ rides/day)</Text>
                 </View>
               )}
             </View>
@@ -4696,9 +4696,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
 
           {/* ── Recent History ── */}
-          <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 8, elevation: 2 }}>
+          <View style={{ backgroundColor: '#1E2A38', borderRadius: 16, padding: 16, marginBottom: 8, elevation: 2, borderWidth: 1, borderColor: '#2D4060' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '900', color: '#1a1a2e', flex: 1 }}>📋 Bonus History</Text>
+              <Text style={{ fontSize: 15, fontWeight: '900', color: '#E2E8F0', flex: 1 }}>📋 Bonus History</Text>
               {!bonusHistoryLoaded && (
                 <TouchableOpacity onPress={() => loadBonusHistory(phone)}>
                   <Text style={{ fontSize: 12, color: '#2196F3', fontWeight: '700' }}>Load History</Text>
@@ -4712,9 +4712,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 const isEarn = item.amount > 0;
                 const typeLabel: Record<string,string> = { daily_rides: '🎯 Daily Rides', peak_hour: '⚡ Peak Hour', weekly_streak: '🏆 Weekly Warrior', redeem: '💸 Redeemed' };
                 return (
-                  <View key={item.id || i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: i < bonusHistory.length - 1 ? 1 : 0, borderBottomColor: '#f5f5f5' }}>
+                  <View key={item.id || i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: i < bonusHistory.length - 1 ? 1 : 0, borderBottomColor: '#2D4060' }}>
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1a1a2e' }}>{typeLabel[item.bonus_type] || item.bonus_type}</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#E2E8F0' }}>{typeLabel[item.bonus_type] || item.bonus_type}</Text>
                       <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{item.description}</Text>
                       <Text style={{ fontSize: 10, color: '#bbb', marginTop: 1 }}>{new Date(item.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
                     </View>
@@ -4919,96 +4919,96 @@ function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq }: any) {
 }
 
 const s = StyleSheet.create({
-  screen:          { flex:1, backgroundColor:'#FEFCE8' },
-  mapFit:          { height: 220, width: '100%', backgroundColor: '#FFF3CC' },
+  screen:          { flex:1, backgroundColor:'#111827' },
+  mapFit:          { height: 220, width: '100%', backgroundColor: '#161B22' },
   navFloat:        { position:'absolute', bottom:0, left:0, right:0 },
-  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#EF4444', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
+  chatBadge:       { position:'absolute', top:-6, right:-10, backgroundColor:'#E94560', borderRadius:9, minWidth:18, height:18, alignItems:'center', justifyContent:'center', paddingHorizontal:4 },
   hero:            { backgroundColor:'#F5C518', alignItems:'center', padding:50, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+24 : 50, paddingBottom:40 },
   heroIcon:        { fontSize:60 },
   heroTitle:       { color:'#1A1200', fontSize:28, fontWeight:'bold', marginTop:10 },
   heroSub:         { color:'rgba(26,18,0,0.75)', fontSize:14, marginTop:6 },
-  sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#1A1200', marginBottom:12 },
-  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#D4A520' },
+  sectionTitle:    { fontSize:16, fontWeight:'bold', color:'#E2E8F0', marginBottom:12 },
+  driverItem:      { flexDirection:'row', alignItems:'center', backgroundColor:'#1E2A38', borderRadius:14, padding:16, marginBottom:10, elevation:2, borderWidth:1, borderColor:'#2D4060' },
   btn:             { backgroundColor:'#F5C518', borderRadius:14, padding:16, alignItems:'center', marginTop:16, marginBottom:10, elevation:4, shadowColor:'#F5C518', shadowOpacity:0.4, shadowRadius:10 },
   btnTxt:          { color:'#1A1200', fontSize:16, fontWeight:'bold' },
   err:             { textAlign:'center', color:'#F87171', marginVertical:10 },
   topBar:          { backgroundColor:'#F5C518', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:0 },
   greeting:        { color:'#1A1200', fontSize:18, fontWeight:'bold' },
   subTxt:          { color:'rgba(26,18,0,0.65)', fontSize:12, marginTop:2 },
-  notifBanner:     { backgroundColor:'#EF4444', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
+  notifBanner:     { backgroundColor:'#E94560', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },
   statsRow:        { flexDirection:'row', gap:10, marginBottom:16 },
-  statCard:        { flex:1, backgroundColor:'#FFF9E6', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#D4A520', shadowOpacity:0.2, shadowRadius:10, borderWidth:1, borderColor:'#D4A520' },
+  statCard:        { flex:1, backgroundColor:'#1E2A38', borderRadius:16, padding:14, alignItems:'center', elevation:4, shadowColor:'#4CAF50', shadowOpacity:0.15, shadowRadius:10, borderWidth:1, borderColor:'#2D5A3D' },
   statIcon:        { fontSize:22 },
-  statValue:       { fontSize:22, fontWeight:'bold', color:'#1A1200', marginTop:4 },
-  statLabel:       { fontSize:10, color:'#8B6914', marginTop:3, letterSpacing:0.3 },
-  targetCard:      { backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#D4A520' },
-  statusCard:      { backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#D4A520' },
-  statusText:      { fontSize:14, color:'#7B6A1A', textAlign:'center' },
-  tripCard:        { backgroundColor:'#FFF9E6', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#22C55E', shadowColor:'#22C55E', shadowOpacity:0.2, shadowRadius:16 },
-  tripBadge:       { backgroundColor:'#22C55E', borderRadius:10, padding:9, marginBottom:12 },
+  statValue:       { fontSize:22, fontWeight:'bold', color:'#E2E8F0', marginTop:4 },
+  statLabel:       { fontSize:10, color:'#9CA3AF', marginTop:3, letterSpacing:0.3 },
+  targetCard:      { backgroundColor:'#1E2A38', borderRadius:14, padding:16, marginBottom:14, elevation:2, borderWidth:1, borderColor:'#2D4060' },
+  statusCard:      { backgroundColor:'#1E2A38', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#2D4060' },
+  statusText:      { fontSize:14, color:'#9CA3AF', textAlign:'center' },
+  tripCard:        { backgroundColor:'#1E2A38', borderRadius:18, padding:16, marginBottom:16, elevation:6, borderWidth:2, borderColor:'#4CAF50', shadowColor:'#4CAF50', shadowOpacity:0.2, shadowRadius:16 },
+  tripBadge:       { backgroundColor:'#4CAF50', borderRadius:10, padding:9, marginBottom:12 },
   tripBadgeTxt:    { color:'#fff', textAlign:'center', fontWeight:'bold', fontSize:14 },
   tripCustomer:    { flexDirection:'row', alignItems:'center', marginBottom:12 },
   tripAvatar:      { width:46, height:46, borderRadius:23, backgroundColor:'#F5C518', alignItems:'center', justifyContent:'center', marginRight:12 },
-  tripCustName:    { fontSize:16, fontWeight:'bold', color:'#1A1200' },
-  tripCustPhone:   { fontSize:13, color:'#8B6914', marginTop:2 },
-  tripFare:        { fontSize:22, fontWeight:'bold', color:'#22C55E' },
-  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#FFFBF0', borderRadius:12, padding:11, borderWidth:1, borderColor:'#D4A520' },
-  tripRoute:       { backgroundColor:'#FFFBF0', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#D4A520' },
-  tripFrom:        { fontSize:14, color:'#22C55E', fontWeight:'600' },
-  tripArrow:       { fontSize:16, textAlign:'center', color:'#B8921A', marginVertical:4 },
-  tripTo:          { fontSize:14, color:'#C49A00', fontWeight:'600' },
-  tripBtn:         { backgroundColor:'#F5C518', borderRadius:14, padding:16, alignItems:'center', marginBottom:8, elevation:5, shadowColor:'#F5C518', shadowOpacity:0.45, shadowRadius:10 },
-  tripBtnTxt:      { color:'#1A1200', fontWeight:'bold', fontSize:15 },
+  tripCustName:    { fontSize:16, fontWeight:'bold', color:'#E2E8F0' },
+  tripCustPhone:   { fontSize:13, color:'#9CA3AF', marginTop:2 },
+  tripFare:        { fontSize:22, fontWeight:'bold', color:'#4CAF50' },
+  chatCallBtn:     { flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', backgroundColor:'#1A2535', borderRadius:12, padding:11, borderWidth:1, borderColor:'#2D4060' },
+  tripRoute:       { backgroundColor:'#1A2535', borderRadius:12, padding:12, marginBottom:12, borderWidth:1, borderColor:'#2D4060' },
+  tripFrom:        { fontSize:14, color:'#4CAF50', fontWeight:'600' },
+  tripArrow:       { fontSize:16, textAlign:'center', color:'#6B7280', marginVertical:4 },
+  tripTo:          { fontSize:14, color:'#E94560', fontWeight:'600' },
+  tripBtn:         { backgroundColor:'#4CAF50', borderRadius:14, padding:16, alignItems:'center', marginBottom:8, elevation:5, shadowColor:'#4CAF50', shadowOpacity:0.45, shadowRadius:10 },
+  tripBtnTxt:      { color:'#fff', fontWeight:'bold', fontSize:15 },
   navBtn:          { backgroundColor:'#0EA5E9', borderRadius:12, padding:12, alignItems:'center', marginBottom:10 },
   cancelBtn:       { padding:12, alignItems:'center' },
-  cancelTxt:       { color:'#F87171', fontWeight:'600' },
-  rideCard:        { backgroundColor:'#FFF9E6', borderRadius:22, padding:18, marginBottom:16, elevation:10, borderWidth:1, borderColor:'#D4A520', shadowColor:'#D4A520', shadowOpacity:0.25, shadowRadius:20 },
+  cancelTxt:       { color:'#E94560', fontWeight:'600' },
+  rideCard:        { backgroundColor:'#1E2A38', borderRadius:22, padding:18, marginBottom:16, elevation:6, borderWidth:1, borderColor:'#2D4060', shadowColor:'#4CAF50', shadowOpacity:0.12, shadowRadius:14 },
   rideHeader:      { flexDirection:'row', justifyContent:'space-between', alignItems:'center', marginBottom:10 },
-  rideTitle:       { fontSize:16, fontWeight:'bold', color:'#1A1200' },
-  rideFare:        { fontSize:24, fontWeight:'bold', color:'#22C55E' },
-  rideDetails:     { backgroundColor:'#FFFBF0', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#D4A520' },
-  rideFrom:        { fontSize:14, color:'#22C55E', fontWeight:'600' },
-  rideDivider:     { fontSize:16, textAlign:'center', color:'#D4A520', marginVertical:4 },
-  rideTo:          { fontSize:14, color:'#C49A00', fontWeight:'600' },
+  rideTitle:       { fontSize:16, fontWeight:'bold', color:'#E2E8F0' },
+  rideFare:        { fontSize:24, fontWeight:'bold', color:'#4CAF50' },
+  rideDetails:     { backgroundColor:'#1A2535', borderRadius:12, padding:12, marginBottom:4, borderWidth:1, borderColor:'#2D4060' },
+  rideFrom:        { fontSize:14, color:'#4CAF50', fontWeight:'600' },
+  rideDivider:     { fontSize:16, textAlign:'center', color:'#6B7280', marginVertical:4 },
+  rideTo:          { fontSize:14, color:'#E94560', fontWeight:'600' },
   rideActions:     { flexDirection:'row', gap:10 },
-  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#D4A520', alignItems:'center', backgroundColor:'#FFFBF0' },
-  rejectTxt:       { color:'#8B6914', fontWeight:'bold' },
-  acceptBtn:       { flex:2, padding:14, borderRadius:12, backgroundColor:'#22C55E', alignItems:'center', elevation:4, shadowColor:'#22C55E', shadowOpacity:0.4, shadowRadius:8 },
+  rejectBtn:       { flex:1, padding:14, borderRadius:12, borderWidth:1, borderColor:'#E94560', alignItems:'center', backgroundColor:'rgba(233,69,96,0.08)' },
+  rejectTxt:       { color:'#E94560', fontWeight:'bold' },
+  acceptBtn:       { flex:2, padding:14, borderRadius:12, backgroundColor:'#4CAF50', alignItems:'center', elevation:4, shadowColor:'#4CAF50', shadowOpacity:0.4, shadowRadius:8 },
   acceptTxt:       { color:'#fff', fontWeight:'900', fontSize:16 },
-  result:          { textAlign:'center', color:'#22C55E', fontSize:14, marginTop:10, fontWeight:'600' },
-  nav:             { flexDirection:'row', backgroundColor:'#1A1200', borderTopWidth:1, borderTopColor:'#3D2E00', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
+  result:          { textAlign:'center', color:'#4CAF50', fontSize:14, marginTop:10, fontWeight:'600' },
+  nav:             { flexDirection:'row', backgroundColor:'#0D1117', borderTopWidth:1, borderTopColor:'#1F2937', paddingBottom: Platform.OS==='android' ? 44 : 16, paddingTop:10, elevation:20, shadowColor:'#000', shadowOpacity:0.5, shadowRadius:16 },
   navItem:         { flex:1, alignItems:'center', justifyContent:'center', paddingTop:2 },
-  navIcon:         { fontSize:22, color:'#7B6A2A' },
+  navIcon:         { fontSize:22, color:'#6B7280' },
   navIconActive:   { color:'#F5C518' },
-  navLbl:          { fontSize:10, color:'#7B6A2A', marginTop:3, letterSpacing:0.3 },
+  navLbl:          { fontSize:10, color:'#6B7280', marginTop:3, letterSpacing:0.3 },
   navActive:       { color:'#F5C518', fontWeight:'bold' },
-  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#EF4444', borderWidth:1.5, borderColor:'#1A1200' },
+  navDot:          { position:'absolute', top:-3, right:-10, width:9, height:9, borderRadius:4.5, backgroundColor:'#E94560', borderWidth:1.5, borderColor:'#0D1117' },
   navLine:         { width:24, height:3, borderRadius:2, backgroundColor:'#F5C518', marginTop:5 },
-  earningsCard:    { backgroundColor:'#FFF9E6', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#D4A520' },
-  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#D4A520' },
-  earningsKey:     { fontSize:14, color:'#8B6914' },
-  earningsVal:     { fontSize:14, color:'#1A1200', fontWeight:'500' },
+  earningsCard:    { backgroundColor:'#1E2A38', borderRadius:14, padding:16, marginBottom:16, elevation:2, borderWidth:1, borderColor:'#2D4060' },
+  earningsRow:     { flexDirection:'row', justifyContent:'space-between', paddingVertical:10, borderBottomWidth:1, borderBottomColor:'#2D4060' },
+  earningsKey:     { fontSize:14, color:'#9CA3AF' },
+  earningsVal:     { fontSize:14, color:'#E2E8F0', fontWeight:'500' },
   profileHero:     { backgroundColor:'#F5C518', borderRadius:24, padding:28, alignItems:'center', marginBottom:16, elevation:6, shadowColor:'#D4A520', shadowOpacity:0.35, shadowRadius:14 },
   profileAvatar:   { width:84, height:84, borderRadius:42, backgroundColor:'rgba(26,18,0,0.1)', alignItems:'center', justifyContent:'center', marginBottom:12, borderWidth:3, borderColor:'rgba(26,18,0,0.25)' },
   profileName:     { color:'#1A1200', fontSize:22, fontWeight:'bold' },
   profilePhone:    { color:'rgba(26,18,0,0.7)', fontSize:14, marginTop:4 },
   profileVehicle:  { color:'rgba(26,18,0,0.6)', fontSize:13, marginTop:4 },
-  badge:           { backgroundColor:'rgba(26,18,0,0.08)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(26,18,0,0.2)' },
-  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#FFF9E6', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#D4A520' },
-  logoutBtn:       { borderWidth:1.5, borderColor:'#EF4444', borderRadius:14, padding:14, alignItems:'center', marginTop:8, marginBottom:30, backgroundColor:'rgba(239,68,68,0.1)' },
+  badge:           { backgroundColor:'rgba(76,175,80,0.12)', borderRadius:12, paddingVertical:5, paddingHorizontal:14, marginTop:10, borderWidth:1, borderColor:'rgba(76,175,80,0.3)' },
+  menuItem:        { flexDirection:'row', alignItems:'center', backgroundColor:'#1E2A38', borderRadius:14, padding:14, marginBottom:8, elevation:2, borderWidth:1, borderColor:'#2D4060' },
+  logoutBtn:       { borderWidth:1.5, borderColor:'#E94560', borderRadius:14, padding:14, alignItems:'center', marginTop:8, marginBottom:30, backgroundColor:'rgba(233,69,96,0.08)' },
 });
 
 const rs = StyleSheet.create({
   regHeader:   { backgroundColor:'#F5C518', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48 },
   regTitle:    { color:'#1A1200', fontSize:16, fontWeight:'bold' },
-  bigTitle:    { fontSize:26, fontWeight:'bold', color:'#1A1200', marginTop:10 },
-  subTitle:    { fontSize:14, color:'#8B6914', marginTop:6, marginBottom:10 },
-  fieldLabel:  { fontSize:14, fontWeight:'600', color:'#7B6A1A', marginTop:16, marginBottom:8 },
-  input:       { borderWidth:1, borderColor:'#D4A520', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#FFF9E6', color:'#1A1200' },
-  photoBox:    { borderWidth:2, borderColor:'#D4A520', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#FFF9E6' },
-  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#FFF9E6', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#D4A520' },
-  vehBoxActive:{ backgroundColor:'#FFFBF0', borderColor:'#F5C518', borderWidth:2 },
-  uploadBtn:   { flex:1, backgroundColor:'#22C55E', borderRadius:8, padding:10, alignItems:'center' },
+  bigTitle:    { fontSize:26, fontWeight:'bold', color:'#E2E8F0', marginTop:10 },
+  subTitle:    { fontSize:14, color:'#9CA3AF', marginTop:6, marginBottom:10 },
+  fieldLabel:  { fontSize:14, fontWeight:'600', color:'#9CA3AF', marginTop:16, marginBottom:8 },
+  input:       { borderWidth:1, borderColor:'#2D4060', borderRadius:10, padding:14, fontSize:16, backgroundColor:'#1E2A38', color:'#E2E8F0' },
+  photoBox:    { borderWidth:2, borderColor:'#2D4060', borderStyle:'dashed', borderRadius:14, padding:16, alignItems:'center', backgroundColor:'#1E2A38' },
+  vehBox:      { flexDirection:'row', alignItems:'center', backgroundColor:'#1E2A38', borderRadius:14, padding:18, marginBottom:12, elevation:2, borderWidth:1, borderColor:'#2D4060' },
+  vehBoxActive:{ backgroundColor:'#1A2535', borderColor:'#4CAF50', borderWidth:2 },
+  uploadBtn:   { flex:1, backgroundColor:'#4CAF50', borderRadius:8, padding:10, alignItems:'center' },
   uploadBtnTxt:{ color:'#fff', fontWeight:'600', fontSize:13 },
   adviceBox:   { backgroundColor:'rgba(59,130,246,0.1)', borderRadius:12, padding:14, marginTop:14, marginBottom:6, borderWidth:1, borderColor:'rgba(59,130,246,0.25)' },
   adviceTitle: { fontSize:14, fontWeight:'bold', color:'#60A5FA', marginBottom:6 },
