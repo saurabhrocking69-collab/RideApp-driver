@@ -3895,7 +3895,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         setDrvCmpLoading(false);
                         Alert.alert(
                           '✅ Complaint Submit Ho Gayi',
-                          `ID: #${data.complaint.id?.slice(-8) || 'N/A'}\n\nAapki complaint receive hui. Team ${selectedType?.sla || '48h'} mein review karegi.`,
+                          `ID: #${String(data.complaint.id).slice(-8).toUpperCase()}\n\nAapki complaint receive hui. Team ${selectedType?.sla || '48h'} mein review karegi.`,
                           [{ text: 'Theek Hai', onPress: () => setDrSubScreen('complaints') }]
                         );
                         // Reload list non-blocking
