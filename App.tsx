@@ -2703,8 +2703,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={[s.hero, { paddingTop: 50, paddingBottom: 28 }]}>
         <Text style={{ fontSize: 60 }}>💰</Text>
         <Text style={s.heroTitle}>Trip Complete!</Text>
-        <Text style={{ color: '#10B981', fontSize: 40, fontWeight: 'bold', marginTop: 8 }}>₹{paymentFare}</Text>
-        <Text style={{ color: '#64748B', fontSize: 13, marginTop: 4 }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} (15% fee ke baad)</Text>
+        <Text style={{ color: '#10B981', fontSize: 40, fontWeight: '900', marginTop: 8 }}>₹{paymentFare}</Text>
+        <Text style={{ color: 'rgba(255,255,255,0.80)', fontSize: 13, marginTop: 4 }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} (15% fee ke baad)</Text>
       </View>
       <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
 
