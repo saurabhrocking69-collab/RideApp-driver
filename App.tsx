@@ -3723,7 +3723,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
         {/* ── INCOMING STANDARD RIDE REQUEST ── */}
         {rideReq && !activeRide && (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 0, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 0, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
             {/* Yellow header */}
             <View style={{ backgroundColor: '#F5C518', paddingTop: 20, paddingHorizontal: 20, paddingBottom: 24, alignItems: 'center' }}>
               {rideReq?.is_favourite_request && (
@@ -3864,7 +3864,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {/* ── ACTIVE STANDARD RIDE ── */}
         {activeRide && (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <TripStatusBar status={activeRide.status} />
 
               {/* Status banner */}
@@ -3941,37 +3941,50 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               )}
 
-              {/* Navigate buttons */}
+              {/* ── Navigate section (secondary action) ── */}
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-                <TouchableOpacity style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, marginBottom: 12 }]} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}>
-                  <Ionicons name="navigate" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Pickup Navigate Karo</Text>
+                <TouchableOpacity
+                  style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0 }]}
+                  onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}
+                >
+                  <Ionicons name="navigate" size={20} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Pickup Navigate Karo</Text>
                 </TouchableOpacity>
               )}
               {activeRide.status === 'started' && (
-                <TouchableOpacity style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, marginBottom: 12, backgroundColor: 'rgba(14,165,233,0.9)' }]} onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}>
-                  <Ionicons name="navigate" size={18} color="#8ae961" />
-                  <Text style={{ color: '#8ae961', fontWeight: '700', fontSize: 15 }}>Drop Navigate Karo</Text>
+                <TouchableOpacity
+                  style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0, backgroundColor: 'rgba(14,165,233,0.9)' }]}
+                  onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}
+                >
+                  <Ionicons name="navigate" size={20} color="#8ae961" />
+                  <Text style={{ color: '#8ae961', fontWeight: '700', fontSize: 16 }}>Drop Navigate Karo</Text>
                 </TouchableOpacity>
               )}
 
-              {/* Action: Arrived at pickup */}
+              {/* ── Spacer + divider between navigate and CTA ── */}
+              <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 20, marginHorizontal: 4 }} />
+
+              {/* ── Primary CTA: Arrived at pickup ── */}
               {activeRide.status === 'matched' && (
-                <Bouncy style={[s.tripBtn, { padding: 18, marginBottom: 12 }]} onPress={markArrived} disabled={loading}>
-                  <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
+                <Bouncy style={[s.tripBtn, { paddingVertical: 20, marginBottom: 28 }]} onPress={markArrived} disabled={loading}>
+                  <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
                 </Bouncy>
               )}
 
-              {/* Action: OTP entry — cancel button ABOVE so keyboard never hides it */}
+              {/* ── OTP entry — cancel ABOVE so keyboard never hides it ── */}
               {activeRide.status === 'arrived' && (
                 <View>
-                  <Bouncy style={[s.cancelBtn, { borderWidth: 1.5, borderColor: '#E91E63', borderRadius: 14, padding: 14, marginBottom: 14 }]} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
+                  <Bouncy
+                    style={[s.cancelBtn, { borderWidth: 1.5, borderColor: '#E91E63', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 20 }]}
+                    onPress={() => setShowDriverCancelModal(true)}
+                    disabled={loading}
+                  >
                     <Text style={[s.cancelTxt, { fontSize: 14, fontWeight: '700' }]}>✕ Cancel Trip</Text>
                   </Bouncy>
-                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, elevation: 4, borderWidth: 2, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 15, color: '#0F172A', marginBottom: 16, textAlign: 'center', fontWeight: '700' }}>🔐 Passenger se 4-digit OTP poocho</Text>
+                  <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, padding: 22, elevation: 4, borderWidth: 2, borderColor: '#E2E8F0' }}>
+                    <Text style={{ fontSize: 15, color: '#0F172A', marginBottom: 18, textAlign: 'center', fontWeight: '700' }}>🔐 Passenger se 4-digit OTP poocho</Text>
                     <TextInput
-                      style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? '#16A34A' : '#E2E8F0', borderRadius: 16, padding: 18, fontSize: 36, textAlign: 'center', letterSpacing: 14, marginBottom: 16, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
+                      style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? '#16A34A' : '#E2E8F0', borderRadius: 16, paddingVertical: 20, paddingHorizontal: 18, fontSize: 36, textAlign: 'center', letterSpacing: 14, marginBottom: 20, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
                       keyboardType="number-pad"
                       maxLength={4}
                       value={otpInput}
@@ -3980,20 +3993,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       placeholderTextColor="#D4A520"
                       autoFocus={false}
                     />
-                    <Bouncy style={[s.tripBtn, { padding: 18, opacity: otpInput.length < 4 ? 0.5 : 1 }]} onPress={startTrip} disabled={loading || otpInput.length < 4}>
-                      <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
+                    <Bouncy style={[s.tripBtn, { paddingVertical: 20, opacity: otpInput.length < 4 ? 0.5 : 1 }]} onPress={startTrip} disabled={loading || otpInput.length < 4}>
+                      <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
                     </Bouncy>
                   </View>
                 </View>
               )}
 
-              {/* Action: Complete trip */}
+              {/* ── Complete trip + cancel (well spaced) ── */}
               {activeRide.status === 'started' && (
                 <View>
-                  <Bouncy style={[s.tripBtn, { backgroundColor: '#10B981', shadowColor: '#10B981', padding: 18, marginBottom: 12 }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                  <Bouncy style={[s.tripBtn, { backgroundColor: '#10B981', shadowColor: '#10B981', paddingVertical: 20, marginBottom: 0 }]} onPress={completeTrip} disabled={loading}>
+                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
                   </Bouncy>
-                  <Bouncy style={[s.cancelBtn, { borderWidth: 1.5, borderColor: '#E91E63', borderRadius: 14, padding: 14 }]} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
+                  {/* Extra large gap so cancel is NOT accidentally hit after tapping Complete */}
+                  <View style={{ height: 24 }} />
+                  <Bouncy style={[s.cancelBtn, { borderWidth: 1.5, borderColor: '#E91E63', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 16 }]} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
                     <Text style={[s.cancelTxt, { fontSize: 14, fontWeight: '700' }]}>✕ Cancel Trip</Text>
                   </Bouncy>
                 </View>
@@ -4011,7 +4026,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
         {/* ── ACTIVE HOURLY RIDE ── */}
         {activeHourlyRide && (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
             <View style={{ backgroundColor: '#E91E63', borderRadius: 16, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>⏱️ HOURLY</Text></View>
@@ -4056,22 +4071,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* OTP section (matched) */}
             {activeHourlyRide.status === 'matched' && (
               <View>
-                <TouchableOpacity style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, padding: 16, marginBottom: 12 }]} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>
-                  <Ionicons name="navigate" size={18} color="#fff" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Pickup Navigate Karo</Text>
+                <TouchableOpacity
+                  style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0 }]}
+                  onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}
+                >
+                  <Ionicons name="navigate" size={20} color="#fff" />
+                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Pickup Navigate Karo</Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => Alert.alert('Ride Cancel?', 'Pickup nahi pahunch sakte?', [
-                  { text: 'Nahi', style: 'cancel' },
-                  { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
-                    try { const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) }); const d = await r.json(); if (d.success) { setActiveHourlyRide(null); setResult('Ride cancel ho gayi.'); } else Alert.alert('Error', d.error || 'Cancel nahi hua'); } catch (_e) { Alert.alert('Error', 'Network error'); }
-                  }},
-                ])} style={{ borderWidth: 1.5, borderColor: '#E91E63', borderRadius: 14, padding: 14, alignItems: 'center', marginBottom: 14 }}>
+                <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 20, marginHorizontal: 4 }} />
+                <TouchableOpacity
+                  onPress={() => Alert.alert('Ride Cancel?', 'Pickup nahi pahunch sakte?', [
+                    { text: 'Nahi', style: 'cancel' },
+                    { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
+                      try { const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) }); const d = await r.json(); if (d.success) { setActiveHourlyRide(null); setResult('Ride cancel ho gayi.'); } else Alert.alert('Error', d.error || 'Cancel nahi hua'); } catch (_e) { Alert.alert('Error', 'Network error'); }
+                    }},
+                  ])}
+                  style={{ borderWidth: 1.5, borderColor: '#E91E63', borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', marginBottom: 20 }}
+                >
                   <Text style={{ color: '#E91E63', fontWeight: '700', fontSize: 14 }}>✗ Pickup Nahi Pahunch Sakta — Cancel Karo</Text>
                 </TouchableOpacity>
-                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, padding: 20, elevation: 4, borderWidth: 2, borderColor: '#10B981' }}>
-                  <Text style={{ fontSize: 14, color: '#0F172A', marginBottom: 14, textAlign: 'center', fontWeight: '700' }}>🔐 Customer se OTP poocho</Text>
-                  <TextInput style={{ borderWidth: 2.5, borderColor: '#10B981', borderRadius: 14, padding: 16, fontSize: 34, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: 'bold', backgroundColor: '#F8FAFC', color: '#0F172A' }} placeholder="0000" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
-                  <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, padding: 22, elevation: 4, borderWidth: 2, borderColor: '#10B981' }}>
+                  <Text style={{ fontSize: 14, color: '#0F172A', marginBottom: 16, textAlign: 'center', fontWeight: '700' }}>🔐 Customer se OTP poocho</Text>
+                  <TextInput
+                    style={{ borderWidth: 2.5, borderColor: '#10B981', borderRadius: 14, paddingVertical: 18, paddingHorizontal: 16, fontSize: 34, textAlign: 'center', letterSpacing: 12, marginBottom: 18, fontWeight: 'bold', backgroundColor: '#F8FAFC', color: '#0F172A' }}
+                    placeholder="0000" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput}
+                  />
+                  <Bouncy style={[s.tripBtn, { paddingVertical: 18 }]} onPress={startHourlyTrip} disabled={loading}>
+                    <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
+                  </Bouncy>
                 </View>
               </View>
             )}
@@ -4112,8 +4139,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       </View>
                     );
                     return (
-                      <Bouncy style={[s.tripBtn, { backgroundColor: '#16A34A', marginBottom: 10 }]} onPress={completeHourlyTrip} disabled={loading}>
-                        <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                      <Bouncy style={[s.tripBtn, { backgroundColor: '#16A34A', paddingVertical: 20, marginBottom: 0 }]} onPress={completeHourlyTrip} disabled={loading}>
+                        <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
                       </Bouncy>
                     );
                   })()}
