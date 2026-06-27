@@ -527,6 +527,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [driverInfo, setDriverInfo]       = useState<any>(null);
   const [favouriteCount, setFavouriteCount] = useState<number | null>(null);
   const [devOtp, setDevOtp]         = useState('');
+  // Login banner animations
+  const [loginCaptionIdx, setLoginCaptionIdx] = useState(0);
+  const loginGlowAnim     = useRef(new Animated.Value(0.3)).current;
+  const loginCaptionFade  = useRef(new Animated.Value(1)).current;
+  const loginCaptionSlide = useRef(new Animated.Value(0)).current;
   // Complaint system state
   const [drvComplaints, setDrvComplaints]   = useState<any[]>([]);
   const [drvCmpType, setDrvCmpType]         = useState('');
@@ -595,6 +600,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } catch (_e) {}
     })();
   }, []);
+
+  // ── Login banner glow + caption cycling ─────
+  useEffect(() => {
+    if (screen !== 'login') return;
+    const glow = Animated.loop(Animated.sequence([
+      Animated.timing(loginGlowAnim, { toValue: 1, duration: 2000, useNativeDriver: true }),
+      Animated.timing(loginGlowAnim, { toValue: 0.25, duration: 2000, useNativeDriver: true }),
+    ]));
+    glow.start();
+    const iv = setInterval(() => {
+      Animated.parallel([
+        Animated.timing(loginCaptionFade, { toValue: 0, duration: 250, useNativeDriver: true }),
+        Animated.timing(loginCaptionSlide, { toValue: -14, duration: 250, useNativeDriver: true }),
+      ]).start(() => {
+        setLoginCaptionIdx(i => (i + 1) % 5);
+        loginCaptionSlide.setValue(14);
+        Animated.parallel([
+          Animated.timing(loginCaptionFade, { toValue: 1, duration: 250, useNativeDriver: true }),
+          Animated.timing(loginCaptionSlide, { toValue: 0, duration: 250, useNativeDriver: true }),
+        ]).start();
+      });
+    }, 3000);
+    return () => { glow.stop(); clearInterval(iv); };
+  }, [screen]);
 
   // ── Notification Handler ──────────────────────
   useEffect(() => {
@@ -2374,95 +2403,292 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   }
 
   // ═══ LOGIN ═══
-  if (screen === 'login') return (
-    <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={s.hero}>
-        <View style={{ width: 90, height: 90, borderRadius: 28, backgroundColor: 'rgba(26,18,0,0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 6, borderWidth: 2, borderColor: 'rgba(26,18,0,0.2)' }}>
-          <Ionicons name="car" size={48} color="#1A1200" />
-        </View>
-        <Text style={s.heroTitle}>Sppero Buddy</Text>
-        <Text style={s.heroSub}>Captain Login</Text>
-      </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        {!loginOtpSent ? (
-          // ── Phone Input ──
-          <View>
-            <Text style={s.sectionTitle}>📱 Apne number se login karo:</Text>
-            <View style={[s.driverItem, { marginBottom: 12 }]}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
-              <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={loginPhone} onChangeText={setLoginPhone} />
+  if (screen === 'login') {
+    const LOGIN_CAPTIONS = [
+      { emoji: '👑', line1: 'Become Your', line2: 'Own Boss', sub: 'No office. No fixed hours. You decide when you drive.' },
+      { emoji: '🗺️', line1: 'Help People Reach', line2: 'Their Destination', sub: 'Every ride is a story of trust & service.' },
+      { emoji: '💰', line1: 'Earn ₹800+', line2: 'Every Day', sub: 'Steady income credited instantly to your wallet.' },
+      { emoji: '🛺', line1: 'India Ka Apna', line2: 'Ride Platform', sub: 'Built for Bharat. Powered by 10,000+ Captains.' },
+      { emoji: '⭐', line1: 'Join & Keep', line2: 'Earning Daily', sub: 'Morning, afternoon or night — your schedule, your earnings.' },
+    ];
+    const cap = LOGIN_CAPTIONS[loginCaptionIdx];
+
+    return (
+      <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#08080F' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <StatusBar barStyle="light-content" backgroundColor="#08080F" />
+
+        {/* ══════════ IMMERSIVE ADS BANNER ══════════ */}
+        {!loginOtpSent && (
+          <View style={{ flex: 1, backgroundColor: '#08080F', overflow: 'hidden' }}>
+
+            {/* Starfield */}
+            {[8,22,35,48,61,74,15,29,42,55,68,81,5,19,33,47,60,73,86,11,25,38,52,65,78,3,17,31,45,59].map((v, i) => (
+              <View key={i} style={{
+                position: 'absolute',
+                width: i % 4 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
+                height: i % 4 === 0 ? 3 : i % 3 === 0 ? 2 : 1.5,
+                borderRadius: 2,
+                backgroundColor: `rgba(255,255,255,${0.15 + (i % 6) * 0.06})`,
+                top: `${v}%` as any,
+                left: `${(v * 3 + i * 7) % 95}%` as any,
+              }} />
+            ))}
+
+            {/* Pink glow top-left */}
+            <Animated.View style={{
+              position: 'absolute', width: 300, height: 300, borderRadius: 150,
+              backgroundColor: 'rgba(233,30,99,0.13)', top: -80, left: -80,
+              opacity: loginGlowAnim,
+              transform: [{ scale: loginGlowAnim.interpolate({ inputRange: [0.25, 1], outputRange: [0.92, 1.08] }) }],
+            }} />
+            {/* Purple glow bottom-right */}
+            <Animated.View style={{
+              position: 'absolute', width: 220, height: 220, borderRadius: 110,
+              backgroundColor: 'rgba(124,58,237,0.12)', bottom: 80, right: -60,
+              opacity: loginGlowAnim.interpolate({ inputRange: [0.25, 1], outputRange: [1, 0.3] }),
+            }} />
+            {/* Gold accent dot */}
+            <View style={{ position: 'absolute', width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(245,197,24,0.07)', top: '40%', right: 20 }} />
+
+            {/* Road surface at bottom */}
+            <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 100 }}>
+              <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 72, backgroundColor: '#0D0D14', borderTopWidth: 1, borderTopColor: 'rgba(245,197,24,0.12)' }} />
+              {/* Lane dashes */}
+              {[0,1,2,3,4,5].map(i => (
+                <View key={i} style={{ position: 'absolute', bottom: 32, left: `${12 + i * 15}%` as any, width: 22, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.18)' }} />
+              ))}
+              {/* Edge lines */}
+              <View style={{ position: 'absolute', bottom: 0, left: '8%', width: 2, height: 72, backgroundColor: 'rgba(245,197,24,0.35)', transform: [{ skewX: '-8deg' }] }} />
+              <View style={{ position: 'absolute', bottom: 0, right: '8%', width: 2, height: 72, backgroundColor: 'rgba(245,197,24,0.35)', transform: [{ skewX: '8deg' }] }} />
             </View>
-            {result ? <Text style={s.err}>{result}</Text> : null}
-            <Bouncy style={[s.btn, { marginTop: 0, marginBottom: 16 }, loginPhone.length !== 10 && { opacity: 0.5 }]} disabled={loginPhone.length !== 10 || loading} onPress={doLogin}>
-              <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
-            </Bouncy>
-            <Bouncy style={{ borderWidth: 2, borderColor: '#F5C518', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 20 }} onPress={() => { setRegStep(1); setResult(''); }}>
-              <Text style={{ color: '#F5C518', fontSize: 16, fontWeight: 'bold' }}>🆕 Sppero Buddy Captain Banein</Text>
-            </Bouncy>
-          </View>
-        ) : (
-          // ── OTP Input ──
-          <View>
-            <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 12, padding: 14, marginBottom: 20, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-              <Text style={{ fontSize: 20, marginRight: 10 }}>📱</Text>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 13, color: '#E91E63', fontWeight: '600' }}>OTP bheja gaya!</Text>
-                <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>+91 {loginPhone} pe 6-digit code aaya hoga</Text>
+
+            {/* Car + glow ring */}
+            <View style={{ position: 'absolute', bottom: 68, left: 0, right: 0, alignItems: 'center' }}>
+              <Animated.View style={{
+                width: 130, height: 130, borderRadius: 65,
+                backgroundColor: 'rgba(233,30,99,0.07)',
+                alignItems: 'center', justifyContent: 'center',
+                opacity: loginGlowAnim,
+                transform: [{ scale: loginGlowAnim.interpolate({ inputRange: [0.25, 1], outputRange: [1, 1.12] }) }],
+              }}>
+                <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(233,30,99,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.5)', elevation: 12, shadowColor: '#E91E63', shadowOpacity: 0.6, shadowRadius: 16 }}>
+                  <Ionicons name="car-sport" size={44} color="#E91E63" />
+                </View>
+              </Animated.View>
+              {/* Headlight beams */}
+              <View style={{ position: 'absolute', bottom: 10, left: '52%', width: 60, height: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, transform: [{ rotate: '-5deg' }] }} />
+              <View style={{ position: 'absolute', bottom: 10, right: '52%', width: 60, height: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, transform: [{ rotate: '5deg' }] }} />
+              {/* Shadow under car */}
+              <View style={{ width: 80, height: 6, borderRadius: 3, backgroundColor: 'rgba(233,30,99,0.25)', marginTop: -6 }} />
+            </View>
+
+            {/* Sppero brand top */}
+            <View style={{ position: 'absolute', top: Platform.OS === 'android' ? 46 : 58, left: 0, right: 0, alignItems: 'center' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 11, backgroundColor: '#E91E63', alignItems: 'center', justifyContent: 'center', elevation: 10, shadowColor: '#E91E63', shadowOpacity: 0.9, shadowRadius: 12 }}>
+                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>S</Text>
+                </View>
+                <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', letterSpacing: 0.5 }}>Sppero</Text>
+                <View style={{ backgroundColor: 'rgba(233,30,99,0.22)', borderRadius: 7, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(233,30,99,0.55)' }}>
+                  <Text style={{ color: '#E91E63', fontSize: 9, fontWeight: '900', letterSpacing: 1.6 }}>CAPTAIN</Text>
+                </View>
               </View>
+              <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '700', letterSpacing: 2.5 }}>INDIA KA APNA RIDE PLATFORM</Text>
             </View>
-            <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 12, marginBottom: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
-              <Text style={{ fontSize: 12, color: '#F59E0B', flex: 1 }}>SMS aane par OTP copy karo — 6 boxes mein paste ho jaayega!</Text>
+
+            {/* Animated motivational caption */}
+            <View style={{ position: 'absolute', top: '28%', left: 0, right: 0, paddingHorizontal: 28, alignItems: 'center' }}>
+              <Animated.View style={{ alignItems: 'center', opacity: loginCaptionFade, transform: [{ translateY: loginCaptionSlide }] }}>
+                <Text style={{ fontSize: 48, marginBottom: 12 }}>{cap.emoji}</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', textAlign: 'center', letterSpacing: -0.3, lineHeight: 34 }}>{cap.line1}</Text>
+                <Text style={{ color: '#E91E63', fontSize: 28, fontWeight: '900', textAlign: 'center', letterSpacing: -0.3, lineHeight: 34, marginBottom: 10 }}>{cap.line2}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, textAlign: 'center', fontWeight: '500', lineHeight: 19, maxWidth: 260 }}>{cap.sub}</Text>
+              </Animated.View>
             </View>
-            {/* 6 OTP Boxes */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 14 }}>
-              {loginOtpDigits.map((digit, i) => (
-                <TextInput
-                  key={i}
-                  ref={(ref) => { loginOtpRefs.current[i] = ref; }}
-                  style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#E2E8F0', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#F8FAFC', color: '#0F172A' }}
-                  keyboardType="number-pad" maxLength={1} value={digit}
-                  onChangeText={(t) => handleLoginOtpChange(t, i)}
-                  onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
-                />
+
+            {/* Caption progress dots */}
+            <View style={{ position: 'absolute', bottom: 118, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
+              {[0,1,2,3,4].map(i => (
+                <View key={i} style={{ width: i === loginCaptionIdx ? 22 : 6, height: 6, borderRadius: 3, backgroundColor: i === loginCaptionIdx ? '#E91E63' : 'rgba(255,255,255,0.2)' }} />
               ))}
             </View>
-            {/* Test OTP banner */}
-            {devOtp ? (
-              <TouchableOpacity
-                onPress={() => { const d = devOtp.split(''); setLoginOtpDigits(d); setLoginOtp(devOtp); }}
-                style={{ backgroundColor: '#1e3a5f', borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#7dd3fc', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
-                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
+
+            {/* Stats strip */}
+            <View style={{ position: 'absolute', bottom: 135, left: 16, right: 16, flexDirection: 'row', gap: 8 }}>
+              {[
+                { val: '₹800+', sub: 'per day avg' },
+                { val: '10K+',  sub: 'Captains' },
+                { val: '4.8 ★', sub: 'App rating' },
+              ].map((st, i) => (
+                <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 13, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)' }}>
+                  <Text style={{ color: '#F5C518', fontSize: 15, fontWeight: '900' }}>{st.val}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.38)', fontSize: 9, marginTop: 2, fontWeight: '700', letterSpacing: 0.5 }}>{st.sub}</Text>
                 </View>
-                <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
-              </TouchableOpacity>
-            ) : null}
-            {result ? <Text style={s.err}>{result}</Text> : null}
-            <Bouncy style={[s.btn, { marginBottom: 12 }, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.6 }]} disabled={loading || loginOtpDigits.join('').length < 6} onPress={() => verifyLoginOtp()}>
-              <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify Karo'}</Text>
-            </Bouncy>
-            {/* Resend */}
-            <View style={{ alignItems: 'center', marginBottom: 16 }}>
-              {loginCanResend ? (
-                <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setLoginOtp(''); setResult(''); doLogin(); }}>
-                  <Text style={{ color: '#E91E63', fontWeight: 'bold', fontSize: 14 }}>🔄 OTP Dobara Bhejo</Text>
-                </TouchableOpacity>
-              ) : (
-                <Text style={{ color: '#999', fontSize: 13 }}>Dobara bhejne ke liye <Text style={{ color: '#E91E63', fontWeight: 'bold' }}>{loginResendTimer}s</Text> wait karo</Text>
-              )}
+              ))}
             </View>
-            <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setResult(''); }} style={{ alignItems: 'center' }}>
-              <Text style={{ color: '#666', fontSize: 13 }}>← Number change karo</Text>
-            </TouchableOpacity>
           </View>
         )}
-        <View style={{ height: 20 }} />
-      </ScrollView>
-    </KeyboardAvoidingView>
-  );
+
+        {/* ══════════ LOGIN CARD ══════════ */}
+        <View style={{
+          backgroundColor: '#FFFFFF',
+          borderTopLeftRadius: loginOtpSent ? 0 : 28,
+          borderTopRightRadius: loginOtpSent ? 0 : 28,
+          paddingTop: loginOtpSent ? (Platform.OS === 'android' ? 52 : 66) : 18,
+          paddingHorizontal: 22,
+          paddingBottom: 30,
+          elevation: 28,
+          shadowColor: '#E91E63',
+          shadowOpacity: 0.18,
+          shadowRadius: 22,
+          flex: loginOtpSent ? 1 : undefined,
+        }}>
+
+          {/* OTP screen mini header */}
+          {loginOtpSent && (
+            <View style={{ alignItems: 'center', marginBottom: 18 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 9 }}>
+                <View style={{ width: 32, height: 32, borderRadius: 9, backgroundColor: '#E91E63', alignItems: 'center', justifyContent: 'center' }}>
+                  <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>S</Text>
+                </View>
+                <Text style={{ color: '#0F172A', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 }}>Sppero Captain</Text>
+              </View>
+            </View>
+          )}
+
+          {/* Drag handle */}
+          {!loginOtpSent && <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 18 }} />}
+
+          <Text style={{ color: '#0F172A', fontSize: 21, fontWeight: '900', marginBottom: 4 }}>
+            {loginOtpSent ? '🔑 OTP Enter Karo' : '🚗 Captain Login'}
+          </Text>
+          <Text style={{ color: '#64748B', fontSize: 13, marginBottom: 22, lineHeight: 19 }}>
+            {loginOtpSent
+              ? `+91 ${loginPhone} par 6-digit code bheja gaya`
+              : 'Sppero ke saath drive karo aur roz kamaao'}
+          </Text>
+
+          {!loginOtpSent ? (
+            <View>
+              {/* Phone input */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1.5, borderColor: loginPhone.length > 0 ? '#E91E63' : '#E2E8F0', paddingHorizontal: 14, marginBottom: 16 }}>
+                <View style={{ backgroundColor: '#E91E63', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5, marginRight: 12 }}>
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>🇮🇳 +91</Text>
+                </View>
+                <TextInput
+                  style={{ flex: 1, fontSize: 18, fontWeight: '700', color: '#0F172A', paddingVertical: 14 }}
+                  placeholder="10 digit mobile number"
+                  placeholderTextColor="#CBD5E1"
+                  keyboardType="numeric"
+                  maxLength={10}
+                  value={loginPhone}
+                  onChangeText={setLoginPhone}
+                />
+                {loginPhone.length === 10 && (
+                  <Ionicons name="checkmark-circle" size={22} color="#16A34A" />
+                )}
+              </View>
+
+              {result ? <Text style={{ color: '#EF4444', fontSize: 12, marginBottom: 12, fontWeight: '600' }}>{result}</Text> : null}
+
+              {/* Send OTP button */}
+              <Bouncy
+                style={{ backgroundColor: loginPhone.length !== 10 ? '#F1F5F9' : '#E91E63', borderRadius: 16, paddingVertical: 17, alignItems: 'center', marginBottom: 20, elevation: loginPhone.length === 10 ? 10 : 0, shadowColor: '#E91E63', shadowOpacity: 0.45, shadowRadius: 14 }}
+                disabled={loginPhone.length !== 10 || loading}
+                onPress={doLogin}>
+                <Text style={{ color: loginPhone.length !== 10 ? '#94A3B8' : '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 }}>
+                  {loading ? '⏳ OTP bhej rahe hain...' : 'OTP Bhejo →'}
+                </Text>
+              </Bouncy>
+
+              {/* Divider */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 12 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: '#F1F5F9' }} />
+                <Text style={{ color: '#CBD5E1', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>NEW CAPTAIN?</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: '#F1F5F9' }} />
+              </View>
+
+              {/* Become Sppero Buddy Banner */}
+              <Bouncy
+                onPress={() => { setRegStep(1); setResult(''); }}
+                style={{ borderRadius: 18, overflow: 'hidden', borderWidth: 2, borderColor: '#F5C518', elevation: 6, shadowColor: '#F5C518', shadowOpacity: 0.3, shadowRadius: 10 }}>
+                <View style={{ backgroundColor: '#0D0B02', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                  <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#F5C518', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#F5C518', shadowOpacity: 0.5, shadowRadius: 6 }}>
+                    <Text style={{ fontSize: 24 }}>⭐</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#F5C518', fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>Become Sppero Buddy</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 3, lineHeight: 16 }}>Register as Captain · Free · Just 5 minutes</Text>
+                  </View>
+                  <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F5C518', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ color: '#0D0B02', fontSize: 16, fontWeight: '900' }}>›</Text>
+                  </View>
+                </View>
+              </Bouncy>
+            </View>
+          ) : (
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {/* OTP sent notice */}
+              <View style={{ backgroundColor: 'rgba(233,30,99,0.06)', borderRadius: 14, padding: 14, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
+                <Text style={{ fontSize: 20 }}>📱</Text>
+                <Text style={{ fontSize: 12, color: '#E91E63', flex: 1, fontWeight: '600', lineHeight: 18 }}>SMS se OTP copy karke paste karo — 6 boxes mein auto-fill ho jaayega!</Text>
+              </View>
+
+              {/* 6 OTP Boxes */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                {loginOtpDigits.map((digit, i) => (
+                  <TextInput
+                    key={i}
+                    ref={(ref) => { loginOtpRefs.current[i] = ref; }}
+                    style={{ width: 44, height: 56, borderRadius: 14, textAlign: 'center', fontSize: 24, fontWeight: '900', borderWidth: 2.5, borderColor: digit ? '#E91E63' : '#E2E8F0', backgroundColor: digit ? 'rgba(233,30,99,0.06)' : '#F8FAFC', color: '#0F172A', elevation: digit ? 4 : 0, shadowColor: '#E91E63', shadowOpacity: digit ? 0.25 : 0, shadowRadius: 6 }}
+                    keyboardType="number-pad" maxLength={1} value={digit}
+                    onChangeText={(t) => handleLoginOtpChange(t, i)}
+                    onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
+                  />
+                ))}
+              </View>
+
+              {devOtp ? (
+                <TouchableOpacity onPress={() => { const d = devOtp.split(''); setLoginOtpDigits(d); setLoginOtp(devOtp); }} style={{ backgroundColor: '#1e3a5f', borderRadius: 12, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 16 }}>🧪</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#7dd3fc', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
+                    <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
+                  </View>
+                  <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
+                </TouchableOpacity>
+              ) : null}
+
+              {result ? <Text style={{ color: '#EF4444', fontSize: 12, marginBottom: 12, fontWeight: '600' }}>{result}</Text> : null}
+
+              {/* Verify button */}
+              <Bouncy
+                style={{ backgroundColor: (loading || loginOtpDigits.join('').length < 6) ? '#F1F5F9' : '#E91E63', borderRadius: 16, paddingVertical: 17, alignItems: 'center', marginBottom: 14, elevation: loginOtpDigits.join('').length === 6 ? 10 : 0, shadowColor: '#E91E63', shadowOpacity: 0.45, shadowRadius: 14 }}
+                disabled={loading || loginOtpDigits.join('').length < 6}
+                onPress={() => verifyLoginOtp()}>
+                <Text style={{ color: (loading || loginOtpDigits.join('').length < 6) ? '#94A3B8' : '#fff', fontSize: 16, fontWeight: '900' }}>
+                  {loading ? '⏳ Verify ho raha hai...' : '✅ Login Karo'}
+                </Text>
+              </Bouncy>
+
+              {/* Resend */}
+              <View style={{ alignItems: 'center', marginBottom: 12 }}>
+                {loginCanResend
+                  ? <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setLoginOtp(''); setResult(''); doLogin(); }}>
+                      <Text style={{ color: '#E91E63', fontWeight: '800', fontSize: 13 }}>🔄 OTP Dobara Bhejo</Text>
+                    </TouchableOpacity>
+                  : <Text style={{ color: '#94A3B8', fontSize: 12 }}>Dobara bhejne ke liye <Text style={{ color: '#E91E63', fontWeight: '700' }}>{loginResendTimer}s</Text> wait karo</Text>
+                }
+              </View>
+              <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setResult(''); }} style={{ alignItems: 'center', paddingVertical: 4 }}>
+                <Text style={{ color: '#64748B', fontSize: 12 }}>← Number change karo</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          )}
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   // ═══ PAYMENT WAITING SCREEN ═══
   if (paymentWaiting) return (
