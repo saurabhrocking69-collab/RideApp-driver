@@ -544,6 +544,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [drvCmpRideId, setDrvCmpRideId]     = useState('');
   const [lastRideId, setLastRideId]         = useState<string>('');
 
+  useEffect(() => {
+    if (driverSubScreen !== 'complaints' || !phone) return;
+    setDrvCmpLoading(true);
+    fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`)
+      .then(r => r.json())
+      .then(d => setDrvComplaints(d.complaints || []))
+      .catch(() => {})
+      .finally(() => setDrvCmpLoading(false));
+  }, [driverSubScreen, phone]);
 
   // ── Splash + Auto login ────────────────────────
   useEffect(() => {
