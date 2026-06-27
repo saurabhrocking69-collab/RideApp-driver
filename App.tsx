@@ -508,6 +508,7 @@ function App() {
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
   const activeHourlyRideRef = useRef<any>(null);
   const [hourlyOtpInput, setHourlyOtpInput]     = useState('');
+  const [hourlyArrived, setHourlyArrived]       = useState(false);
 const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const hourlyTimerRef = useRef<any>(null);
   const [hEarlyEndLoading, setHEarlyEndLoading] = useState(false);
@@ -1137,6 +1138,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   useEffect(() => {
     activeHourlyRideRef.current = activeHourlyRide;
+    setHourlyArrived(false);
     if (activeHourlyRide?.id && socketRef.current?.connected) {
       socketRef.current.emit('joinHourly', { bookingId: activeHourlyRide.id });
     }
@@ -4093,6 +4095,24 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* OTP section (matched) */}
             {activeHourlyRide.status === 'matched' && (
               <View>
+                {!hourlyArrived ? (
+                  <Bouncy
+                    style={{ backgroundColor: '#16A34A', borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginBottom: 12, elevation: 4, shadowColor: '#16A34A', shadowOpacity: 0.35, shadowRadius: 10 }}
+                    onPress={async () => {
+                      try {
+                        await fetch(`${API}/api/hourly/arrived`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
+                        setHourlyArrived(true);
+                      } catch (_e) { Alert.alert('Error', 'Network error'); }
+                    }}
+                  >
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>📍 Pickup Pe Pahunch Gaya</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 3 }}>Customer ko notification milegi</Text>
+                  </Bouncy>
+                ) : (
+                  <View style={{ backgroundColor: '#F0FDF4', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 12, borderWidth: 1.5, borderColor: '#86EFAC' }}>
+                    <Text style={{ color: '#15803D', fontWeight: '800', fontSize: 14 }}>✅ Customer ko Notify Ho Gaya — OTP Leke Trip Shuru Karo</Text>
+                  </View>
+                )}
                 <TouchableOpacity
                   style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0 }]}
                   onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}
