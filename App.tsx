@@ -506,6 +506,7 @@ function App() {
   // ── Hourly Booking State ──────────────────────
   const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
+  const activeHourlyRideRef = useRef<any>(null);
   const [hourlyOtpInput, setHourlyOtpInput]     = useState('');
 const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const hourlyTimerRef = useRef<any>(null);
@@ -1134,6 +1135,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     prevHourlyGpsRef.current = null;
   }, [activeHourlyRide?.id]);
 
+  useEffect(() => {
+    activeHourlyRideRef.current = activeHourlyRide;
+    if (activeHourlyRide?.id && socketRef.current?.connected) {
+      socketRef.current.emit('joinHourly', { bookingId: activeHourlyRide.id });
+    }
+  }, [activeHourlyRide?.id]);
+
   // Accumulate GPS distance during active hourly ride
   useEffect(() => {
     if (activeHourlyRide?.status !== 'active' || !driverGps) return;
@@ -1417,9 +1425,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         });
         s.on('connect', () => {
           s.emit('driverJoin', { phone });
-          // Re-join active ride room on reconnect so we don't miss payment/chat events
+          // Re-join active ride/hourly room on reconnect so we don't miss payment/chat events
           const ar = useDriverStore.getState().activeRide;
           if (ar?.id) s.emit('joinRide', { rideId: ar.id });
+          const ahr = activeHourlyRideRef.current;
+          if (ahr?.id) s.emit('joinHourly', { bookingId: ahr.id });
+        });
+        s.on('hourlyChatMessage', (msg: any) => {
+          setHourlyChatMsgs((prev: any[]) => [...prev, msg]);
         });
         s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); });
         s.on('paymentConfirmed', async (data: any) => {
@@ -3018,14 +3031,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi — pehla message bhejo!</Text>
         ) : hourlyChatMsgs.map((m, i) => (
           <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
-            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#CBD5E1', fontSize: 14 }}>{m.message}</Text>
+            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#0F172A', fontSize: 14 }}>{m.message}</Text>
           </View>
         ))}
       </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
         {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke location pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
           <TouchableOpacity key={q} onPress={() => sendHourlyChat(q)} style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600' }}>{q}</Text>
+            <Text style={{ fontSize: 12, color: '#334155', fontWeight: '600' }}>{q}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
