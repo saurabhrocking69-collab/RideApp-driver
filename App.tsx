@@ -707,6 +707,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setScreen('home'); setActiveTab('live');
         useDriverStore.getState().triggerPoll?.();
       }
+      if (data?.type === 'compensation_credited' || data?.type === 'earning_credited') {
+        setScreen('home'); setActiveTab('earnings');
+      }
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleDriverNotifTap(r); });
