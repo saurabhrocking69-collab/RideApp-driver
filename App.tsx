@@ -5155,6 +5155,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                     const d = await r.json();
                     if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                    if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
                     RazorpayCheckout.open({
                       key: d.key_id,
                       amount: d.amount,
@@ -5178,11 +5179,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       if (vd.success) { setCommResult('✅ Commission paid!'); loadCommissionHistory(phone); }
                       else setCommResult('❌ Verification failed: ' + (vd.error || ''));
                       setCommPayLoading(false);
-                    }).catch((_e: any) => {
-                      setCommResult('Payment cancelled ya failed');
+                    }).catch((e: any) => {
+                      setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : 'Payment cancel hua');
                       setCommPayLoading(false);
                     });
-                  } catch (_e) { setCommResult('❌ Server error'); setCommPayLoading(false); }
+                  } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
                 }}
                 style={{ backgroundColor: commPayLoading ? '#ccc' : '#e65100', borderRadius: 10, paddingVertical: 11, alignItems: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)}`}</Text>
@@ -5314,6 +5315,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                   const d = await r.json();
                   if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                  if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
                   RazorpayCheckout.open({
                     key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
                     name: 'Sppero', description: 'Platform Commission Payment', prefill: { contact: phone }, theme: { color: '#e65100' },
@@ -5326,8 +5328,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     if (vd.success) { setCommResult('✅ Commission paid!'); loadCommissionHistory(phone); }
                     else setCommResult('❌ Verification failed: ' + (vd.error || ''));
                     setCommPayLoading(false);
-                  }).catch((_e: any) => { setCommResult('Payment cancelled ya failed'); setCommPayLoading(false); });
-                } catch (_e) { setCommResult('❌ Server error'); setCommPayLoading(false); }
+                  }).catch((e: any) => {
+                    setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : 'Payment cancel hua');
+                    setCommPayLoading(false);
+                  });
+                } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
               }}
               style={{ backgroundColor: commPayLoading ? '#334155' : '#E91E63', borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 4 }}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
