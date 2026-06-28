@@ -455,6 +455,8 @@ function App() {
   const [showChat, setShowChat]         = useState(false);
   const [unreadChat, setUnreadChat]     = useState(0);
   const lastChatCount                   = useRef(0);
+  const [chatToast, setChatToast]       = useState<string | null>(null);
+  const chatToastTimer                  = useRef<any>(null);
   // Hourly chat
   const [showHourlyChat, setShowHourlyChat] = useState(false);
   const [hourlyChatMsgs, setHourlyChatMsgs] = useState<any[]>([]);
@@ -1155,7 +1157,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     prevHourlyGpsRef.current = driverGps;
   }, [driverGps]);
 
-  // ── Unread badge during ride ───────────────────
+  // ── Unread badge + toast during standard ride ──
   useEffect(() => {
     if (!activeRide?.id || showChat) return;
     const iv = setInterval(async () => {
@@ -1163,11 +1165,42 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const r = await fetch(`${API}/api/chat/${activeRide.id}`);
         const d = await r.json();
         const msgs = d.messages || [];
-        if (msgs.length > lastChatCount.current) setUnreadChat(msgs.length - lastChatCount.current);
+        if (msgs.length > lastChatCount.current) {
+          setUnreadChat(msgs.length - lastChatCount.current);
+          const latest = msgs[msgs.length - 1];
+          if (latest?.sender === 'customer') {
+            setChatToast(latest.message);
+            if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
+            chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+          }
+        }
       } catch (_e) {}
     }, 3000);
     return () => clearInterval(iv);
   }, [activeRide?.id, showChat]);
+
+  // ── Unread toast during hourly ride (background) ──
+  useEffect(() => {
+    if (!activeHourlyRide?.id || showHourlyChat) return;
+    let lastCount = 0;
+    const iv = setInterval(async () => {
+      try {
+        const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
+        const d = await r.json();
+        const msgs = d.messages || [];
+        if (msgs.length > lastCount) {
+          const latest = msgs[msgs.length - 1];
+          if (latest?.sender === 'customer') {
+            setChatToast(latest.message);
+            if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
+            chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+          }
+          lastCount = msgs.length;
+        }
+      } catch (_e) {}
+    }, 3000);
+    return () => { clearInterval(iv); };
+  }, [activeHourlyRide?.id, showHourlyChat]);
 
 
   // ── Surge + Admin Notifications polling ───────────────
@@ -3003,14 +3036,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi</Text>
         ) : chatMsgs.map((m, i) => (
           <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
-            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#CBD5E1', fontSize: 14 }}>{m.message}</Text>
+            <Text style={{ color: m.sender === 'driver' ? '#fff' : '#0F172A', fontSize: 14 }}>{m.message}</Text>
           </View>
         ))}
       </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
         {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke pickup point pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
           <TouchableOpacity key={q} onPress={() => sendChat(q)} style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
-            <Text style={{ fontSize: 12, color: '#CBD5E1', fontWeight: '600' }}>{q}</Text>
+            <Text style={{ fontSize: 12, color: '#334155', fontWeight: '600' }}>{q}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -3028,7 +3061,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Text style={s.greeting}>💬 Customer (Hourly)</Text>
         <View style={{ width: 36 }} />
       </View>
-      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
+      <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
         {hourlyChatMsgs.length === 0 ? (
           <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi — pehla message bhejo!</Text>
         ) : hourlyChatMsgs.map((m, i) => (
@@ -3199,9 +3232,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </TouchableOpacity>
                 <TouchableOpacity style={s.chatCallBtn} onPress={callCustomer}><Ionicons name="call" size={16} color="#22C55E" /><Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '600', marginLeft: 6 }}>Call</Text></TouchableOpacity>
               </View>
-              {unreadChat > 0 && (
+              {chatToast && (
+                <TouchableOpacity style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,30,99,0.5)', elevation: 6 }} onPress={() => { setChatToast(null); setUnreadChat(0); setShowChat(true); }}>
+                  <Ionicons name="chatbubble" size={16} color="#E91E63" />
+                  <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Tap to reply</Text>
+                </TouchableOpacity>
+              )}
+              {!chatToast && unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: '#E91E63', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Customer ne {unreadChat} message bheja</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Customer ke {unreadChat} message — tap to read</Text>
                 </TouchableOpacity>
               )}
 
@@ -4075,7 +4115,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
-                <TouchableOpacity style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#BBF7D0' }} onPress={() => { setShowHourlyChat(true); setHourlyChatMsgs([]); }}>
+                <TouchableOpacity style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#BBF7D0' }} onPress={() => { setChatToast(null); setShowHourlyChat(true); setHourlyChatMsgs([]); }}>
                   <Ionicons name="chatbubble" size={20} color="#16A34A" />
                   <Text style={{ color: '#15803D', fontWeight: '700', fontSize: 14 }}>Chat</Text>
                 </TouchableOpacity>
@@ -4084,6 +4124,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ color: '#1D4ED8', fontWeight: '700', fontSize: 14 }}>Call</Text>
                 </TouchableOpacity>
               </View>
+              {chatToast && (
+                <TouchableOpacity style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,30,99,0.5)', elevation: 6 }} onPress={() => { setChatToast(null); setShowHourlyChat(true); setHourlyChatMsgs([]); }}>
+                  <Ionicons name="chatbubble" size={16} color="#E91E63" />
+                  <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Tap to reply</Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Route */}
