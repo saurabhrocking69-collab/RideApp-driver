@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet, Image, Alert,
+  ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, Image, Alert,
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
@@ -4450,8 +4450,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Nayi Complaint File Karo</Text>
             </TouchableOpacity>
 
+            {/* Loading state */}
+            {drvCmpLoading && (
+              <View style={{ alignItems: 'center', paddingTop: 40, paddingBottom: 24 }}>
+                <ActivityIndicator size="large" color="#E91E63" />
+                <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 14 }}>Complaints load ho rahi hain...</Text>
+              </View>
+            )}
+
             {/* Quick categories */}
-            {drvComplaints.length === 0 && (
+            {!drvCmpLoading && drvComplaints.length === 0 && (
               <>
                 <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24 }}>
                   <Text style={{ fontSize: 48 }}>📭</Text>
