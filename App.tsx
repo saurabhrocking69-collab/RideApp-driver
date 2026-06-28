@@ -2757,96 +2757,99 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ PAYMENT WAITING SCREEN ═══
   if (paymentWaiting) return (
     <ScreenIn style={s.screen}>
-      <View style={[s.hero, { paddingTop: 50, paddingBottom: 28 }]}>
-        <Text style={{ fontSize: 60 }}>💰</Text>
-        <Text style={s.heroTitle}>Trip Complete!</Text>
-        <Text style={{ color: '#10B981', fontSize: 40, fontWeight: '900', marginTop: 8 }}>₹{paymentFare}</Text>
-        <Text style={{ color: 'rgba(255,255,255,0.80)', fontSize: 13, marginTop: 4 }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} (15% fee ke baad)</Text>
+      {/* Hero */}
+      <View style={[s.hero, { paddingTop: 50, paddingBottom: 26, overflow: 'hidden' }]}>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.08)', top: -80, right: -50 }} />
+        <Text style={s.heroTitle}>Trip Complete! 🏁</Text>
+        <Text style={{ color: '#10B981', fontSize: 50, fontWeight: '900', marginTop: 6, letterSpacing: -1 }}>₹{paymentFare}</Text>
+        <View style={{ backgroundColor: 'rgba(16,185,129,0.18)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, marginTop: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.35)' }}>
+          <Text style={{ color: '#10B981', fontSize: 13, fontWeight: '700' }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} · 15% fee ke baad</Text>
+        </View>
       </View>
-      <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 30 }}>
 
-        {/* ── Driver se directly pay kiya ── */}
-        <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#0F172A', marginBottom: 12 }}>
-          Customer ne aapko directly pay kiya?
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 36 }}>
+
+        {/* ── Cash or UPI confirm (always visible) ── */}
+        <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 1.8, marginBottom: 12, textTransform: 'uppercase' }}>
+          {paymentMethod === 'cash' ? 'Customer ne cash select kiya — confirm karo' : 'Payment mili? Confirm karo'}
         </Text>
 
-        <Bouncy
-          style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 14, padding: 18, marginBottom: 10, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.3)', opacity: loading ? 0.6 : 1 }}
-          onPress={() => confirmDirectPayment('cash')} disabled={loading}>
-          <Text style={{ fontSize: 36, marginRight: 14 }}>💵</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#10B981' }}>Cash Mila — ₹{paymentFare}</Text>
-            <Text style={{ fontSize: 12, color: '#6EE7B7', marginTop: 3 }}>Customer ne haath mein cash diya</Text>
+        {paymentMethod === 'cash' ? (
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 18, padding: 18, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.4)' }}>
+            <Text style={{ fontSize: 15, fontWeight: '900', color: '#F59E0B', marginBottom: 6 }}>💵 Customer Ne Cash Chuna</Text>
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 16, lineHeight: 20 }}>
+              Customer ne app mein cash select ki hai. Unse ₹{paymentFare} cash lo aur neeche confirm karo.
+            </Text>
+            <Bouncy
+              style={{ backgroundColor: '#10B981', borderRadius: 14, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
+              onPress={() => confirmDirectPayment('cash')} disabled={loading}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>✅  ₹{paymentFare} Cash Mil Gaya</Text>
+            </Bouncy>
           </View>
-          <Text style={{ fontSize: 22, color: '#10B981' }}>›</Text>
-        </Bouncy>
+        ) : (
+          <View style={{ backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)', alignItems: 'center' }}>
+            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>Customer abhi app mein payment kar raha hai...</Text>
+            <FloatingDots color="#10B981" />
+          </View>
+        )}
 
-        <Bouncy
-          style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 18, marginBottom: 18, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)', opacity: loading ? 0.6 : 1 }}
-          onPress={() => confirmDirectPayment('upi_direct')} disabled={loading}>
-          <Text style={{ fontSize: 36, marginRight: 14 }}>📱</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#E91E63' }}>UPI / QR Se Mila — ₹{paymentFare}</Text>
-            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>Customer ne mera QR scan kiya ya UPI pe diya</Text>
-          </View>
-          <Text style={{ fontSize: 22, color: '#E91E63' }}>›</Text>
-        </Bouncy>
+        {/* ── Direct confirm buttons ── */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
+          <Bouncy
+            style={{ flex: 1, backgroundColor: 'rgba(16,185,129,0.10)', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(16,185,129,0.35)', opacity: loading ? 0.6 : 1 }}
+            onPress={() => confirmDirectPayment('cash')} disabled={loading}>
+            <Text style={{ fontSize: 28, marginBottom: 4 }}>💵</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: '#10B981' }}>Cash Mila</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(16,185,129,0.7)', marginTop: 2 }}>₹{paymentFare}</Text>
+          </Bouncy>
+          <Bouncy
+            style={{ flex: 1, backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.3)', opacity: loading ? 0.6 : 1 }}
+            onPress={() => confirmDirectPayment('upi_direct')} disabled={loading}>
+            <Text style={{ fontSize: 28, marginBottom: 4 }}>📱</Text>
+            <Text style={{ fontSize: 13, fontWeight: '900', color: '#E91E63' }}>UPI Mila</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(233,30,99,0.6)', marginTop: 2 }}>₹{paymentFare}</Text>
+          </Bouncy>
+        </View>
 
         {/* ── Divider ── */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
-          <Text style={{ color: '#64748B', marginHorizontal: 12, fontSize: 13, fontWeight: '600' }}>YA</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: '#E2E8F0' }} />
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+          <Text style={{ color: 'rgba(255,255,255,0.35)', marginHorizontal: 14, fontSize: 12, fontWeight: '700' }}>YA CUSTOMER KO DIKHAO</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
         </View>
 
-        {/* ── My UPI QR — customer scan kar sakta hai ── */}
+        {/* ── My UPI QR ── */}
         {driverUpiId ? (() => {
           const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=Sppero%20Trip`;
-          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=8&data=${encodeURIComponent(upiLink)}`;
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(upiLink)}`;
           return (
-            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 18, elevation: 3, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>📱 Customer Ko Dikhao — Scan Kare</Text>
-              <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>GPay · PhonePe · Paytm · Koi bhi UPI</Text>
-              <Image source={{ uri: qrUrl }} style={{ width: 200, height: 200, borderRadius: 12 }} resizeMode="contain" />
-              <Text style={{ fontSize: 12, color: '#E91E63', marginTop: 10, fontWeight: '600' }}>{driverUpiId}</Text>
-              <View style={{ backgroundColor: '#E91E63', borderRadius: 12, paddingHorizontal: 18, paddingVertical: 7, marginTop: 10 }}>
-                <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>₹{paymentFare}</Text>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 18, marginBottom: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)' }}>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', marginBottom: 4 }}>📱 Customer Ko Dikhao</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 14 }}>GPay · PhonePe · Paytm · Any UPI</Text>
+              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 8 }}>
+                <Image source={{ uri: qrUrl }} style={{ width: 210, height: 210, borderRadius: 10 }} resizeMode="contain" />
+              </View>
+              <Text style={{ fontSize: 12, color: '#E91E63', marginTop: 12, fontWeight: '700' }}>{driverUpiId}</Text>
+              <View style={{ backgroundColor: '#E91E63', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 8, marginTop: 10, elevation: 4, shadowColor: '#E91E63', shadowOpacity: 0.5, shadowRadius: 8 }}>
+                <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>₹{paymentFare}</Text>
               </View>
             </View>
           );
         })() : (
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 13, color: '#F59E0B', textAlign: 'center' }}>⚠️ UPI ID set karo profile mein QR dikhane ke liye</Text>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
+            <Text style={{ fontSize: 13, color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>⚠️ Profile mein UPI ID set karo QR dikhane ke liye</Text>
           </View>
         )}
 
-        {/* ── Customer app se payment ── */}
-        {paymentMethod !== 'cash' ? (
-          <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>Customer abhi app mein pay kar raha hai...</Text>
-            <FloatingDots color="#e94560" />
-          </View>
-        ) : (
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 14, padding: 18, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#F59E0B', marginBottom: 6 }}>💵 Customer Ne Cash Select Kiya</Text>
-            <Text style={{ fontSize: 13, color: '#FCD34D', marginBottom: 16, lineHeight: 20 }}>
-              Customer ne app mein cash payment select ki hai. Unse ₹{paymentFare} cash lo aur confirm karo.
-            </Text>
-            <TouchableOpacity
-              style={{ backgroundColor: '#10B981', borderRadius: 12, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
-              onPress={() => confirmDirectPayment('cash')} disabled={loading}>
-              <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>✅ ₹{paymentFare} Cash Mil Gaya</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', lineHeight: 18 }}>
-            💡 15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
+        {/* ── Net earning note ── */}
+        <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 18 }}>💡</Text>
+          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18, flex: 1 }}>
+            15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
           </Text>
         </View>
 
-        {/* ── Payment Not Received (cash escape) ── */}
+        {/* ── Payment not received ── */}
         <TouchableOpacity
           onPress={() => Alert.alert(
             '⚠️ Payment Nahi Mili?',
@@ -2875,13 +2878,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               }},
             ]
           )}
-          style={{ backgroundColor: '#ffebee', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: '#ef9a9a' }}>
+          style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 16, padding: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
           <Text style={{ fontSize: 22 }}>🚨</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: '800', fontSize: 13, color: '#c62828' }}>Customer Ne Payment Nahi Ki</Text>
-            <Text style={{ fontSize: 11, color: '#e57373', marginTop: 2 }}>Cash liye bina chale gaye? Report karo — 10 min mein</Text>
+            <Text style={{ fontWeight: '900', fontSize: 13, color: '#ef4444' }}>Customer Ne Payment Nahi Ki</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(239,68,68,0.65)', marginTop: 2 }}>Cash liye bina chale gaye? Report karo</Text>
           </View>
-          <Text style={{ color: '#c62828', fontSize: 18 }}>›</Text>
+          <Text style={{ color: '#ef4444', fontSize: 20 }}>›</Text>
         </TouchableOpacity>
 
       </ScrollView>
