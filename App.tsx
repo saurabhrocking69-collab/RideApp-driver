@@ -553,7 +553,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setDrvCmpLoading(true);
     fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`)
       .then(r => r.json())
-      .then(d => setDrvComplaints(d.complaints || []))
+      .then(d => { if (Array.isArray(d.complaints)) setDrvComplaints(d.complaints); })
       .catch(() => {})
       .finally(() => setDrvCmpLoading(false));
   }, [driverSubScreen, phone]);
@@ -4442,7 +4442,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
           </View>
           {[
-            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#E91E63', action: async () => { setDrvCmpLoading(true); try { const r = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`); const d = await r.json(); setDrvComplaints(d.complaints||[]); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
+            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: '#E91E63', action: async () => { setDrvCmpLoading(true); try { const r = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`); const d = await r.json(); if (Array.isArray(d.complaints)) setDrvComplaints(d.complaints); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
             { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
             { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
             { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: '#E91E63', action: () => Linking.openURL('mailto:driver.support@sppero.com') },
