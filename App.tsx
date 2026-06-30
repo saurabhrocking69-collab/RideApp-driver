@@ -891,7 +891,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const fetchDriverLevel = async (ph: string) => {
     try {
       const d = await apiGet(`/api/driver/level/${ph}`);
-      if (!d._error) setDriverLevel(d);
+      if (!d._error && d.level && Array.isArray(d.benefits)) setDriverLevel(d);
     } catch (_e) {}
   };
 
@@ -5836,8 +5836,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Benefits */}
               <View style={{ backgroundColor: isPlatinum ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isPlatinum ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: isPlatinum ? 'rgba(255,255,255,0.7)' : '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>Aapke Benefits</Text>
-                {driverLevel.benefits.map((b: string, i: number) => (
-                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: i < driverLevel.benefits.length - 1 ? 6 : 0 }}>
+                {(driverLevel.benefits || []).map((b: string, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: i < (driverLevel.benefits || []).length - 1 ? 6 : 0 }}>
                     <Text style={{ fontSize: 14, color: isPlatinum ? '#FFD700' : driverLevel.levelColor }}>✓</Text>
                     <Text style={{ fontSize: 12, color: isPlatinum ? 'rgba(255,255,255,0.85)' : cfg.text, fontWeight: '500' }}>{b}</Text>
                   </View>
