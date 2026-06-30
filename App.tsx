@@ -877,13 +877,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch (_e) {}
   };
   const fetchDemandZones = async () => {
-    if (!driverGps?.latitude && !driverGps?.lat) return;
     setZonesLoading(true);
     try {
-      const lat = driverGps?.latitude ?? driverGps?.lat;
-      const lng = driverGps?.longitude ?? driverGps?.lng;
-      const d = await apiGet(`/api/driver/demand-zones?lat=${lat}&lng=${lng}`);
-      if (!d._error && d.zones) setDemandZones(d.zones);
+      // GPS optional — backend defaults to city center if not provided
+      const lat = driverGps?.lat ?? driverGps?.latitude ?? '';
+      const lng = driverGps?.lng ?? driverGps?.longitude ?? '';
+      const qs = lat && lng ? `?lat=${lat}&lng=${lng}` : '';
+      const d = await apiGet(`/api/driver/demand-zones${qs}`);
+      if (!d._error && Array.isArray(d.zones)) setDemandZones(d.zones);
     } catch (_e) {}
     setZonesLoading(false);
   };
@@ -3157,8 +3158,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
 
-          {/* Hot Zones */}
-          {isOnline && !activeRide && !rideReq && !activeHourlyRide && !hourlyRideReq && demandZones.length > 0 && (
+          {/* Hot Zones — always visible when online */}
+          {isOnline && !activeRide && !rideReq && !activeHourlyRide && !hourlyRideReq && (
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, marginBottom: 14, elevation: 4, borderWidth: 1.5, borderColor: '#E2E8F0', shadowColor: '#E91E63', shadowOpacity: 0.08, shadowRadius: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -3171,10 +3172,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
                 </View>
                 <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
-                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#E91E63' }}>LIVE</Text>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#E91E63' }}>{zonesLoading ? '...' : 'LIVE'}</Text>
                 </View>
               </View>
-              {demandZones.slice(0, 5).map((zone, i) => {
+              {demandZones.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingVertical: 18 }}>
+                  <Text style={{ fontSize: 28, marginBottom: 8 }}>🗺️</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Abhi koi hot zone nahi</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 4, textAlign: 'center' }}>Jaise hi aapke area mein ride activity badhe,{'\n'}zones yahan dikhenge</Text>
+                </View>
+              ) : demandZones.slice(0, 5).map((zone, i) => {
                 const heatConfig = zone.heat === 'high'
                   ? { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.3)', dot: '#EF4444', label: 'High', labelBg: '#EF4444' }
                   : zone.heat === 'medium'
