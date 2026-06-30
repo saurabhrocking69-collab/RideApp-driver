@@ -487,6 +487,12 @@ function App() {
   const [commPayLoading, setCommPayLoading] = useState(false);
   const [commResult, setCommResult] = useState('');
 
+  // ── Demand Heatmap + Driver Level ────────────
+  const [demandZones, setDemandZones] = useState<any[]>([]);
+  const [zonesLoading, setZonesLoading] = useState(false);
+  const zonesIntervalRef = useRef<any>(null);
+  const [driverLevel, setDriverLevel] = useState<any>(null);
+
   // Ride extension
   const [extRequest, setExtRequest]       = useState<any>(null); // pending extension from customer
   const [extRespSec, setExtRespSec]       = useState(60);
@@ -586,7 +592,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
-              navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); promptBatteryOptimization();
+              navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); promptBatteryOptimization(); fetchDriverLevel(savedPhone);
               // Restore active ride into store so home screen shows it immediately
               try {
                 const ar = await fetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
@@ -870,6 +876,25 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (d.code) { setReferralInfo(d); setReferralLoaded(true); }
     } catch (_e) {}
   };
+  const fetchDemandZones = async () => {
+    if (!driverGps?.latitude && !driverGps?.lat) return;
+    setZonesLoading(true);
+    try {
+      const lat = driverGps?.latitude ?? driverGps?.lat;
+      const lng = driverGps?.longitude ?? driverGps?.lng;
+      const d = await apiGet(`/api/driver/demand-zones?lat=${lat}&lng=${lng}`);
+      if (!d._error && d.zones) setDemandZones(d.zones);
+    } catch (_e) {}
+    setZonesLoading(false);
+  };
+
+  const fetchDriverLevel = async (ph: string) => {
+    try {
+      const d = await apiGet(`/api/driver/level/${ph}`);
+      if (!d._error) setDriverLevel(d);
+    } catch (_e) {}
+  };
+
   const claimDailyBonus = async (rule_id: number, tier_index: number) => {
     setBonusClaiming(true); setBonusMsg('');
     try {
@@ -1302,7 +1327,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
         promptBatteryOptimization();
-        loadUpiId(data.driver.phone); loadDriverOffers();
+        loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone);
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
@@ -1451,6 +1476,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult('🟢 Online hain — rides aayengi!');
       (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
       startPolling(phone);
+      fetchDemandZones();
+      if (zonesIntervalRef.current) clearInterval(zonesIntervalRef.current);
+      zonesIntervalRef.current = setInterval(fetchDemandZones, 120000); // every 2 min
       loadDriverOffers();
       if (!socketRef.current?.connected) {
         const s = io(API, {
@@ -1515,6 +1543,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         Notifications.dismissNotificationAsync(onlineNotifIdRef.current).catch(() => {});
         onlineNotifIdRef.current = null;
       }
+      if (zonesIntervalRef.current) { clearInterval(zonesIntervalRef.current); zonesIntervalRef.current = null; }
+      setDemandZones([]);
       stopPolling();
       socketRef.current?.disconnect();
       socketRef.current = null;
@@ -3112,6 +3142,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={s.greeting}>{isOnline ? '🟢 Online' : '🔴 Offline'}</Text>
           </View>
           <Text style={s.subTxt}>{driverInfo?.name || phone} · {driverInfo?.vehicle_no || ''}</Text>
+          {driverLevel && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
+              <Text style={{ fontSize: 13 }}>{driverLevel.levelEmoji}</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: '700' }}>{driverLevel.levelName}</Text>
+              {driverLevel.nextLevel && (
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>· {driverLevel.progress}% to {driverLevel.nextLevelName}</Text>
+              )}
+            </View>
+          )}
         </View>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: '#16A34A', false: '#e0e0e0' }} />
       </View>
@@ -3123,6 +3162,54 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
+
+          {/* Hot Zones */}
+          {isOnline && !activeRide && !rideReq && !activeHourlyRide && !hourlyRideReq && demandZones.length > 0 && (
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, marginBottom: 14, elevation: 4, borderWidth: 1.5, borderColor: '#E2E8F0', shadowColor: '#E91E63', shadowOpacity: 0.08, shadowRadius: 12 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(233,30,99,0.1)', alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 18 }}>🔥</Text>
+                  </View>
+                  <View>
+                    <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Hot Zones</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>Jahan rides ki demand hai</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
+                  <Text style={{ fontSize: 10, fontWeight: '800', color: '#E91E63' }}>LIVE</Text>
+                </View>
+              </View>
+              {demandZones.slice(0, 5).map((zone, i) => {
+                const heatConfig = zone.heat === 'high'
+                  ? { bg: 'rgba(239,68,68,0.08)', border: 'rgba(239,68,68,0.3)', dot: '#EF4444', label: 'High', labelBg: '#EF4444' }
+                  : zone.heat === 'medium'
+                  ? { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)', dot: '#F59E0B', label: 'Medium', labelBg: '#F59E0B' }
+                  : { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)', dot: '#10B981', label: 'Low', labelBg: '#10B981' };
+                const vehicleEmoji = zone.top_vehicle === 'bike' ? '🏍️' : zone.top_vehicle === 'auto' ? '🛺' : zone.top_vehicle === 'car' ? '🚕' : zone.top_vehicle === 'eriksha' ? '🛵' : '🚗';
+                return (
+                  <View key={i} style={{ backgroundColor: heatConfig.bg, borderRadius: 12, padding: 12, marginBottom: i < 4 ? 8 : 0, borderWidth: 1, borderColor: heatConfig.border, flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: heatConfig.dot, marginRight: 10 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                        {vehicleEmoji} {zone.dist_km < 0.5 ? 'Aapke paas' : `${zone.dist_km} km door`}
+                        {zone.avg_fare > 0 ? ` · avg ₹${zone.avg_fare}` : ''}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                        {zone.ride_count} ride{zone.ride_count > 1 ? 's' : ''} is area mein
+                      </Text>
+                    </View>
+                    <View style={{ backgroundColor: heatConfig.labelBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{heatConfig.label}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+              <TouchableOpacity onPress={fetchDemandZones} style={{ marginTop: 10, alignItems: 'center', paddingVertical: 6 }}>
+                <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>🔄 Refresh zones</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Sppero Buddy Recruit Banner */}
           {!activeRide && !rideReq && !activeHourlyRide && (
@@ -5682,6 +5769,84 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} · {driverInfo?.vehicle_no || ''}</Text>
           <View style={s.badge}><Text style={{ color: '#F59E0B', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
+
+        {/* ── Driver Level Card ── */}
+        {driverLevel && (() => {
+          const lvlColors: Record<string, { bg: string; border: string; text: string }> = {
+            platinum: { bg: 'linear', border: '#9C27B0', text: '#7B1FA2' },
+            gold:     { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.4)', text: '#B45309' },
+            silver:   { bg: 'rgba(100,116,139,0.08)', border: 'rgba(100,116,139,0.35)', text: '#475569' },
+            bronze:   { bg: 'rgba(205,127,50,0.08)', border: 'rgba(205,127,50,0.35)', text: '#92400E' },
+          };
+          const cfg = lvlColors[driverLevel.level] || lvlColors.bronze;
+          const isPlatinum = driverLevel.level === 'platinum';
+          return (
+            <View style={{ borderRadius: 20, padding: 18, marginBottom: 14, elevation: 6,
+              backgroundColor: isPlatinum ? '#2D1B69' : cfg.bg.startsWith('rgba') ? cfg.bg : '#F5F3FF',
+              borderWidth: 2, borderColor: isPlatinum ? '#9C27B0' : cfg.border,
+              shadowColor: driverLevel.levelColor || '#9C27B0', shadowOpacity: 0.18, shadowRadius: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 40 }}>{driverLevel.levelEmoji}</Text>
+                  <View>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: isPlatinum ? 'rgba(255,255,255,0.6)' : '#94A3B8', letterSpacing: 1, textTransform: 'uppercase' }}>Aapka Level</Text>
+                    <Text style={{ fontSize: 24, fontWeight: '900', color: isPlatinum ? '#FFD700' : cfg.text, marginTop: 2 }}>{driverLevel.levelName}</Text>
+                  </View>
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={{ fontSize: 11, color: isPlatinum ? 'rgba(255,255,255,0.5)' : '#94A3B8' }}>Rides</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: isPlatinum ? '#fff' : cfg.text }}>{driverLevel.completed_rides}</Text>
+                </View>
+              </View>
+
+              {/* Progress to next level */}
+              {driverLevel.nextLevel && (
+                <View style={{ marginBottom: 14 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <Text style={{ fontSize: 11, color: isPlatinum ? 'rgba(255,255,255,0.6)' : '#64748B', fontWeight: '600' }}>
+                      {driverLevel.levelName} → {driverLevel.nextLevelName}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: isPlatinum ? '#FFD700' : cfg.text }}>
+                      {driverLevel.progress}%
+                    </Text>
+                  </View>
+                  <View style={{ height: 8, backgroundColor: isPlatinum ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                    <View style={{ height: '100%', width: `${driverLevel.progress}%`, borderRadius: 4, backgroundColor: isPlatinum ? '#FFD700' : driverLevel.levelColor || '#9C27B0' }} />
+                  </View>
+                  <Text style={{ fontSize: 11, color: isPlatinum ? 'rgba(255,255,255,0.5)' : '#94A3B8', marginTop: 5 }}>
+                    {driverLevel.nextTarget - driverLevel.completed_rides} aur rides — {driverLevel.nextLevelEmoji} {driverLevel.nextLevelName} unlock hoga
+                  </Text>
+                </View>
+              )}
+
+              {/* Stats row */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                {[
+                  { label: 'Rating', value: `⭐ ${driverLevel.avg_rating}` },
+                  { label: 'Cancel Rate', value: `${driverLevel.cancel_rate}%` },
+                  { label: 'Is Mahine', value: `${driverLevel.rides_this_month} rides` },
+                ].map((item, i) => (
+                  <View key={i} style={{ flex: 1, backgroundColor: isPlatinum ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)', borderRadius: 10, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: isPlatinum ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: isPlatinum ? '#fff' : '#0F172A' }}>{item.value}</Text>
+                    <Text style={{ fontSize: 9, color: isPlatinum ? 'rgba(255,255,255,0.5)' : '#94A3B8', marginTop: 3, textAlign: 'center' }}>{item.label}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* Benefits */}
+              <View style={{ backgroundColor: isPlatinum ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: isPlatinum ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: isPlatinum ? 'rgba(255,255,255,0.7)' : '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>Aapke Benefits</Text>
+                {driverLevel.benefits.map((b: string, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: i < driverLevel.benefits.length - 1 ? 6 : 0 }}>
+                    <Text style={{ fontSize: 14, color: isPlatinum ? '#FFD700' : driverLevel.levelColor }}>✓</Text>
+                    <Text style={{ fontSize: 12, color: isPlatinum ? 'rgba(255,255,255,0.85)' : cfg.text, fontWeight: '500' }}>{b}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          );
+        })()}
+
         {/* ── Favourite Buddy Count Card ── */}
         {(() => {
           const n = favouriteCount ?? 0;
