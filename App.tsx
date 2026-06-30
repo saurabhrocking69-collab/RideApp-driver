@@ -487,11 +487,12 @@ function App() {
   const [commPayLoading, setCommPayLoading] = useState(false);
   const [commResult, setCommResult] = useState('');
 
-  // ── Demand Heatmap + Driver Level ────────────
+  // ── Demand Heatmap + Driver Level + Prediction ────────────
   const [demandZones, setDemandZones] = useState<any[]>([]);
   const [zonesLoading, setZonesLoading] = useState(false);
   const zonesIntervalRef = useRef<any>(null);
   const [driverLevel, setDriverLevel] = useState<any>(null);
+  const [demandPrediction, setDemandPrediction] = useState<any>(null);
 
   // Ride extension
   const [extRequest, setExtRequest]       = useState<any>(null); // pending extension from customer
@@ -896,6 +897,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch (_e) {}
   };
 
+  const fetchDemandPrediction = async () => {
+    try {
+      const d = await apiGet('/api/driver/demand-prediction');
+      if (!d._error) setDemandPrediction(d);
+    } catch (_e) {}
+  };
+
   const claimDailyBonus = async (rule_id: number, tier_index: number) => {
     setBonusClaiming(true); setBonusMsg('');
     try {
@@ -999,6 +1007,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Keep gpsRef in sync (for use inside intervals) ──
   useEffect(() => { driverGpsRef.current = driverGps; }, [driverGps]);
+
+  // ── Live location posting to backend during active ride (every 4s) ──
+  useEffect(() => {
+    if (!activeRide?.id || !phone) return;
+    const iv = setInterval(() => {
+      const gps = driverGpsRef.current;
+      if (!gps) return;
+      apiPost(`/api/rides/${activeRide.id}/driver-location`, {
+        lat: gps.lat ?? gps.latitude,
+        lng: gps.lng ?? gps.longitude,
+        phone,
+      }).catch(() => {});
+    }, 4000);
+    return () => clearInterval(iv);
+  }, [activeRide?.id, phone]);
 
   // ── Live distance to pickup (matched / arrived) ──
   useEffect(() => {
@@ -1478,6 +1501,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
       startPolling(phone);
       fetchDemandZones();
+      fetchDemandPrediction();
       if (zonesIntervalRef.current) clearInterval(zonesIntervalRef.current);
       zonesIntervalRef.current = setInterval(fetchDemandZones, 120000); // every 2 min
       loadDriverOffers();
@@ -3209,6 +3233,63 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <TouchableOpacity onPress={fetchDemandZones} style={{ marginTop: 10, alignItems: 'center', paddingVertical: 6 }}>
                 <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>🔄 Refresh zones</Text>
               </TouchableOpacity>
+            </View>
+          )}
+
+          {/* ── Demand Prediction Card ── */}
+          {isOnline && !activeRide && !rideReq && !activeHourlyRide && demandPrediction && (
+            <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, elevation: 4, shadowColor: '#6366F1', shadowOpacity: 0.12, shadowRadius: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.15)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ fontSize: 18, marginRight: 8 }}>📊</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#1E1B4B' }}>Demand Forecast</Text>
+                  <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>Aaj ke liye ride demand prediction</Text>
+                </View>
+                {demandPrediction.mins_to_next_peak != null && (
+                  <View style={{ backgroundColor: '#EEF2FF', borderRadius: 10, padding: 8, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: '#6366F1', fontWeight: '800' }}>NEXT PEAK</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#4338CA' }}>{demandPrediction.next_peak_label}</Text>
+                    <Text style={{ fontSize: 9, color: '#6366F1' }}>
+                      {demandPrediction.mins_to_next_peak < 60
+                        ? `${demandPrediction.mins_to_next_peak} min mein`
+                        : `${Math.round(demandPrediction.mins_to_next_peak / 60)}h mein`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Hourly bar chart — 6am to 11pm */}
+              <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 50, gap: 2 }}>
+                {(demandPrediction.hourly || []).filter((_: any, i: number) => i >= 6 && i <= 22).map((h: any, idx: number) => {
+                  const hour = h.hour;
+                  const isPeak = (demandPrediction.peak_hours || []).includes(hour);
+                  const isCurrent = hour === demandPrediction.current_hour;
+                  const barH = Math.max(4, Math.round((h.intensity / 100) * 46));
+                  return (
+                    <View key={hour} style={{ flex: 1, alignItems: 'center' }}>
+                      <View style={{
+                        width: '80%', height: barH, borderRadius: 3,
+                        backgroundColor: isCurrent ? '#F59E0B' : isPeak ? '#6366F1' : 'rgba(99,102,241,0.2)',
+                      }} />
+                      {(idx % 4 === 0) && (
+                        <Text style={{ fontSize: 7, color: '#9CA3AF', marginTop: 2 }}>
+                          {hour === 0 ? '12A' : hour < 12 ? `${hour}A` : hour === 12 ? '12P' : `${hour - 12}P`}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })}
+              </View>
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 8 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#6366F1' }} />
+                  <Text style={{ fontSize: 9, color: '#6B7280' }}>Peak hours</Text>
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: '#F59E0B' }} />
+                  <Text style={{ fontSize: 9, color: '#6B7280' }}>Abhi</Text>
+                </View>
+              </View>
             </View>
           )}
 
