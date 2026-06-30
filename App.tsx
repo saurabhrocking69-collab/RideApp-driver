@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, Image, Alert,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -18,7 +18,7 @@ import { io, Socket } from 'socket.io-client';
 // evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
 // registered yet. The try/catch prevents this from killing the app on startup.
 let RazorpayCheckout: any = null;
-try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m; } catch (_e) {}
+try { const _m = require('react-native-razorpay'); RazorpayCheckout = NativeModules?.RazorpayCheckout ? (_m?.default || _m) : null; } catch (_e) {}
 
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
@@ -478,6 +478,7 @@ function App() {
   const [driverRideHistory, setDriverRideHistory] = useState<any[]>([]);
   const [driverHourlyHistory, setDriverHourlyHistory] = useState<any[]>([]);
   const [walletEarningsTab, setWalletEarningsTab] = useState<'summary'|'rides'|'hourly'|'commission'>('summary');
+  const [earningsAnalytics, setEarningsAnalytics] = useState<any>(null);
   const [payoutInput, setPayoutInput] = useState('');
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
@@ -5237,6 +5238,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') {
     if (!walletLoaded) { loadDriverWallet(phone); loadCommissionHistory(phone); }
+    if (!earningsAnalytics && phone) {
+      apiGet(`/api/driver/earnings-analytics/${phone}`).then(d => { if (!d._error) setEarningsAnalytics(d); }).catch(() => {});
+    }
     const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
     return (
     <View style={s.screen}>
@@ -5298,6 +5302,79 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Row k="Platform Fee (15%)" v={'₹' + (earnings * 0.15).toFixed(0)} />
             <Row k="Aaj Ki Net Kamai" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
           </View>
+          {/* ── 7-Day Earnings Chart ── */}
+          {earningsAnalytics && (() => {
+            const days = earningsAnalytics.days7 || [];
+            const maxEarned = Math.max(...days.map((d: any) => d.earned), 1);
+            const thisW = earningsAnalytics.this_week;
+            const lastW = earningsAnalytics.last_week;
+            const weekChange = lastW.earned > 0 ? Math.round(((thisW.earned - lastW.earned) / lastW.earned) * 100) : null;
+            const topHours = (earningsAnalytics.top_hours || []).map((h: number) => {
+              const ampm = h < 12 ? 'AM' : 'PM';
+              return `${h % 12 || 12}${ampm}`;
+            });
+            return (
+              <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, elevation: 3, shadowColor: '#10B981', shadowOpacity: 0.1, shadowRadius: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.15)' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  <Text style={{ fontSize: 16, marginRight: 8 }}>📈</Text>
+                  <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', flex: 1 }}>7-Day Earnings</Text>
+                  {weekChange !== null && (
+                    <View style={{ backgroundColor: weekChange >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
+                      <Text style={{ fontSize: 12, fontWeight: '800', color: weekChange >= 0 ? '#10B981' : '#EF4444' }}>
+                        {weekChange >= 0 ? '↑' : '↓'} {Math.abs(weekChange)}% vs last week
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Bar chart */}
+                <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 80, gap: 4, marginBottom: 6 }}>
+                  {days.map((d: any, i: number) => {
+                    const barH = Math.max(4, Math.round((d.earned / maxEarned) * 76));
+                    const isToday = i === days.length - 1;
+                    return (
+                      <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
+                        {d.earned > 0 && (
+                          <Text style={{ fontSize: 8, color: '#64748B', fontWeight: '700' }}>₹{d.earned >= 1000 ? (d.earned / 1000).toFixed(1) + 'k' : d.earned}</Text>
+                        )}
+                        <View style={{
+                          width: '100%', height: barH, borderRadius: 5,
+                          backgroundColor: isToday ? '#10B981' : d.earned === 0 ? '#F1F5F9' : 'rgba(16,185,129,0.4)',
+                        }} />
+                        <Text style={{ fontSize: 8, color: isToday ? '#10B981' : '#94A3B8', fontWeight: isToday ? '800' : '500' }}>{d.label}</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+
+                {/* This week vs last week */}
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
+                  <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>IS HAFTE</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#10B981', marginTop: 4 }}>₹{thisW.earned}</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B' }}>{thisW.rides} rides</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>PICHLA HAFTE</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#64748B', marginTop: 4 }}>₹{lastW.earned}</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B' }}>{lastW.rides} rides</Text>
+                  </View>
+                </View>
+
+                {/* Best earning hours */}
+                {topHours.length > 0 && (
+                  <View style={{ backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 14 }}>⏰</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#0F172A' }}>Best Earning Hours</Text>
+                      <Text style={{ fontSize: 11, color: '#10B981', marginTop: 2 }}>{topHours.join(' · ')}</Text>
+                    </View>
+                  </View>
+                )}
+              </View>
+            );
+          })()}
+
           <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' }}>
             <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
             <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>

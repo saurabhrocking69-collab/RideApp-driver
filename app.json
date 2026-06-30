@@ -68,7 +68,8 @@
         "isIosBackgroundLocationEnabled": true,
         "isAndroidBackgroundLocationEnabled": true
       }],
-      ["expo-image-picker", { "photosPermission": "Documents upload karne ke liye gallery access chahiye" }]
+      ["expo-image-picker", { "photosPermission": "Documents upload karne ke liye gallery access chahiye" }],
+      ["react-native-maps", { "googleMapsApiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4" }]
     ],
     "web": {
       "favicon": "./assets/favicon.png"
