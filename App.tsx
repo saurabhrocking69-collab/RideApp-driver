@@ -1568,31 +1568,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult('❌ ' + data.message);
     } else if (data.success) {
       setResult('✅ Ride accept ki!');
-      // Join ride room for real-time payment + chat updates
       socketRef.current?.emit('joinRide', { rideId: rideReq.id });
+      // Clear store + React state immediately so subscription can't restore stale rideReq
+      useDriverStore.setState({ pendingRide: null });
       setRideReq(null);
       fetchEta(rideReq.pickup, rideReq.drop_location);
+      // Trigger an immediate poll so activeRide populates in <1s instead of waiting 2s
+      useDriverStore.getState().triggerPoll();
     } else {
       setResult('❌ ' + (data.message || 'Ride kisi aur ko mil gayi'));
+      useDriverStore.setState({ pendingRide: null });
       setRideReq(null);
     }
     setLoading(false);
   };
   const rejectRide = async () => {
     const req = rideReq;
+    useDriverStore.setState({ pendingRide: null });
     setRideReq(null);
     useDriverStore.getState().clearAll();
     if (isOnline) startPolling(phone);
     setResult('❌ Ride reject ki');
-    // Tell server to advance queue to next driver immediately
     if (req?.id) {
-      try {
-        await fetch(`${API}/api/rides/reject-offer`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ride_id: req.id, driver_phone: phone }),
-        });
-      } catch (_e) {}
+      // apiPost has 10s timeout — raw fetch can hang indefinitely and block queue advancement
+      apiPost('/api/rides/reject-offer', { ride_id: req.id, driver_phone: phone }).catch(() => {});
     }
   };
 
@@ -1728,8 +1727,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!paymentWaiting || !paymentRideId) return;
     const iv = setInterval(async () => {
       try {
-        const res = await fetch(`${API}/api/rides/payment-status/${paymentRideId}`);
-        const data = await res.json();
+        const data = await apiGet(`/api/rides/payment-status/${paymentRideId}`, 0, 5000);
+        if (data._error) return;
         if (data.payment_status === 'completed') {
           setPaymentMethod(data.payment_method);
           setPaymentWaiting(false);
@@ -1751,10 +1750,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const confirmDirectPayment = async (method: 'cash' | 'upi_direct') => {
     setLoading(true);
     try {
-      await fetch(`${API}/api/rides/cash-confirm`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: paymentRideId, phone, payment_method: method })
-      });
+      await apiPost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
       setPaymentWaiting(false);
       const fare = parseFloat(paymentFare || '0');
       setTripSummary({
@@ -1770,14 +1766,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const cancelTrip = async () => {
     setLoading(true);
     try {
-      const cr = await fetch(`${API}/api/rides/cancel-smart`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone })
-      });
-      const cd = await cr.json();
+      const cd = await apiPost('/api/rides/cancel-smart', { ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
       if (cd.success) {
         setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancel ki');
         setActiveRide(null);
+        useDriverStore.setState({ activeRide: null });
         setShowDriverCancelModal(false);
       } else {
         setResult('❌ Cancel nahi hua — retry karo');
@@ -1785,6 +1778,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch (_e) {
       setResult('❌ Network error — retry karo');
       setActiveRide(null);
+      useDriverStore.setState({ activeRide: null });
     }
     setLoading(false);
   };
