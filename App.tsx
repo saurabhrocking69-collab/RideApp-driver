@@ -4082,13 +4082,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ LIVE TAB — Full-screen active ride control ═══
   if (activeTab === 'live') {
-    const PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52;
+    const PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 44;
     const isIdle = !rideReq && !activeRide && !hourlyRideReq && !activeHourlyRide;
     return (
       <View style={{ flex: 1, backgroundColor: '#F1F5F9' }}>
         <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
         {/* Header */}
-        <View style={{ backgroundColor: '#0F172A', paddingTop: PT, paddingHorizontal: 18, paddingBottom: 14 }}>
+        <View style={{ backgroundColor: '#0F172A', paddingTop: PT, paddingHorizontal: 18, paddingBottom: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, letterSpacing: 0.3 }}>⚡ Live</Text>
@@ -6388,7 +6388,7 @@ const s = StyleSheet.create({
   btn:             { backgroundColor:'#E91E63', borderRadius:14, padding:16, alignItems:'center', marginTop:16, marginBottom:10, elevation:4, shadowColor:'#E91E63', shadowOpacity:0.35, shadowRadius:10 },
   btnTxt:          { color:'#fff', fontSize:16, fontWeight:'bold' },
   err:             { textAlign:'center', color:'#EF4444', marginVertical:10 },
-  topBar:          { backgroundColor:'#E91E63', flexDirection:'row', alignItems:'center', justifyContent:'space-between', padding:16, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+12 : 48, borderBottomWidth:0 },
+  topBar:          { backgroundColor:'#E91E63', flexDirection:'row', alignItems:'center', justifyContent:'space-between', paddingHorizontal:16, paddingBottom:10, paddingTop: Platform.OS==='android' ? (StatusBar.currentHeight||28)+8 : 44, borderBottomWidth:0 },
   greeting:        { color:'#fff', fontSize:18, fontWeight:'bold' },
   subTxt:          { color:'rgba(255,255,255,0.75)', fontSize:12, marginTop:2 },
   notifBanner:     { backgroundColor:'#E91E63', padding:12, flexDirection:'row', alignItems:'center', justifyContent:'space-between' },

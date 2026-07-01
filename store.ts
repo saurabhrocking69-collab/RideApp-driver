@@ -46,7 +46,9 @@ export const useDriverStore = create<DriverState>((set, get) => ({
           busy = false;
           return;
         }
-        set({ activeRide: null });
+        // Only clear activeRide on explicit "no ride" response — not on network error
+        // (transient errors would flash the card blank for 2s between polls)
+        if (!ad._error) set({ activeRide: null });
 
         const pd = await apiGet(`/api/driver/pending-ride?phone=${phone}`, 0, 5000);
         if (!pd._error) {
