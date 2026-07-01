@@ -2,28 +2,39 @@ const { withDangerousMod } = require('@expo/config-plugins');
 const fs = require('fs');
 const path = require('path');
 
-const RULES = `
-# Razorpay SDK — keep all classes so ProGuard doesn't strip native module
+const RAZORPAY_RULES = `
+# Razorpay SDK — keep all classes from ProGuard stripping
 -keep class com.razorpay.** { *; }
--keepclasseswithmembers class * { public void onPayment*(...); }
 -dontwarn com.razorpay.**
--optimizations !method/inlining/*
+-keepattributes *Annotation*
 -keepattributes JavascriptInterface
--keepclassmembers class * { @android.webkit.JavascriptInterface <methods>; }
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
+-keepclasseswithmembers class * {
+    public void onPayment*(...);
+}
+-optimizations !method/inlining/*
 `;
 
-module.exports = function withRazorpayProguard(config) {
+const withRazorpayProguard = (config) => {
   return withDangerousMod(config, [
     'android',
-    async (cfg) => {
-      const file = path.join(cfg.modRequest.platformProjectRoot, 'app', 'proguard-rules.pro');
-      try {
-        const existing = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    (config) => {
+      const proguardPath = path.join(
+        config.modRequest.platformProjectRoot,
+        'app',
+        'proguard-rules.pro'
+      );
+      if (fs.existsSync(proguardPath)) {
+        const existing = fs.readFileSync(proguardPath, 'utf8');
         if (!existing.includes('com.razorpay')) {
-          fs.writeFileSync(file, existing + '\n' + RULES);
+          fs.appendFileSync(proguardPath, RAZORPAY_RULES);
         }
-      } catch (_e) {}
-      return cfg;
+      }
+      return config;
     },
   ]);
 };
+
+module.exports = withRazorpayProguard;
