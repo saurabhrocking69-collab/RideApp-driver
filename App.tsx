@@ -1209,8 +1209,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extDrop, fare: extFare, status: 'matched', payment_method: 'wallet' };
         setActiveRide({ ...newRide, id: data.new_ride_id });
         setExtRequest(null); setTripSummary(null);
-      } else { setResult('❌ ' + (data.error || 'Accept nahi hua')); }
-    } catch (_e) { setResult(_e instanceof Error && _e.name === 'AbortError' ? '❌ Request timeout — retry karo' : '❌ Network error'); }
+      } else { Alert.alert('Extension Accept Failed', data.error || 'Accept nahi hua — dobara try karo'); }
+    } catch (_e) { Alert.alert('Network Error', _e instanceof Error && _e.name === 'AbortError' ? 'Request timeout — retry karo' : 'Server se connect nahi hua'); }
     clearTimeout(timeout);
     setExtAccLoading(false);
   };
