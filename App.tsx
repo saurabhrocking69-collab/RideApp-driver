@@ -1179,28 +1179,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => { stopped = true; clearInterval(iv); };
   }, [tripSummary, phone]);
 
-  // Extension response countdown
+  // Extension response countdown — paused while accept is loading
+  const extAccLoadingRef = useRef(false);
+  useEffect(() => { extAccLoadingRef.current = extAccLoading; }, [extAccLoading]);
   useEffect(() => {
     if (!extRequest) return;
     setExtRespSec(extRequest.seconds_left ?? 60);
-    const iv = setInterval(() => setExtRespSec(s => { if (s <= 1) { clearInterval(iv); setExtRequest(null); return 0; } return s - 1; }), 1000);
+    const iv = setInterval(() => setExtRespSec(s => {
+      if (extAccLoadingRef.current) return s; // don't count down while accepting
+      if (s <= 1) { clearInterval(iv); setExtRequest(null); return 0; }
+      return s - 1;
+    }), 1000);
     return () => clearInterval(iv);
   }, [extRequest?.id]);
 
   const acceptExtension = async () => {
     if (!extRequest) return;
+    const extId = extRequest.id;
+    const extDrop = extRequest.new_drop;
+    const extFare = extRequest.estimated_fare;
     setExtAccLoading(true);
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 12000);
     try {
-      const res = await fetch(`${API}/api/rides/extension-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extRequest.id }) });
+      const res = await fetch(`${API}/api/rides/extension-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extId }), signal: ctrl.signal });
       const data = await res.json();
       if (data.success) {
-        // Fetch new ride and go active
-        const rideRes = await fetch(`${API}/api/rides/status/${data.new_ride_id}`).then(r => r.json());
-        const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extRequest.new_drop, fare: extRequest.estimated_fare, status: 'matched', payment_method: 'wallet' };
+        const rideRes = await fetch(`${API}/api/rides/status/${data.new_ride_id}`, { signal: ctrl.signal }).then(r => r.json()).catch(() => ({}));
+        const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extDrop, fare: extFare, status: 'matched', payment_method: 'wallet' };
         setActiveRide({ ...newRide, id: data.new_ride_id });
         setExtRequest(null); setTripSummary(null);
       } else { setResult('❌ ' + (data.error || 'Accept nahi hua')); }
-    } catch (_e) { setResult('❌ Network error'); }
+    } catch (_e) { setResult(_e instanceof Error && _e.name === 'AbortError' ? '❌ Request timeout — retry karo' : '❌ Network error'); }
+    clearTimeout(timeout);
     setExtAccLoading(false);
   };
 
