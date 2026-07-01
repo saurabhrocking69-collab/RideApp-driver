@@ -1,15 +1,25 @@
 import { useRef, useEffect, useState, memo } from 'react';
-import { Animated, View, Text, StyleSheet } from 'react-native';
-import MapView, { Marker, Polyline, Polygon, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Animated, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-type DemandZone = { lat: number; lng: number; heat: 'high' | 'medium' | 'low'; ride_count: number; avg_fare: number };
+const PINK   = '#FF2D78';
+const GREEN  = '#10B981';
+const YELLOW = '#F59E0B';
 
-const HEAT_FILL:   Record<string, string> = { high: 'rgba(255,45,120,0.28)', medium: 'rgba(245,158,11,0.22)', low: 'rgba(5,150,105,0.16)' };
-const HEAT_STROKE: Record<string, string> = { high: 'rgba(255,45,120,0.65)', medium: 'rgba(245,158,11,0.65)', low: 'rgba(5,150,105,0.55)' };
-const CELL = 0.009; // half of 0.018° grid cell
+type DemandZone = { lat: number; lng: number; heat: 'high' | 'medium' | 'low'; ride_count: number; avg_fare: number };
+type RideStatus = 'matched' | 'arrived' | 'started' | null;
+
+const HEAT_FILL:   Record<string, string> = { high: 'rgba(255,45,120,0.25)', medium: 'rgba(245,158,11,0.18)', low: 'rgba(5,150,105,0.14)' };
+const HEAT_STROKE: Record<string, string> = { high: 'rgba(255,45,120,0.60)', medium: 'rgba(245,158,11,0.60)', low: 'rgba(5,150,105,0.50)' };
+const CELL = 0.009;
+
+const VEHICLE_ICONS: Record<string, string> = {
+  bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
+  eriksha: '🛵', car: '🚕', luxury: '🚙',
+};
 
 function zonePolygon(lat: number, lng: number) {
   return [
@@ -20,7 +30,7 @@ function zonePolygon(lat: number, lng: number) {
   ];
 }
 
-// ── Polyline decoder (Google encoded format) ──────────────────────────────────
+// ── Polyline decoder ──────────────────────────────────────────────────────────
 function decodePolyline(encoded: string): { latitude: number; longitude: number }[] {
   const pts: { latitude: number; longitude: number }[] = [];
   let idx = 0, lat = 0, lng = 0;
@@ -36,51 +46,118 @@ function decodePolyline(encoded: string): { latitude: number; longitude: number 
   return pts;
 }
 
-function DriverMarker() {
+// ── Compass bearing ───────────────────────────────────────────────────────────
+function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const toR = (d: number) => d * Math.PI / 180;
+  const dL = toR(lng2 - lng1);
+  const l1 = toR(lat1), l2 = toR(lat2);
+  const y = Math.sin(dL) * Math.cos(l2);
+  const x = Math.cos(l1) * Math.sin(l2) - Math.sin(l1) * Math.cos(l2) * Math.cos(dL);
+  return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+// ── Driver self-marker — large pink, bearing arrow ────────────────────────────
+function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: number }) {
+  const icon = VEHICLE_ICONS[vehicleType] || '🛺';
   return (
-    <View style={styles.driverMarker}>
-      <View style={styles.driverMarkerInner}>
-        <Text style={{ fontSize: 18 }}>🛺</Text>
+    <View style={styles.driverOuter}>
+      <View style={[styles.bearingArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
+        <View style={styles.bearingTip} />
       </View>
-      <View style={styles.driverMarkerTail} />
+      <View style={styles.driverInner}>
+        <Text style={{ fontSize: 20 }}>{icon}</Text>
+      </View>
     </View>
   );
 }
 
+// ── Pickup — green ring ───────────────────────────────────────────────────────
 function PickupMarker() {
   return (
-    <View style={styles.pickupMarker}>
+    <View style={styles.pickupRing}>
       <View style={styles.pickupDot} />
     </View>
   );
 }
 
+// ── Drop — pink pin ───────────────────────────────────────────────────────────
 function DropMarker() {
   return (
-    <View style={styles.dropMarker}>
-      <Text style={{ fontSize: 20 }}>📍</Text>
+    <View style={styles.dropOuter}>
+      <View style={styles.dropPin}>
+        <View style={styles.dropHole} />
+      </View>
+      <View style={styles.dropTail} />
     </View>
   );
 }
 
+// ── Customer marker — blue circle with person ─────────────────────────────────
 function CustomerMarker() {
   return (
-    <View style={styles.customerMarker}>
-      <Text style={{ fontSize: 18 }}>🧑</Text>
+    <View style={styles.customerRing}>
+      <Text style={{ fontSize: 16 }}>🧑</Text>
     </View>
   );
 }
 
-interface DriverLiveMapProps {
+// ── ETA chip ──────────────────────────────────────────────────────────────────
+function EtaChip({ eta, distance, color }: { eta: string; distance: string; color?: string }) {
+  if (!eta) return null;
+  const c = color || GREEN;
+  return (
+    <View style={styles.etaChip}>
+      <View style={[styles.etaDot, { backgroundColor: c }]} />
+      <Text style={styles.etaTime}>{eta}</Text>
+      <View style={styles.etaSep} />
+      <Text style={styles.etaDist}>{distance}</Text>
+    </View>
+  );
+}
+
+// ── Re-center button ──────────────────────────────────────────────────────────
+function RecenterBtn({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.recenterBtn} onPress={onPress} activeOpacity={0.8}>
+      <Text style={{ fontSize: 18 }}>🎯</Text>
+    </TouchableOpacity>
+  );
+}
+
+// ── Status badge overlay ──────────────────────────────────────────────────────
+function StatusBadge({ status }: { status: RideStatus }) {
+  if (!status) return null;
+  const cfg: Record<string, { label: string; bg: string; color: string }> = {
+    matched: { label: '🚗 Pickup jao', bg: '#1E40AF', color: '#fff' },
+    arrived: { label: '📍 Pickup pe ho', bg: GREEN, color: '#fff' },
+    started: { label: '🛣️ Trip chal rahi', bg: PINK, color: '#fff' },
+  };
+  const c = cfg[status];
+  if (!c) return null;
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: c.bg }]}>
+      <Text style={{ color: c.color, fontSize: 11, fontWeight: '900' }}>{c.label}</Text>
+    </View>
+  );
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
+export interface DriverLiveMapProps {
   pickupCoords?: { lat: number; lng: number } | null;
   dropCoords?: { lat: number; lng: number } | null;
   driverLat?: number | null;
   driverLng?: number | null;
   customerLat?: number | null;
   customerLng?: number | null;
+  vehicleType?: string;
+  rideStatus?: RideStatus;
+  showTraffic?: boolean;
+  followDriver?: boolean;
+  driverAccuracy?: number | null;
   height?: number;
 }
 
+// ── Main component ────────────────────────────────────────────────────────────
 export const DriverLiveMap = memo(function DriverLiveMap({
   pickupCoords,
   dropCoords,
@@ -88,25 +165,34 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   driverLng,
   customerLat,
   customerLng,
-  height = 220,
+  vehicleType = 'auto',
+  rideStatus = null,
+  showTraffic = false,
+  followDriver = false,
+  driverAccuracy,
+  height = 260,
 }: DriverLiveMapProps) {
   const mapRef = useRef<MapView>(null);
+  const prevPos = useRef<{ lat: number; lng: number } | null>(null);
+  const [heading, setHeading] = useState(0);
 
   const driverRegion = useRef(
     new AnimatedRegion({
-      latitude: driverLat || pickupCoords?.lat || 26.8467,
+      latitude:  driverLat || pickupCoords?.lat || 26.8467,
       longitude: driverLng || pickupCoords?.lng || 80.9462,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
+      latitudeDelta: 0.01, longitudeDelta: 0.01,
     })
   ).current;
 
+  // Route segments — split into completed (grey) + remaining (colored)
   const [routeCoords, setRouteCoords] = useState<{ latitude: number; longitude: number }[]>([]);
+  const [etaText, setEtaText] = useState('');
+  const [distText, setDistText] = useState('');
   const [demandZones, setDemandZones] = useState<DemandZone[]>([]);
 
-  // Fetch demand zones every 90 seconds when driver has no active ride
+  // Demand zones when idle (no active ride)
   useEffect(() => {
-    if (pickupCoords || driverLat == null || driverLng == null) { setDemandZones([]); return; }
+    if (rideStatus || driverLat == null || driverLng == null) { setDemandZones([]); return; }
     let cancelled = false;
     const fetchZones = () => {
       fetch(`${API}/api/driver/demand-zones?lat=${driverLat}&lng=${driverLng}`)
@@ -115,58 +201,115 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         .catch(() => {});
     };
     fetchZones();
-    const interval = setInterval(fetchZones, 90000);
-    return () => { cancelled = true; clearInterval(interval); };
-  }, [!!pickupCoords, Math.round((driverLat || 0) * 100), Math.round((driverLng || 0) * 100)]);
+    const iv = setInterval(fetchZones, 90000);
+    return () => { cancelled = true; clearInterval(iv); };
+  }, [!!rideStatus, Math.round((driverLat || 0) * 100), Math.round((driverLng || 0) * 100)]);
 
-  // Smoothly animate driver marker when GPS updates
+  // Driver position: smooth animation + bearing
   useEffect(() => {
     if (driverLat == null || driverLng == null) return;
+    if (prevPos.current) {
+      const { lat: pl, lng: pg } = prevPos.current;
+      if (Math.abs(driverLat - pl) > 0.00001 || Math.abs(driverLng - pg) > 0.00001) {
+        setHeading(computeBearing(pl, pg, driverLat, driverLng));
+      }
+    }
+    prevPos.current = { lat: driverLat, lng: driverLng };
     driverRegion.timing({
-      latitude: driverLat,
-      longitude: driverLng,
-      latitudeDelta: 0.01,
-      longitudeDelta: 0.01,
-      duration: 1500,
-      useNativeDriver: false,
+      latitude: driverLat, longitude: driverLng,
+      latitudeDelta: 0.01, longitudeDelta: 0.01,
+      duration: 1400, useNativeDriver: false,
     } as any).start();
   }, [driverLat, driverLng]);
 
-  // Fetch route polyline when pickup + drop are available
+  // Camera follow driver
   useEffect(() => {
-    if (!pickupCoords || !dropCoords) { setRouteCoords([]); return; }
+    if (!followDriver || driverLat == null || driverLng == null || !mapRef.current) return;
+    mapRef.current.animateToRegion(
+      { latitude: driverLat, longitude: driverLng, latitudeDelta: 0.012, longitudeDelta: 0.012 },
+      900
+    );
+  }, [followDriver, driverLat, driverLng]);
+
+  // Fetch route — logic depends on ride status:
+  // matched  : driver → pickup
+  // started  : pickup → drop
+  // arrived  : no route
+  useEffect(() => {
+    if (rideStatus === 'arrived' || rideStatus === null) { setRouteCoords([]); setEtaText(''); setDistText(''); return; }
+    let origin: string | null = null;
+    let destination: string | null = null;
+
+    if (rideStatus === 'matched' && driverLat != null && driverLng != null && pickupCoords) {
+      origin      = `${driverLat},${driverLng}`;
+      destination = `${pickupCoords.lat},${pickupCoords.lng}`;
+    } else if (rideStatus === 'started' && pickupCoords && dropCoords) {
+      origin      = `${pickupCoords.lat},${pickupCoords.lng}`;
+      destination = `${dropCoords.lat},${dropCoords.lng}`;
+    }
+    if (!origin || !destination) return;
+
     let cancelled = false;
-    const origin = `${pickupCoords.lat},${pickupCoords.lng}`;
-    const dest   = `${dropCoords.lat},${dropCoords.lng}`;
-    fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${dest}&mode=driving&key=${MAPS_KEY}`)
+    fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving&key=${MAPS_KEY}`)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
-        const points = data.routes?.[0]?.overview_polyline?.points;
-        if (points) setRouteCoords(decodePolyline(points));
+        const route = data.routes?.[0];
+        if (!route) return;
+        setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
+        const leg = route.legs?.[0];
+        if (leg) { setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || ''); }
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng]);
+  }, [
+    rideStatus,
+    pickupCoords?.lat, pickupCoords?.lng,
+    dropCoords?.lat, dropCoords?.lng,
+    driverLat != null ? Math.round(driverLat * 200) / 200 : null,
+    driverLng != null ? Math.round(driverLng * 200) / 200 : null,
+  ]);
 
-  // Fit map to show all relevant points
+  // Route progress split for 'started': completed=grey, remaining=pink
+  let completedCoords: { latitude: number; longitude: number }[] = [];
+  let remainingCoords = routeCoords;
+  if (rideStatus === 'started' && routeCoords.length > 1 && driverLat != null && driverLng != null) {
+    let closestIdx = 0, minDist = Infinity;
+    routeCoords.forEach((pt, i) => {
+      const d = Math.hypot(pt.latitude - driverLat, pt.longitude - driverLng);
+      if (d < minDist) { minDist = d; closestIdx = i; }
+    });
+    completedCoords = routeCoords.slice(0, closestIdx + 1);
+    remainingCoords = routeCoords.slice(closestIdx);
+  }
+
+  // Fit map to all markers
   useEffect(() => {
-    if (!mapRef.current) return;
+    if (followDriver || !mapRef.current) return;
     const coords: { latitude: number; longitude: number }[] = [];
-    if (pickupCoords)                     coords.push({ latitude: pickupCoords.lat, longitude: pickupCoords.lng });
-    if (dropCoords)                       coords.push({ latitude: dropCoords.lat,   longitude: dropCoords.lng   });
+    if (pickupCoords)   coords.push({ latitude: pickupCoords.lat, longitude: pickupCoords.lng });
+    if (dropCoords)     coords.push({ latitude: dropCoords.lat,   longitude: dropCoords.lng   });
     if (driverLat != null && driverLng != null) coords.push({ latitude: driverLat, longitude: driverLng });
     if (customerLat != null && customerLng != null) coords.push({ latitude: customerLat, longitude: customerLng });
     if (coords.length > 0) {
       mapRef.current.fitToCoordinates(coords, {
-        edgePadding: { top: 60, right: 60, bottom: 80, left: 60 },
+        edgePadding: { top: 70, right: 60, bottom: 90, left: 60 },
         animated: true,
       });
     }
-  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng]);
+  }, [pickupCoords?.lat, pickupCoords?.lng, dropCoords?.lat, dropCoords?.lng, driverLat, driverLng, followDriver]);
+
+  const recenter = () => {
+    if (!mapRef.current) return;
+    const lat = driverLat ?? pickupCoords?.lat ?? 26.8467;
+    const lng = driverLng ?? pickupCoords?.lng ?? 80.9462;
+    mapRef.current.animateToRegion({ latitude: lat, longitude: lng, latitudeDelta: 0.014, longitudeDelta: 0.014 }, 700);
+  };
 
   const centerLat = driverLat || pickupCoords?.lat || 26.8467;
   const centerLng = driverLng || pickupCoords?.lng || 80.9462;
+
+  const routeColor = rideStatus === 'matched' ? PINK : GREEN;
 
   return (
     <View style={{ height, width: '100%', overflow: 'hidden' }}>
@@ -174,15 +317,16 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         ref={mapRef}
         provider={PROVIDER_GOOGLE}
         style={{ flex: 1 }}
-        initialRegion={{ latitude: centerLat, longitude: centerLng, latitudeDelta: 0.04, longitudeDelta: 0.04 }}
+        initialRegion={{ latitude: centerLat, longitude: centerLng, latitudeDelta: 0.036, longitudeDelta: 0.036 }}
         showsUserLocation={false}
         showsMyLocationButton={false}
         showsCompass={false}
+        showsTraffic={showTraffic}
         toolbarEnabled={false}
         moveOnMarkerPress={false}
         customMapStyle={MAP_STYLE}
       >
-        {/* Demand heatmap — shown when driver has no active ride */}
+        {/* Demand zones — idle state only */}
         {demandZones.map((z, i) => (
           <Polygon
             key={`zone-${i}`}
@@ -192,106 +336,175 @@ export const DriverLiveMap = memo(function DriverLiveMap({
             strokeWidth={1.5}
           />
         ))}
-        {/* Zone center markers — show ride count badge */}
         {demandZones.filter(z => z.heat === 'high').map((z, i) => (
           <Marker key={`zone-lbl-${i}`} coordinate={{ latitude: z.lat, longitude: z.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <View style={{ backgroundColor: '#FF2D78', borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1.5, borderColor: '#fff', elevation: 4 }}>
+            <View style={{ backgroundColor: PINK, borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1.5, borderColor: '#fff', elevation: 4 }}>
               <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>🔥 {z.ride_count}</Text>
             </View>
           </Marker>
         ))}
 
-        {/* Route polyline: pickup → drop */}
-        {routeCoords.length > 0 && (
+        {/* Completed route segment (grey) */}
+        {completedCoords.length > 1 && (
+          <Polyline coordinates={completedCoords} strokeColor="rgba(100,116,139,0.4)" strokeWidth={4} lineCap="round" />
+        )}
+
+        {/* Remaining route (pink = to pickup, green = to drop) */}
+        {remainingCoords.length > 1 && (
           <Polyline
-            coordinates={routeCoords}
-            strokeColor="#E91E63"
+            coordinates={remainingCoords}
+            strokeColor={routeColor}
             strokeWidth={4}
+            lineDashPattern={rideStatus === 'matched' ? undefined : undefined}
             lineCap="round"
+          />
+        )}
+
+        {/* Driver GPS accuracy circle */}
+        {driverLat != null && driverLng != null && driverAccuracy != null && driverAccuracy > 5 && (
+          <Circle
+            center={{ latitude: driverLat, longitude: driverLng }}
+            radius={driverAccuracy}
+            fillColor="rgba(255,45,120,0.06)"
+            strokeColor="rgba(255,45,120,0.22)"
+            strokeWidth={1.5}
           />
         )}
 
         {/* Pickup marker */}
         {pickupCoords && (
-          <Marker
-            coordinate={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-          >
+          <Marker coordinate={{ latitude: pickupCoords.lat, longitude: pickupCoords.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
             <PickupMarker />
           </Marker>
         )}
 
-        {/* Drop marker */}
-        {dropCoords && (
-          <Marker
-            coordinate={{ latitude: dropCoords.lat, longitude: dropCoords.lng }}
-            anchor={{ x: 0.5, y: 1 }}
-            tracksViewChanges={false}
-          >
+        {/* Drop marker — only show when started */}
+        {dropCoords && rideStatus === 'started' && (
+          <Marker coordinate={{ latitude: dropCoords.lat, longitude: dropCoords.lng }} anchor={{ x: 0.5, y: 1 }} tracksViewChanges={false}>
             <DropMarker />
           </Marker>
         )}
 
-        {/* Customer marker */}
-        {customerLat != null && customerLng != null && (
-          <Marker
-            coordinate={{ latitude: customerLat, longitude: customerLng }}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-          >
+        {/* Customer marker — show when matched/arrived (customer at pickup) */}
+        {customerLat != null && customerLng != null && (rideStatus === 'arrived' || rideStatus === 'matched') && (
+          <Marker coordinate={{ latitude: customerLat, longitude: customerLng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
             <CustomerMarker />
           </Marker>
         )}
 
-        {/* Animated driver position marker */}
+        {/* Animated driver marker */}
         {driverLat != null && driverLng != null && (
-          <Marker.Animated
-            ref={(_ref: any) => {}}
-            coordinate={driverRegion as any}
-            anchor={{ x: 0.5, y: 0.5 }}
-            tracksViewChanges={false}
-          >
-            <DriverMarker />
+          <Marker.Animated coordinate={driverRegion as any} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+            <DriverMarker vehicleType={vehicleType} heading={heading} />
           </Marker.Animated>
         )}
       </MapView>
+
+      {/* ETA chip */}
+      {etaText ? <EtaChip eta={etaText} distance={distText} color={routeColor} /> : null}
+
+      {/* Status badge */}
+      <StatusBadge status={rideStatus} />
+
+      {/* Re-center */}
+      <RecenterBtn onPress={recenter} />
     </View>
   );
 });
 
+// ── Sppero brand map style ────────────────────────────────────────────────────
 const MAP_STYLE = [
-  { featureType: 'poi',           stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit',       stylers: [{ visibility: 'off' }] },
-  { featureType: 'road', elementType: 'labels.icon', stylers: [{ visibility: 'off' }] },
-  { featureType: 'administrative.land_parcel', stylers: [{ visibility: 'off' }] },
+  { elementType: 'geometry',                              stylers: [{ color: '#f4f5f7' }] },
+  { elementType: 'labels.text.stroke',                    stylers: [{ color: '#f4f5f7' }, { weight: 3 }] },
+  { elementType: 'labels.text.fill',                      stylers: [{ color: '#374151' }] },
+
+  { featureType: 'road',          elementType: 'geometry',        stylers: [{ color: '#ffffff' }] },
+  { featureType: 'road',          elementType: 'geometry.stroke',  stylers: [{ color: '#e5e7eb' }, { weight: 0.6 }] },
+  { featureType: 'road.highway',  elementType: 'geometry',        stylers: [{ color: '#fef3c7' }] },
+  { featureType: 'road.highway',  elementType: 'geometry.stroke',  stylers: [{ color: '#fde68a' }, { weight: 0.8 }] },
+  { featureType: 'road',          elementType: 'labels.icon',     stylers: [{ visibility: 'off' }] },
+
+  { featureType: 'water',         elementType: 'geometry',        stylers: [{ color: '#dbeafe' }] },
+  { featureType: 'water',         elementType: 'labels.text.fill', stylers: [{ color: '#93c5fd' }] },
+  { featureType: 'landscape',     elementType: 'geometry',        stylers: [{ color: '#eff0f4' }] },
+
+  { featureType: 'poi',                                           stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit',                                       stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.land_parcel',                    stylers: [{ visibility: 'off' }] },
+  { featureType: 'administrative.neighborhood', elementType: 'labels', stylers: [{ visibility: 'off' }] },
 ];
 
-const PINK = '#E91E63';
+// ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  driverMarker: { alignItems: 'center' },
-  driverMarkerInner: {
-    width: 44, height: 44, borderRadius: 22,
+  driverOuter: { alignItems: 'center', justifyContent: 'center', width: 54, height: 54 },
+  bearingArrow: { position: 'absolute', width: 54, height: 54, alignItems: 'center' },
+  bearingTip: {
+    width: 0, height: 0,
+    borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 10,
+    borderLeftColor: 'transparent', borderRightColor: 'transparent',
+    borderBottomColor: PINK,
+  },
+  driverInner: {
+    width: 42, height: 42, borderRadius: 21,
     backgroundColor: PINK, alignItems: 'center', justifyContent: 'center',
-    elevation: 6, shadowColor: PINK, shadowOpacity: 0.5, shadowRadius: 8,
+    elevation: 8, shadowColor: PINK, shadowOpacity: 0.55, shadowRadius: 10,
     borderWidth: 2.5, borderColor: '#fff',
   },
-  driverMarkerTail: {
+
+  pickupRing: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    elevation: 5, shadowColor: GREEN, shadowOpacity: 0.30, shadowRadius: 6,
+    borderWidth: 2.5, borderColor: GREEN,
+  },
+  pickupDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: GREEN },
+
+  dropOuter: { alignItems: 'center' },
+  dropPin: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: PINK, alignItems: 'center', justifyContent: 'center',
+    elevation: 6, shadowColor: PINK, shadowOpacity: 0.45, shadowRadius: 8,
+    borderWidth: 2, borderColor: '#fff',
+  },
+  dropHole: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
+  dropTail: {
     width: 0, height: 0,
-    borderLeftWidth: 6, borderRightWidth: 6, borderTopWidth: 8,
+    borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 9,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
     borderTopColor: PINK, marginTop: -1,
   },
-  pickupMarker: {
-    width: 22, height: 22, borderRadius: 11,
+
+  customerRing: {
+    width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 4, borderWidth: 2, borderColor: '#16A34A',
+    elevation: 4, borderWidth: 2.5, borderColor: '#1E40AF',
+    shadowColor: '#1E40AF', shadowOpacity: 0.25, shadowRadius: 6,
   },
-  pickupDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#16A34A' },
-  dropMarker: { alignItems: 'center', justifyContent: 'center' },
-  customerMarker: {
-    width: 40, height: 40, borderRadius: 20,
+
+  etaChip: {
+    position: 'absolute', top: 12, left: 12,
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: '#fff', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 7,
+    elevation: 8, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', gap: 6,
+  },
+  etaDot: { width: 7, height: 7, borderRadius: 3.5 },
+  etaTime: { fontSize: 13, fontWeight: '900', color: '#0F172A' },
+  etaSep: { width: 1, height: 12, backgroundColor: '#E2E8F0' },
+  etaDist: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+
+  statusBadge: {
+    position: 'absolute', bottom: 46, alignSelf: 'center',
+    borderRadius: 16, paddingHorizontal: 14, paddingVertical: 7,
+    elevation: 6, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 8,
+  },
+
+  recenterBtn: {
+    position: 'absolute', bottom: 10, right: 10,
+    width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 4, borderWidth: 2, borderColor: '#1E40AF',
+    elevation: 6, shadowColor: PINK, shadowOpacity: 0.18, shadowRadius: 8,
+    borderWidth: 1, borderColor: 'rgba(255,45,120,0.15)',
   },
 });

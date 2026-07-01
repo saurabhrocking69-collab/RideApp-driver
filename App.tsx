@@ -3203,13 +3203,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           dropCoords={activeRide ? { lat: activeRide.drop_lat, lng: activeRide.drop_lng } : null}
           driverLat={driverGps?.lat}
           driverLng={driverGps?.lng}
-          height={220}
+          customerLat={activeRide ? activeRide.pickup_lat : null}
+          customerLng={activeRide ? activeRide.pickup_lng : null}
+          vehicleType={driverInfo?.vehicle_type || 'auto'}
+          rideStatus={activeRide?.status || null}
+          showTraffic={!!activeRide && activeRide.status === 'started'}
+          followDriver={true}
+          height={260}
         />
         <MapOverlay hasRoute={!!activeRide} pickup={activeRide?.pickup} drop={activeRide?.drop_location} live={activeRide?.status === 'started'} />
       </View>
       {/* Voice Navigation Bar */}
       {navActive && (
-        <View style={{ position: 'absolute', top: 226, left: 0, right: 0, zIndex: 100 }}>
+        <View style={{ position: 'absolute', top: 266, left: 0, right: 0, zIndex: 100 }}>
           <VoiceNavBar
             instruction={navInstruction}
             nextDistM={navDist}
