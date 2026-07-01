@@ -10,6 +10,11 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
+import { DriverLiveMap } from './DriverLiveMap';
+import { useVoiceNav } from './useVoiceNav';
+import { VoiceNavBar } from './VoiceNavBar';
+import { FuelLogScreen } from './FuelLogScreen';
+import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
@@ -450,6 +455,8 @@ function App() {
   const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
+  const [navMuted, setNavMuted]     = useState(false);
+  const [showFuelLog, setShowFuelLog] = useState(false);
   const [chatMsgs, setChatMsgs]         = useState<any[]>([]);
   const [chatInput, setChatInput]       = useState('');
   const [showChat, setShowChat]         = useState(false);
@@ -501,8 +508,15 @@ function App() {
   const [extAccLoading, setExtAccLoading] = useState(false);
   const [hExtendLoading, setHExtendLoading] = useState(false);
 
+  // ── Zone Alerts ───────────────────────────────────
+  const [zoneAlert, setZoneAlert]           = useState<ZoneAlert | null>(null);
+  const [showZoneAlertSender, setShowZoneAlertSender] = useState(false);
+  const [zoneAlertSentCount, setZoneAlertSentCount]   = useState<number | null>(null);
+
   // ── Surge + Admin Notif + Referral ───────────────
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
+  const [autoAcceptSurge, setAutoAcceptSurge] = useState(false);
+  const [dailyGoal, setDailyGoal] = useState(1500);
   const [adminNotif, setAdminNotif] = useState<any>(null);
   const [adminNotifDismissed, setAdminNotifDismissed] = useState('');
   const [referralInfo, setReferralInfo] = useState<any>(null);
@@ -1009,6 +1023,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Keep gpsRef in sync (for use inside intervals) ──
   useEffect(() => { driverGpsRef.current = driverGps; }, [driverGps]);
 
+  // ── Voice navigation ──
+  const navPhase = activeRide?.status === 'started' ? 'to_drop' : 'to_pickup';
+  const navActive = !!activeRide && (activeRide.status === 'matched' || activeRide.status === 'started') && !navMuted;
+  const navDestLat = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lat) || null : parseFloat(activeRide?.drop_lat) || null;
+  const navDestLng = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lng) || null : parseFloat(activeRide?.drop_lng) || null;
+  const { currentInstruction: navInstruction, nextDistM: navDist } = useVoiceNav({
+    driverLat: driverGps?.lat ?? null,
+    driverLng: driverGps?.lng ?? null,
+    destLat: navActive ? navDestLat : null,
+    destLng: navActive ? navDestLng : null,
+    active: navActive,
+    phase: navPhase,
+  });
+
   // ── Live location posting to backend during active ride (every 4s) ──
   useEffect(() => {
     if (!activeRide?.id || !phone) return;
@@ -1059,6 +1087,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setActiveTab('live');
     }
   }, [!!rideReq, !!activeRide, !!hourlyRideReq, !!activeHourlyRide]);
+
+  // ── Auto-accept high-surge rides ──
+  useEffect(() => {
+    if (!autoAcceptSurge || !rideReq || activeRide || surgeMultiplier < 1.5) return;
+    const t = setTimeout(() => { acceptRide(); }, 800); // small delay so UI can show briefly
+    return () => clearTimeout(t);
+  }, [rideReq?.id, autoAcceptSurge, surgeMultiplier]);
 
   // ── Chat polling ───────────────────────────────
   useEffect(() => {
@@ -1548,6 +1583,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         s.on('chatMessage', (msg: any) => {
           setChatMsgs((prev: any[]) => [...prev, msg]);
           setUnreadChat((prev: number) => prev + 1);
+        });
+        s.on('zoneAlertReceived', (alert: ZoneAlert) => {
+          setZoneAlert(alert);
+        });
+        s.on('zoneAlertSent', ({ count }: { count: number }) => {
+          setZoneAlertSentCount(count);
+          setTimeout(() => setZoneAlertSentCount(null), 3000);
         });
         socketRef.current = s;
         (globalThis as any).__driverSocket = s;
@@ -3145,7 +3187,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Full map background */}
       <View style={s.mapFit}>
-        <MapWebView
+        <DriverLiveMap
           pickupCoords={activeRide ? { lat: activeRide.pickup_lat, lng: activeRide.pickup_lng } : null}
           dropCoords={activeRide ? { lat: activeRide.drop_lat, lng: activeRide.drop_lng } : null}
           driverLat={driverGps?.lat}
@@ -3154,6 +3196,57 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         />
         <MapOverlay hasRoute={!!activeRide} pickup={activeRide?.pickup} drop={activeRide?.drop_location} live={activeRide?.status === 'started'} />
       </View>
+      {/* Voice Navigation Bar */}
+      {navActive && (
+        <View style={{ position: 'absolute', top: 226, left: 0, right: 0, zIndex: 100 }}>
+          <VoiceNavBar
+            instruction={navInstruction}
+            nextDistM={navDist}
+            phase={navPhase}
+            muted={navMuted}
+            onMute={() => setNavMuted(p => !p)}
+            visible={navActive}
+          />
+        </View>
+      )}
+      {/* Zone Alert received banner */}
+      <ZoneAlertBanner
+        alert={zoneAlert}
+        onDismiss={() => setZoneAlert(null)}
+      />
+      {/* Zone Alert sender panel */}
+      <ZoneAlertSender
+        visible={showZoneAlertSender}
+        sentCount={zoneAlertSentCount}
+        onClose={() => setShowZoneAlertSender(false)}
+        onSend={(alertType, message) => {
+          if (socketRef.current?.connected && driverGps) {
+            socketRef.current.emit('driverZoneAlert', {
+              phone,
+              lat: driverGps.lat,
+              lng: driverGps.lng,
+              alertType,
+              message,
+            });
+          }
+        }}
+      />
+      {/* Zone Alert FAB — visible only when online and no active ride */}
+      {isOnline && !activeRide && !showZoneAlertSender && (
+        <TouchableOpacity
+          onPress={() => setShowZoneAlertSender(true)}
+          activeOpacity={0.82}
+          style={{
+            position: 'absolute', bottom: 100, right: 16, zIndex: 200,
+            width: 52, height: 52, borderRadius: 16,
+            backgroundColor: '#0F172A',
+            alignItems: 'center', justifyContent: 'center',
+            elevation: 10, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 12,
+            borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
+          }}>
+          <Text style={{ fontSize: 22 }}>📢</Text>
+        </TouchableOpacity>
+      )}
       {/* Top bar */}
       <View style={s.topBar}>
         <View style={{ flex: 1 }}>
@@ -3182,6 +3275,73 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={s.statCard}><Text style={s.statIcon}>🚗</Text><Text style={s.statValue}>{rides}</Text><Text style={s.statLabel}>Rides</Text></View>
             <View style={s.statCard}><Text style={s.statIcon}>⭐</Text><Text style={s.statValue}>{driverInfo?.rating || '4.8'}</Text><Text style={s.statLabel}>Rating</Text></View>
           </View>
+
+          {/* ── Earnings Optimizer ── */}
+          {(() => {
+            const goalPct = Math.min((earnings / dailyGoal) * 100, 100);
+            const left    = Math.max(dailyGoal - earnings, 0);
+            const done    = earnings >= dailyGoal;
+            const lvlLeft = driverLevel?.nextLevel
+              ? driverLevel.nextTarget - driverLevel.completed_rides
+              : null;
+            return (
+              <View style={{
+                backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12,
+                elevation: 5, borderWidth: 1.5,
+                borderColor: done ? '#BBF7D0' : '#E2E8F0',
+                shadowColor: done ? '#16A34A' : '#E91E63', shadowOpacity: 0.12, shadowRadius: 12,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 22 }}>{done ? '🏆' : '🎯'}</Text>
+                    <View>
+                      <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>
+                        {done ? 'Goal Poora!' : 'Daily Goal'}
+                      </Text>
+                      <Text style={{ fontSize: 11, color: '#64748B' }}>
+                        ₹{earnings} / ₹{dailyGoal}
+                      </Text>
+                    </View>
+                  </View>
+                  {!done && (
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#E91E63' }}>
+                      ₹{left} bacha
+                    </Text>
+                  )}
+                </View>
+                {/* Progress bar */}
+                <View style={{ backgroundColor: '#F1F5F9', borderRadius: 8, height: 10, overflow: 'hidden', marginBottom: 10 }}>
+                  <View style={{
+                    height: '100%', borderRadius: 8,
+                    width: `${goalPct}%`,
+                    backgroundColor: done ? '#16A34A' : goalPct > 70 ? '#F59E0B' : '#E91E63',
+                  }} />
+                </View>
+                {/* Level progress */}
+                {driverLevel?.nextLevel && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(124,58,237,0.07)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)' }}>
+                    <Text style={{ fontSize: 12, color: '#7C3AED', fontWeight: '700' }}>
+                      {driverLevel.levelEmoji} {lvlLeft} aur rides → {driverLevel.nextLevelEmoji} {driverLevel.nextLevelName}
+                    </Text>
+                    <Text style={{ fontSize: 11, fontWeight: '800', color: '#7C3AED' }}>{driverLevel.progress}%</Text>
+                  </View>
+                )}
+                {/* Auto-accept toggle */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>⚡ Auto-Accept High Surge</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>1.5x+ surge pe ride auto-accept ho jayegi</Text>
+                  </View>
+                  <Switch
+                    value={autoAcceptSurge}
+                    onValueChange={setAutoAcceptSurge}
+                    trackColor={{ true: '#F59E0B', false: '#e0e0e0' }}
+                    thumbColor={autoAcceptSurge ? '#fff' : '#fff'}
+                  />
+                </View>
+              </View>
+            );
+          })()}
 
           {/* Hot Zones — always visible when online */}
           {isOnline && !activeRide && !rideReq && !activeHourlyRide && !hourlyRideReq && (
@@ -5276,8 +5436,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </TouchableOpacity>
       )}
 
+      {/* Fuel Log button */}
+      <TouchableOpacity onPress={() => setShowFuelLog(true)} style={{
+        flexDirection: 'row', alignItems: 'center', gap: 8,
+        backgroundColor: 'rgba(239,68,68,0.08)', marginHorizontal: 14, marginBottom: 6,
+        borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
+      }}>
+        <Text style={{ fontSize: 18 }}>⛽</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>Fuel Log</Text>
+          <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>Net kamai = Gross − Fuel</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+      </TouchableOpacity>
+
       {/* Tabs */}
-      <View style={{ flexDirection: 'row', margin: 14, gap: 6 }}>
+      <View style={{ flexDirection: 'row', margin: 14, marginTop: 6, gap: 6 }}>
         {(['summary', 'rides', 'hourly', 'commission'] as const).map(t => (
           <TouchableOpacity key={t} onPress={() => setWalletEarningsTab(t)}
             style={{ flex: 1, borderRadius: 20, paddingVertical: 8, alignItems: 'center', backgroundColor: walletEarningsTab === t ? '#10B981' : '#F8FAFC', position: 'relative', borderWidth: 1, borderColor: walletEarningsTab === t ? '#10B981' : '#E2E8F0' }}>
@@ -5640,6 +5814,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       </ScrollView>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+      {showFuelLog && (
+        <FuelLogScreen
+          onClose={() => setShowFuelLog(false)}
+          todayEarnings={earnings}
+          weeklyEarnings={earningsAnalytics?.this_week?.earned ?? 0}
+        />
+      )}
     </View>
   );
   }
