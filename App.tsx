@@ -836,6 +836,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => backHandler.remove();
   }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen]);
 
+  // Load earnings-tab data when tab becomes active (not in render body — avoids infinite loop on network failure)
+  useEffect(() => {
+    if (activeTab === 'earnings' && phone) {
+      if (!walletLoaded) { loadDriverWallet(phone); loadCommissionHistory(phone); }
+      if (!earningsAnalytics) {
+        apiGet(`/api/driver/earnings-analytics/${phone}`).then((d: any) => { if (!d._error) setEarningsAnalytics(d); }).catch(() => {});
+      }
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (activeTab === 'bonus' && phone && !bonusDash && !bonusLoading) {
+      loadBonusDash(phone); loadBonusHistory(phone);
+    }
+  }, [activeTab]);
+
   // ── Polling rides ──────────────────────────────
   const startPolling = (dp: string) => {
     useDriverStore.getState().startPolling(dp, () => {
@@ -1552,7 +1568,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (zonesIntervalRef.current) clearInterval(zonesIntervalRef.current);
       zonesIntervalRef.current = setInterval(fetchDemandZones, 120000); // every 2 min
       loadDriverOffers();
-      if (!socketRef.current?.connected) {
+      if (!socketRef.current) {
         const s = io(API, {
           transports: ['polling', 'websocket'], // polling first — passes through Jio/BSNL carrier NAT; upgrades to WebSocket when stable
           reconnection: true,
@@ -1627,6 +1643,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       stopPolling();
       socketRef.current?.disconnect();
       socketRef.current = null;
+      (globalThis as any).__driverSocket = null;
       // Offline update — fire and forget with retry
       (async () => {
         for (let i = 0; i < 5; i++) {
@@ -3203,8 +3220,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           dropCoords={activeRide ? { lat: activeRide.drop_lat, lng: activeRide.drop_lng } : null}
           driverLat={driverGps?.lat}
           driverLng={driverGps?.lng}
-          customerLat={activeRide ? activeRide.pickup_lat : null}
-          customerLng={activeRide ? activeRide.pickup_lng : null}
+          customerLat={activeRide ? parseFloat(activeRide.pickup_lat) : null}
+          customerLng={activeRide ? parseFloat(activeRide.pickup_lng) : null}
           vehicleType={driverInfo?.vehicle_type || 'auto'}
           rideStatus={activeRide?.status || null}
           showTraffic={!!activeRide && activeRide.status === 'started'}
@@ -5414,10 +5431,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ EARNINGS TAB ═══
   if (activeTab === 'earnings') {
-    if (!walletLoaded) { loadDriverWallet(phone); loadCommissionHistory(phone); }
-    if (!earningsAnalytics && phone) {
-      apiGet(`/api/driver/earnings-analytics/${phone}`).then(d => { if (!d._error) setEarningsAnalytics(d); }).catch(() => {});
-    }
     const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
     return (
     <View style={s.screen}>
@@ -5586,7 +5599,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   ₹{commissionData.pending_commission.toFixed(0)}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 4 }}>
-                  {commissionData.pending_commission > 300 ? '⚠️ ₹300 se zyada — nayi rides temporarily block' : '✅ Normal range — jaldi clear kar do'}
+                  {commissionData.pending_commission >= 300 ? '⚠️ ₹300 ya zyada — nayi rides temporarily block' : '✅ Normal range — jaldi clear kar do'}
                 </Text>
               </View>
 
@@ -5870,7 +5883,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ BONUS TAB ═══
   if (activeTab === 'bonus') {
-    if (!bonusDash && !bonusLoading) { loadBonusDash(phone); loadBonusHistory(phone); }
 
     const dash = bonusDash;
     const balance = parseFloat(dash?.wallet?.balance || 0);

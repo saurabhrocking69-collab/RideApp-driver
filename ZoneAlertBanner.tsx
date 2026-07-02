@@ -170,6 +170,8 @@ export function ZoneAlertSender({ visible, onSend, onClose, sentCount }: SenderP
     setSelected(key);
     const meta = ALERT_TYPES.find(a => a.key === key)!;
     onSend(key, `${meta.emoji} ${meta.label} — ${meta.desc}`);
+    // Clear sending indicator after 5s if server confirmation (zoneAlertSent) never arrives
+    setTimeout(() => setSelected(s => s === key ? null : s), 5000);
   };
 
   return (

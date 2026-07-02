@@ -76,11 +76,12 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
       .then(data => {
         if (cancelled) return;
         const rawSteps = data.routes?.[0]?.legs?.[0]?.steps ?? [];
-        const parsed: NavStep[] = rawSteps.map((s: any) => ({
+        const parsed: NavStep[] = rawSteps.map((s: any, idx: number) => ({
           html: s.html_instructions,
           text: htmlToSpeak(s.html_instructions),
-          endLat: s.end_location?.lat,
-          endLng: s.end_location?.lng,
+          // Fallback chain: step end → next step start → destination → 0 (never NaN)
+          endLat: s.end_location?.lat ?? rawSteps[idx + 1]?.start_location?.lat ?? destLat ?? 0,
+          endLng: s.end_location?.lng ?? rawSteps[idx + 1]?.start_location?.lng ?? destLng ?? 0,
           distanceM: s.distance?.value ?? 0,
         }));
         setSteps(parsed);
@@ -105,7 +106,7 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
     let nearestDist = Infinity;
     for (let i = currentIdx; i < Math.min(currentIdx + 3, steps.length); i++) {
       const d = distM(driverLat, driverLng, steps[i].endLat, steps[i].endLng);
-      if (d < nearestDist) { nearestDist = d; nearest = i; }
+      if (!isNaN(d) && d < nearestDist) { nearestDist = d; nearest = i; }
     }
     setCurrentIdx(nearest);
     setNextDistM(nearestDist);
