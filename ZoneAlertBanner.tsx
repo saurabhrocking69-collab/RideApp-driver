@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, Text, TouchableOpacity, View } from 'react-native';
+import { Animated, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 export type ZoneAlert = {
@@ -115,13 +115,19 @@ export function ZoneAlertBanner({ alert, onDismiss }: Props) {
   );
 }
 
-// ── Quick alert sender panel ──────────────────────────────────────────────────
+// ── Zone Alert Sender — full-screen Modal card ────────────────────────────────
 const ALERT_TYPES = [
-  { key: 'police',   emoji: '🚔', label: 'Police',  color: '#EF4444' },
-  { key: 'traffic',  emoji: '🚧', label: 'Traffic', color: '#F97316' },
-  { key: 'demand',   emoji: '🔥', label: 'Demand',  color: '#16A34A' },
-  { key: 'accident', emoji: '⚠️', label: 'Accident',color: '#EAB308' },
-  { key: 'closed',   emoji: '🚫', label: 'Closed',  color: '#64748B' },
+  { key: 'police',   emoji: '🚔', label: 'Police Check', desc: 'Police nakabandi hai aage', color: '#EF4444' },
+  { key: 'traffic',  emoji: '🚧', label: 'Traffic Jam',  desc: 'Rasta bhara hua hai',       color: '#F97316' },
+  { key: 'demand',   emoji: '🔥', label: 'High Demand',  desc: 'Rides bahut aa rahi hain',  color: '#16A34A' },
+  { key: 'accident', emoji: '⚠️', label: 'Accident',     desc: 'Hadsa hua hai, sambhal ke', color: '#EAB308' },
+  { key: 'closed',   emoji: '🚫', label: 'Road Closed',  desc: 'Rasta band hai, doosra lo', color: '#64748B' },
+];
+
+const HOW_IT_WORKS = [
+  { icon: '📡', text: '3km ke andar ke sabhi online Sppero Buddy ko alert milta hai' },
+  { icon: '⚡', text: 'Real-time — 1 second mein sabke phone pe notification' },
+  { icon: '🤝', text: 'Ek dusre ki madad karo — team Sppero' },
 ];
 
 interface SenderProps {
@@ -132,101 +138,151 @@ interface SenderProps {
 }
 
 export function ZoneAlertSender({ visible, onSend, onClose, sentCount }: SenderProps) {
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const scaleAnim   = useRef(new Animated.Value(0.88)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
   const [selected, setSelected] = useState<string | null>(null);
   const [showSent, setShowSent] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   useEffect(() => {
-    Animated.spring(slideAnim, {
-      toValue: visible ? 0 : 300,
-      useNativeDriver: true, tension: 80, friction: 12,
-    }).start();
-    if (!visible) { setSelected(null); setShowSent(false); }
+    if (visible) {
+      setSelected(null); setShowSent(false);
+      Animated.parallel([
+        Animated.spring(scaleAnim,   { toValue: 1,   useNativeDriver: true, tension: 80, friction: 10 }),
+        Animated.timing(opacityAnim, { toValue: 1,   duration: 220, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(scaleAnim,   { toValue: 0.88, duration: 180, useNativeDriver: true }),
+        Animated.timing(opacityAnim, { toValue: 0,    duration: 160, useNativeDriver: true }),
+      ]).start();
+    }
   }, [visible]);
 
   useEffect(() => {
     if (sentCount !== null) {
       setShowSent(true);
-      setTimeout(() => { setShowSent(false); onClose(); }, 2000);
+      setTimeout(() => { setShowSent(false); onClose(); }, 2200);
     }
   }, [sentCount]);
 
   const handleSend = (key: string) => {
     setSelected(key);
     const meta = ALERT_TYPES.find(a => a.key === key)!;
-    onSend(key, `${meta.emoji} ${meta.label} alert — apna dhyan rakho!`);
+    onSend(key, `${meta.emoji} ${meta.label} — ${meta.desc}`);
   };
 
   return (
-    <Animated.View style={{
-      position: 'absolute', bottom: 0, left: 0, right: 0,
-      transform: [{ translateY: slideAnim }],
-      zIndex: 9998,
-    }}>
-      <View style={{
-        backgroundColor: '#0F172A',
-        borderTopLeftRadius: 28, borderTopRightRadius: 28,
-        paddingTop: 10, paddingBottom: 34, paddingHorizontal: 20,
-        elevation: 24,
-      }}>
-        {/* Drag handle */}
-        <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#334155', alignSelf: 'center', marginBottom: 18 }} />
+    <Modal
+      visible={visible}
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      {/* Backdrop */}
+      <TouchableOpacity
+        activeOpacity={1}
+        onPress={onClose}
+        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.72)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}
+      >
+        {/* Card — stop propagation so taps inside don't close */}
+        <Animated.View
+          style={{ width: '100%', transform: [{ scale: scaleAnim }], opacity: opacityAnim }}
+        >
+          <TouchableOpacity activeOpacity={1} onPress={() => {}}>
+            <View style={{
+              backgroundColor: '#0F172A',
+              borderRadius: 28,
+              overflow: 'hidden',
+              elevation: 32,
+              shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24,
+            }}>
+              {/* Top color accent strip */}
+              <View style={{ height: 4, backgroundColor: '#E91E63' }} />
 
-        {/* Header */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-          <View style={{ flex: 1 }}>
-            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900' }}>Zone Alert Bhejo</Text>
-            <Text style={{ color: '#64748B', fontSize: 12, marginTop: 3 }}>3km ke andar sabhi drivers ko</Text>
-          </View>
-          <TouchableOpacity onPress={onClose} style={{
-            width: 34, height: 34, borderRadius: 10,
-            backgroundColor: 'rgba(255,255,255,0.08)',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <Ionicons name="close" size={18} color="#94A3B8" />
+              <View style={{ padding: 20 }}>
+                {/* Header row */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>📡 Zone Alert Bhejo</Text>
+                    <Text style={{ color: '#64748B', fontSize: 12, marginTop: 3 }}>3km ke andar sabhi Sppero Buddy ko</Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => setShowInfo(s => !s)}
+                    style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}
+                  >
+                    <Ionicons name="information-circle-outline" size={20} color="#94A3B8" />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={onClose}
+                    style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <Ionicons name="close" size={18} color="#94A3B8" />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Info panel — toggleable */}
+                {showInfo && (
+                  <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
+                    <Text style={{ color: '#F472B6', fontSize: 12, fontWeight: '800', marginBottom: 8 }}>Ye Feature Kya Hai?</Text>
+                    {HOW_IT_WORKS.map((h, i) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: i < HOW_IT_WORKS.length - 1 ? 6 : 0 }}>
+                        <Text style={{ fontSize: 14 }}>{h.icon}</Text>
+                        <Text style={{ color: '#CBD5E1', fontSize: 11, lineHeight: 16, flex: 1 }}>{h.text}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Sent confirmation */}
+                {showSent ? (
+                  <View style={{ backgroundColor: '#16A34A22', borderRadius: 18, borderWidth: 1, borderColor: '#16A34A55', padding: 22, alignItems: 'center', marginVertical: 8 }}>
+                    <Text style={{ fontSize: 40, marginBottom: 8 }}>✅</Text>
+                    <Text style={{ color: '#4ADE80', fontSize: 17, fontWeight: '900' }}>{sentCount} Drivers Ko Bheja!</Text>
+                    <Text style={{ color: '#86EFAC', fontSize: 12, marginTop: 4 }}>Sabko real-time alert mil gaya</Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Alert type grid — 2 columns */}
+                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginTop: 4 }}>
+                      {ALERT_TYPES.map(a => {
+                        const isSelected = selected === a.key;
+                        return (
+                          <TouchableOpacity
+                            key={a.key}
+                            onPress={() => handleSend(a.key)}
+                            activeOpacity={0.75}
+                            style={{
+                              width: '47%',
+                              backgroundColor: isSelected ? a.color + '28' : 'rgba(255,255,255,0.05)',
+                              borderRadius: 18, padding: 16,
+                              borderWidth: 1.5,
+                              borderColor: isSelected ? a.color : 'rgba(255,255,255,0.1)',
+                              alignItems: 'center',
+                            }}
+                          >
+                            <Text style={{ fontSize: 28, marginBottom: 6 }}>{a.emoji}</Text>
+                            <Text style={{ color: isSelected ? a.color : '#E2E8F0', fontSize: 12, fontWeight: '900', marginBottom: 3 }}>{a.label}</Text>
+                            <Text style={{ color: '#64748B', fontSize: 10, textAlign: 'center', lineHeight: 13 }}>{a.desc}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+
+                    {selected && (
+                      <View style={{ marginTop: 14, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <Ionicons name="time-outline" size={14} color="#94A3B8" />
+                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>Alert bheja ja raha hai...</Text>
+                      </View>
+                    )}
+                  </>
+                )}
+              </View>
+            </View>
           </TouchableOpacity>
-        </View>
-
-        {/* Sent confirmation */}
-        {showSent && (
-          <View style={{
-            backgroundColor: '#16A34A22', borderRadius: 14,
-            borderWidth: 1, borderColor: '#16A34A55',
-            padding: 14, marginBottom: 16, alignItems: 'center',
-          }}>
-            <Text style={{ color: '#4ADE80', fontSize: 15, fontWeight: '800' }}>
-              ✅ {sentCount} drivers ko bheja gaya!
-            </Text>
-          </View>
-        )}
-
-        {/* Alert type grid */}
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-          {ALERT_TYPES.map(a => {
-            const isSelected = selected === a.key;
-            return (
-              <TouchableOpacity
-                key={a.key}
-                onPress={() => handleSend(a.key)}
-                activeOpacity={0.75}
-                style={{
-                  flex: 1, minWidth: '28%',
-                  backgroundColor: isSelected ? a.color + '33' : 'rgba(255,255,255,0.06)',
-                  borderRadius: 16, padding: 14,
-                  borderWidth: 1.5,
-                  borderColor: isSelected ? a.color : 'rgba(255,255,255,0.1)',
-                  alignItems: 'center',
-                }}
-              >
-                <Text style={{ fontSize: 26, marginBottom: 6 }}>{a.emoji}</Text>
-                <Text style={{ color: isSelected ? a.color : '#CBD5E1', fontSize: 11, fontWeight: '800' }}>
-                  {a.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-      </View>
-    </Animated.View>
+        </Animated.View>
+      </TouchableOpacity>
+    </Modal>
   );
 }

@@ -5494,11 +5494,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Row k="Aaj Ki Net Kamai" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
           </View>
           {/* ── 7-Day Earnings Chart ── */}
-          {earningsAnalytics && (() => {
+          {earningsAnalytics?.days7 && (() => {
             const days = earningsAnalytics.days7 || [];
             const maxEarned = Math.max(...days.map((d: any) => d.earned), 1);
-            const thisW = earningsAnalytics.this_week;
-            const lastW = earningsAnalytics.last_week;
+            const thisW = earningsAnalytics.this_week ?? { earned: 0, rides: 0 };
+            const lastW = earningsAnalytics.last_week ?? { earned: 0, rides: 0 };
             const weekChange = lastW.earned > 0 ? Math.round(((thisW.earned - lastW.earned) / lastW.earned) * 100) : null;
             const topHours = (earningsAnalytics.top_hours || []).map((h: number) => {
               const ampm = h < 12 ? 'AM' : 'PM';
