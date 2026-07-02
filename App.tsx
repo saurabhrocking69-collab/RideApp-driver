@@ -5570,62 +5570,88 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 13, color: '#10B981', fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
             <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
           </View>
-          {/* Pending Commission Card */}
+          {/* Pending Commission Card — redesigned */}
           {commissionData.pending_commission > 0 && (
-            <View style={{ backgroundColor: 'rgba(230,81,0,0.08)', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(230,81,0,0.3)' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ fontSize: 18, marginRight: 8 }}>💰</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '800', color: '#e65100' }}>Pending Commission</Text>
-                  <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Cash rides ki platform fee pending hai</Text>
+            <View style={{ borderRadius: 22, marginBottom: 16, overflow: 'hidden', elevation: 8, shadowColor: '#E91E63', shadowOpacity: 0.22, shadowRadius: 14 }}>
+              {/* Gradient header */}
+              <View style={{ backgroundColor: '#E91E63', padding: 18, paddingBottom: 22 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' }} />
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>SPPERO · COMMISSION DUE</Text>
+                  </View>
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: '900', color: '#E91E63' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>Cash rides ki platform fee</Text>
+                <Text style={{ color: '#fff', fontSize: 44, fontWeight: '900', letterSpacing: -1 }}>
+                  ₹{commissionData.pending_commission.toFixed(0)}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 4 }}>
+                  {commissionData.pending_commission > 300 ? '⚠️ ₹300 se zyada — nayi rides temporarily block' : '✅ Normal range — jaldi clear kar do'}
+                </Text>
               </View>
-              <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 10 }}>
-                Wallet/online rides pe jo bhi earn karte ho, usme se auto-deduct hota hai. Ya seedha pay kar do.
-              </Text>
-              <TouchableOpacity
-                disabled={commPayLoading}
-                onPress={async () => {
-                  setCommPayLoading(true); setCommResult('');
-                  try {
-                    const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
-                    const d = await r.json();
-                    if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
-                    if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
-                    RazorpayCheckout.open({
-                      key: d.key_id,
-                      amount: d.amount,
-                      currency: d.currency || 'INR',
-                      order_id: d.order_id,
-                      name: 'Sppero',
-                      description: 'Platform Commission Payment',
-                      prefill: { contact: phone },
-                      theme: { color: '#e65100' },
-                    }).then(async (payment: any) => {
-                      const vr = await fetch(`${API}/api/driver/commission-pay-verify`, {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                          phone,
-                          razorpay_order_id: payment.razorpay_order_id,
-                          razorpay_payment_id: payment.razorpay_payment_id,
-                          razorpay_signature: payment.razorpay_signature,
-                        }),
+
+              {/* White body */}
+              <View style={{ backgroundColor: '#fff', padding: 16 }}>
+                {/* Info row */}
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                  {[
+                    { icon: '⚡', text: 'Auto-deduct\nwallet rides se' },
+                    { icon: '📱', text: 'UPI · GPay\nPhonePe · Paytm' },
+                    { icon: '✅', text: 'Pay karo\nturant unblock' },
+                  ].map((item, i) => (
+                    <View key={i} style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                      <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                      <Text style={{ color: '#475569', fontSize: 9, fontWeight: '700', textAlign: 'center', lineHeight: 13 }}>{item.text}</Text>
+                    </View>
+                  ))}
+                </View>
+
+                {/* Pay button */}
+                <TouchableOpacity
+                  disabled={commPayLoading}
+                  onPress={async () => {
+                    setCommPayLoading(true); setCommResult('');
+                    try {
+                      const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+                      const d = await r.json();
+                      if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                      if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
+                      RazorpayCheckout.open({
+                        key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
+                        name: 'Sppero', description: 'Platform Commission Payment', prefill: { contact: phone }, theme: { color: '#E91E63' },
+                      }).then(async (payment: any) => {
+                        const vr = await fetch(`${API}/api/driver/commission-pay-verify`, {
+                          method: 'POST', headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
+                        });
+                        const vd = await vr.json();
+                        if (vd.success) { setCommResult('✅ Commission clear! Nayi rides available hain.'); loadCommissionHistory(phone); }
+                        else setCommResult('❌ Verification failed: ' + (vd.error || ''));
+                        setCommPayLoading(false);
+                      }).catch((e: any) => {
+                        setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : '');
+                        setCommPayLoading(false);
                       });
-                      const vd = await vr.json();
-                      if (vd.success) { setCommResult('✅ Commission paid!'); loadCommissionHistory(phone); }
-                      else setCommResult('❌ Verification failed: ' + (vd.error || ''));
-                      setCommPayLoading(false);
-                    }).catch((e: any) => {
-                      setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : 'Payment cancel hua');
-                      setCommPayLoading(false);
-                    });
-                  } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
-                }}
-                style={{ backgroundColor: commPayLoading ? '#ccc' : '#e65100', borderRadius: 10, paddingVertical: 11, alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)}`}</Text>
-              </TouchableOpacity>
-              {commResult ? <Text style={{ color: commResult.includes('✅') ? '#16A34A' : '#bf360c', marginTop: 8, fontSize: 12, fontWeight: '600' }}>{commResult}</Text> : null}
+                    } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
+                  }}
+                  style={{
+                    backgroundColor: commPayLoading ? '#94A3B8' : '#E91E63',
+                    borderRadius: 16, paddingVertical: 16, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 10,
+                    elevation: commPayLoading ? 0 : 6, shadowColor: '#E91E63', shadowOpacity: 0.4, shadowRadius: 10,
+                  }}
+                >
+                  <Text style={{ fontSize: 20 }}>{commPayLoading ? '⏳' : '📱'}</Text>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>
+                    {commPayLoading ? 'Payment kholna...' : `UPI / Card Se Pay — ₹${commissionData.pending_commission.toFixed(0)}`}
+                  </Text>
+                </TouchableOpacity>
+
+                {commResult ? (
+                  <View style={{ marginTop: 10, backgroundColor: commResult.includes('✅') ? '#F0FDF4' : '#FFF5F5', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: commResult.includes('✅') ? '#BBF7D0' : '#FCA5A5' }}>
+                    <Text style={{ color: commResult.includes('✅') ? '#15803D' : '#DC2626', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
+                  </View>
+                ) : null}
+              </View>
             </View>
           )}
 
