@@ -40,6 +40,8 @@ export const C = {
   saffBorder:  'rgba(255,122,0,0.22)',
   redGlass:    'rgba(239,68,68,0.07)',
   redBorder:   'rgba(239,68,68,0.22)',
+  plumGlass:   'rgba(46,20,97,0.06)',
+  plumBorder:  'rgba(46,20,97,0.18)',
 
   // Text
   text:      '#1A0D2E',

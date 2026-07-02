@@ -5,9 +5,7 @@ import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GO
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-const PINK   = '#FF2D78';
-const GREEN  = '#10B981';
-const YELLOW = '#F59E0B';
+import { C } from './theme';
 
 type DemandZone = { lat: number; lng: number; heat: 'high' | 'medium' | 'low'; ride_count: number; avg_fare: number };
 type RideStatus = 'matched' | 'arrived' | 'started' | null;
@@ -104,7 +102,7 @@ function CustomerMarker() {
 // ── ETA chip ──────────────────────────────────────────────────────────────────
 function EtaChip({ eta, distance, color }: { eta: string; distance: string; color?: string }) {
   if (!eta) return null;
-  const c = color || GREEN;
+  const c = color || C.green;
   return (
     <View style={styles.etaChip}>
       <View style={[styles.etaDot, { backgroundColor: c }]} />
@@ -129,8 +127,8 @@ function StatusBadge({ status }: { status: RideStatus }) {
   if (!status) return null;
   const cfg: Record<string, { label: string; bg: string; color: string }> = {
     matched: { label: '🚗 Pickup jao', bg: '#1E40AF', color: '#fff' },
-    arrived: { label: '📍 Pickup pe ho', bg: GREEN, color: '#fff' },
-    started: { label: '🛣️ Trip chal rahi', bg: PINK, color: '#fff' },
+    arrived: { label: '📍 Pickup pe ho', bg: C.green, color: '#fff' },
+    started: { label: '🛣️ Trip chal rahi', bg: C.pink, color: '#fff' },
   };
   const c = cfg[status];
   if (!c) return null;
@@ -309,7 +307,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   const centerLat = driverLat || pickupCoords?.lat || 26.8467;
   const centerLng = driverLng || pickupCoords?.lng || 80.9462;
 
-  const routeColor = rideStatus === 'matched' ? PINK : GREEN;
+  const routeColor = rideStatus === 'matched' ? C.pink : C.green;
 
   return (
     <View style={{ height, width: '100%', overflow: 'hidden' }}>
@@ -338,7 +336,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         ))}
         {demandZones.filter(z => z.heat === 'high').map((z, i) => (
           <Marker key={`zone-lbl-${i}`} coordinate={{ latitude: z.lat, longitude: z.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <View style={{ backgroundColor: PINK, borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1.5, borderColor: '#fff', elevation: 4 }}>
+            <View style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1.5, borderColor: '#fff', elevation: 4 }}>
               <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>🔥 {z.ride_count}</Text>
             </View>
           </Marker>
@@ -442,28 +440,28 @@ const styles = StyleSheet.create({
     width: 0, height: 0,
     borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 10,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderBottomColor: PINK,
+    borderBottomColor: C.pink,
   },
   driverInner: {
     width: 42, height: 42, borderRadius: 21,
-    backgroundColor: PINK, alignItems: 'center', justifyContent: 'center',
-    elevation: 8, shadowColor: PINK, shadowOpacity: 0.55, shadowRadius: 10,
+    backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center',
+    elevation: 8, shadowColor: C.pink, shadowOpacity: 0.55, shadowRadius: 10,
     borderWidth: 2.5, borderColor: '#fff',
   },
 
   pickupRing: {
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 5, shadowColor: GREEN, shadowOpacity: 0.30, shadowRadius: 6,
-    borderWidth: 2.5, borderColor: GREEN,
+    elevation: 5, shadowColor: C.green, shadowOpacity: 0.30, shadowRadius: 6,
+    borderWidth: 2.5, borderColor: C.green,
   },
-  pickupDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: GREEN },
+  pickupDot: { width: 9, height: 9, borderRadius: 4.5, backgroundColor: C.green },
 
   dropOuter: { alignItems: 'center' },
   dropPin: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: PINK, alignItems: 'center', justifyContent: 'center',
-    elevation: 6, shadowColor: PINK, shadowOpacity: 0.45, shadowRadius: 8,
+    backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center',
+    elevation: 6, shadowColor: C.pink, shadowOpacity: 0.45, shadowRadius: 8,
     borderWidth: 2, borderColor: '#fff',
   },
   dropHole: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' },
@@ -471,7 +469,7 @@ const styles = StyleSheet.create({
     width: 0, height: 0,
     borderLeftWidth: 5, borderRightWidth: 5, borderTopWidth: 9,
     borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderTopColor: PINK, marginTop: -1,
+    borderTopColor: C.pink, marginTop: -1,
   },
 
   customerRing: {
@@ -490,9 +488,9 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)', gap: 6,
   },
   etaDot: { width: 7, height: 7, borderRadius: 3.5 },
-  etaTime: { fontSize: 13, fontWeight: '900', color: '#0F172A' },
-  etaSep: { width: 1, height: 12, backgroundColor: '#E2E8F0' },
-  etaDist: { fontSize: 12, color: '#64748B', fontWeight: '600' },
+  etaTime: { fontSize: 13, fontWeight: '900', color: C.text },
+  etaSep: { width: 1, height: 12, backgroundColor: C.glassBorder },
+  etaDist: { fontSize: 12, color: C.textMuted, fontWeight: '600' },
 
   statusBadge: {
     position: 'absolute', bottom: 46, alignSelf: 'center',
@@ -504,7 +502,7 @@ const styles = StyleSheet.create({
     position: 'absolute', bottom: 10, right: 10,
     width: 38, height: 38, borderRadius: 19,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
-    elevation: 6, shadowColor: PINK, shadowOpacity: 0.18, shadowRadius: 8,
+    elevation: 6, shadowColor: C.pink, shadowOpacity: 0.18, shadowRadius: 8,
     borderWidth: 1, borderColor: 'rgba(255,45,120,0.15)',
   },
 });

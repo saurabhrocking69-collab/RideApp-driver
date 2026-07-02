@@ -2,9 +2,7 @@ import { useEffect, useRef } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Speech from 'expo-speech';
-
-const PINK  = '#E91E63';
-const GREEN = '#16A34A';
+import { C } from './theme';
 
 // metres → "200 m" / "1.2 km"
 function fmtDist(m: number): string {
@@ -57,13 +55,13 @@ export function VoiceNavBar({ instruction, nextDistM, phase, onMute, muted, visi
 
   if (!visible) return null;
 
-  const phaseColor = phase === 'to_pickup' ? GREEN : PINK;
+  const phaseColor = phase === 'to_pickup' ? C.green : C.pink;
   const phaseLabel = phase === 'to_pickup' ? 'Pickup ki taraf' : 'Drop ki taraf';
 
   return (
     <Animated.View style={{ transform: [{ translateY: slideAnim }] }}>
       <View style={{
-        backgroundColor: '#0F172A',
+        backgroundColor: C.bgDark,
         marginHorizontal: 12, borderRadius: 20,
         elevation: 14, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 16,
         overflow: 'hidden',
@@ -100,11 +98,11 @@ export function VoiceNavBar({ instruction, nextDistM, phase, onMute, muted, visi
           {/* Mute toggle */}
           <TouchableOpacity onPress={onMute} style={{
             width: 38, height: 38, borderRadius: 12,
-            backgroundColor: muted ? 'rgba(239,68,68,0.2)' : 'rgba(255,255,255,0.1)',
+            backgroundColor: muted ? C.redGlass : 'rgba(255,255,255,0.10)',
             alignItems: 'center', justifyContent: 'center',
-            borderWidth: 1, borderColor: muted ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.15)',
+            borderWidth: 1, borderColor: muted ? C.redBorder : 'rgba(255,255,255,0.15)',
           }}>
-            <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={18} color={muted ? '#EF4444' : '#fff'} />
+            <Ionicons name={muted ? 'volume-mute' : 'volume-high'} size={18} color={muted ? C.red : '#fff'} />
           </TouchableOpacity>
         </View>
       </View>

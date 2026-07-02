@@ -2,14 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Animated, ScrollView, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { C, T, R, SP, SHADOW } from './theme';
 
 const FUEL_KEY = 'sppero_fuel_log';
 const MONTHS   = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 type FuelEntry = { litres: number; pricePerLitre: number; total: number; date: string; note: string };
-
-const PINK  = '#E91E63';
-const GREEN = '#16A34A';
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -23,10 +21,10 @@ function WeekBar({ data }: { data: { label: string; value: number }[] }) {
       {data.map((d, i) => (
         <View key={i} style={{ flex: 1, alignItems: 'center' }}>
           <View style={{
-            width: '100%', height: Math.max((d.value / max) * 56, 3), borderRadius: 6,
-            backgroundColor: d.value > 0 ? 'rgba(239,68,68,0.8)' : '#F1F5F9',
+            width: '100%', height: Math.max((d.value / max) * 56, 3), borderRadius: R.xs,
+            backgroundColor: d.value > 0 ? 'rgba(239,68,68,0.75)' : C.glassMid,
           }} />
-          <Text style={{ fontSize: 9, color: '#64748B', marginTop: 4 }}>{d.label}</Text>
+          <Text style={{ ...T.label, color: C.textMuted, marginTop: 4 }}>{d.label}</Text>
         </View>
       ))}
     </View>
@@ -78,19 +76,16 @@ export function FuelLogScreen({ onClose, todayEarnings, weeklyEarnings }: FuelLo
     await saveEntries(entries.filter((_, idx) => idx !== i));
   };
 
-  // This week's fuel cost
   const now = new Date();
   const weekStart = new Date(now); weekStart.setDate(now.getDate() - 6); weekStart.setHours(0, 0, 0, 0);
   const thisWeekEntries = entries.filter(e => new Date(e.date) >= weekStart);
   const weekFuelCost = thisWeekEntries.reduce((s, e) => s + e.total, 0);
 
-  // Today's fuel cost
   const todayStr = now.toISOString().split('T')[0];
   const todayFuel = entries.filter(e => e.date.startsWith(todayStr)).reduce((s, e) => s + e.total, 0);
   const todayNet  = todayEarnings - todayFuel;
   const weekNet   = weeklyEarnings - weekFuelCost;
 
-  // 7-day bar chart
   const chartData = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now); d.setDate(now.getDate() - (6 - i));
     const dk = d.toISOString().split('T')[0];
@@ -102,108 +97,105 @@ export function FuelLogScreen({ onClose, todayEarnings, weeklyEarnings }: FuelLo
     <Animated.View style={{
       position: 'absolute', inset: 0,
       transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [800, 0] }) }],
-      backgroundColor: '#F8FAFC', zIndex: 999,
+      backgroundColor: C.bg, zIndex: 999,
     }}>
       {/* Header */}
       <View style={{
-        backgroundColor: '#0F172A', paddingTop: 52, paddingBottom: 20,
-        paddingHorizontal: 20, flexDirection: 'row', alignItems: 'center', gap: 12,
+        backgroundColor: C.bgDark, paddingTop: 52, paddingBottom: SP.md,
+        paddingHorizontal: SP.md, overflow: 'hidden',
       }}>
-        <TouchableOpacity onPress={closeWithAnim} style={{ padding: 4 }}>
-          <Ionicons name="arrow-back" size={22} color="#fff" />
-        </TouchableOpacity>
-        <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', flex: 1 }}>⛽ Fuel Log</Text>
-        <TouchableOpacity onPress={() => setShowAdd(p => !p)} style={{
-          backgroundColor: PINK, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
-          flexDirection: 'row', alignItems: 'center', gap: 4,
-        }}>
-          <Ionicons name={showAdd ? 'close' : 'add'} size={14} color="#fff" />
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 12 }}>{showAdd ? 'Cancel' : 'Add'}</Text>
-        </TouchableOpacity>
+        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.08)', top: -80, right: -50 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity onPress={closeWithAnim}
+            style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: R.xs, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)' }}>
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+          </TouchableOpacity>
+          <Text style={{ ...T.title, color: '#fff', flex: 1 }}>Fuel Log</Text>
+          <TouchableOpacity onPress={() => setShowAdd(p => !p)} style={{
+            backgroundColor: C.pink, borderRadius: R.sm, paddingHorizontal: SP.md, paddingVertical: 8,
+            flexDirection: 'row', alignItems: 'center', gap: 4,
+            elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 8,
+          }}>
+            <Ionicons name={showAdd ? 'close' : 'add'} size={14} color="#fff" />
+            <Text style={{ ...T.caption, color: '#fff' }}>{showAdd ? 'Cancel' : 'Add'}</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ padding: SP.md, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
 
         {/* ── Net Earnings Cards ── */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
-          <View style={{
-            flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 16,
-            elevation: 4, borderWidth: 1.5,
-            borderColor: todayNet >= 0 ? '#BBF7D0' : 'rgba(239,68,68,0.3)',
-          }}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', marginBottom: 4 }}>AAJ NET KAMAI</Text>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: todayNet >= 0 ? GREEN : '#EF4444' }}>
-              ₹{Math.abs(todayNet)}
-            </Text>
-            <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
-              ₹{todayEarnings} − ₹{todayFuel} fuel
-            </Text>
-          </View>
-          <View style={{
-            flex: 1, backgroundColor: '#fff', borderRadius: 18, padding: 16,
-            elevation: 4, borderWidth: 1.5,
-            borderColor: weekNet >= 0 ? '#BBF7D0' : 'rgba(239,68,68,0.3)',
-          }}>
-            <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', marginBottom: 4 }}>IS HAFTE NET</Text>
-            <Text style={{ fontSize: 26, fontWeight: '900', color: weekNet >= 0 ? GREEN : '#EF4444' }}>
-              ₹{Math.abs(weekNet)}
-            </Text>
-            <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 4 }}>
-              ₹{weeklyEarnings} − ₹{weekFuelCost} fuel
-            </Text>
-          </View>
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: SP.md }}>
+          {[
+            { label: 'AAJ NET KAMAI', net: todayNet, earn: todayEarnings, fuel: todayFuel },
+            { label: 'IS HAFTE NET',  net: weekNet,  earn: weeklyEarnings, fuel: weekFuelCost },
+          ].map((item, i) => (
+            <View key={i} style={{
+              flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md,
+              ...SHADOW.sm, borderWidth: 1.5,
+              borderColor: item.net >= 0 ? C.greenBorder : C.redBorder,
+            }}>
+              <Text style={{ ...T.label, color: C.textMuted, marginBottom: 4 }}>{item.label}</Text>
+              <Text style={{ fontSize: 26, fontWeight: '900' as const, color: item.net >= 0 ? C.green : C.red }}>
+                ₹{Math.abs(item.net)}
+              </Text>
+              <Text style={{ ...T.label, color: C.textDim, marginTop: 4 }}>
+                ₹{item.earn} − ₹{item.fuel} fuel
+              </Text>
+            </View>
+          ))}
         </View>
 
         {/* ── Week bar chart ── */}
         <View style={{
-          backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 14,
-          elevation: 3, borderWidth: 1, borderColor: '#E2E8F0',
+          backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, marginBottom: SP.md,
+          ...SHADOW.sm, borderWidth: 1, borderColor: C.glassBorder,
         }}>
-          <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>7 Din Ka Fuel Kharch</Text>
+          <Text style={{ ...T.bodyBold, color: C.text, marginBottom: 4 }}>7 Din Ka Fuel Kharch</Text>
           <WeekBar data={chartData} />
         </View>
 
         {/* ── Add entry form ── */}
         {showAdd && (
           <View style={{
-            backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 14,
-            elevation: 5, borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.2)',
+            backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, marginBottom: SP.md,
+            ...SHADOW.md, borderWidth: 1.5, borderColor: C.pinkBorder,
           }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 14 }}>⛽ Nayi Entry</Text>
+            <Text style={{ ...T.bodyBold, color: C.text, marginBottom: SP.md }}>Nayi Entry</Text>
             <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 5 }}>Litres</Text>
+                <Text style={{ ...T.caption, color: C.textMuted, marginBottom: 5 }}>Litres</Text>
                 <TextInput
                   value={litres} onChangeText={setLitres}
-                  placeholder="e.g. 5.5" placeholderTextColor="#94A3B8"
+                  placeholder="e.g. 5.5" placeholderTextColor={C.textDim}
                   keyboardType="decimal-pad"
-                  style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, fontSize: 15, color: '#0F172A', borderWidth: 1, borderColor: '#E2E8F0' }} />
+                  style={{ backgroundColor: C.glassMid, borderRadius: R.xs, padding: 12, fontSize: 15, color: C.text, borderWidth: 1, borderColor: C.glassBorder }} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 5 }}>₹/Litre</Text>
+                <Text style={{ ...T.caption, color: C.textMuted, marginBottom: 5 }}>₹/Litre</Text>
                 <TextInput
                   value={ppl} onChangeText={setPpl}
-                  placeholder="e.g. 97" placeholderTextColor="#94A3B8"
+                  placeholder="e.g. 97" placeholderTextColor={C.textDim}
                   keyboardType="decimal-pad"
-                  style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, fontSize: 15, color: '#0F172A', borderWidth: 1, borderColor: '#E2E8F0' }} />
+                  style={{ backgroundColor: C.glassMid, borderRadius: R.xs, padding: 12, fontSize: 15, color: C.text, borderWidth: 1, borderColor: C.glassBorder }} />
               </View>
             </View>
             {litres && ppl ? (
-              <View style={{ backgroundColor: '#F0FDF4', borderRadius: 10, padding: 10, marginBottom: 10 }}>
-                <Text style={{ color: GREEN, fontWeight: '800', fontSize: 14, textAlign: 'center' }}>
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: R.xs, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: C.greenBorder }}>
+                <Text style={{ ...T.bodyBold, color: C.green, textAlign: 'center' }}>
                   Total: ₹{Math.round((parseFloat(litres) || 0) * (parseFloat(ppl) || 0))}
                 </Text>
               </View>
             ) : null}
             <TextInput
               value={note} onChangeText={setNote}
-              placeholder="Note (optional)" placeholderTextColor="#94A3B8"
-              style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 12, fontSize: 14, color: '#0F172A', borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 12 }} />
+              placeholder="Note (optional)" placeholderTextColor={C.textDim}
+              style={{ backgroundColor: C.glassMid, borderRadius: R.xs, padding: 12, fontSize: 14, color: C.text, borderWidth: 1, borderColor: C.glassBorder, marginBottom: 12 }} />
             <TouchableOpacity onPress={addEntry} style={{
-              backgroundColor: PINK, borderRadius: 14, padding: 14, alignItems: 'center',
-              elevation: 4, shadowColor: PINK, shadowOpacity: 0.4, shadowRadius: 8,
+              backgroundColor: C.pink, borderRadius: R.sm, padding: 14, alignItems: 'center',
+              elevation: 4, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 8,
             }}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Save Entry</Text>
+              <Text style={{ ...T.bodyBold, color: '#fff' }}>Save Entry</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -212,38 +204,38 @@ export function FuelLogScreen({ onClose, todayEarnings, weeklyEarnings }: FuelLo
         {entries.length === 0 ? (
           <View style={{ alignItems: 'center', paddingVertical: 40 }}>
             <Text style={{ fontSize: 36 }}>⛽</Text>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginTop: 12 }}>Koi entry nahi</Text>
-            <Text style={{ fontSize: 12, color: '#64748B', marginTop: 6, textAlign: 'center' }}>
+            <Text style={{ ...T.bodyBold, color: C.text, marginTop: 12 }}>Koi entry nahi</Text>
+            <Text style={{ ...T.caption, color: C.textMuted, marginTop: 6, textAlign: 'center' }}>
               Fuel bhar ne ke baad upar + button dabao
             </Text>
           </View>
         ) : (
-          <View style={{ backgroundColor: '#fff', borderRadius: 18, overflow: 'hidden', elevation: 3, borderWidth: 1, borderColor: '#E2E8F0' }}>
+          <View style={{ backgroundColor: C.bgCard, borderRadius: R.md, overflow: 'hidden', ...SHADOW.sm, borderWidth: 1, borderColor: C.glassBorder }}>
             {entries.map((e, i) => (
               <View key={i} style={{
-                flexDirection: 'row', alignItems: 'center', padding: 14,
-                borderBottomWidth: i < entries.length - 1 ? 1 : 0, borderBottomColor: '#F1F5F9',
+                flexDirection: 'row', alignItems: 'center', padding: SP.md,
+                borderBottomWidth: i < entries.length - 1 ? 1 : 0, borderBottomColor: C.glassMid,
               }}>
                 <View style={{
                   width: 40, height: 40, borderRadius: 20,
-                  backgroundColor: 'rgba(239,68,68,0.1)', alignItems: 'center', justifyContent: 'center',
-                  marginRight: 12,
+                  backgroundColor: C.redGlass, alignItems: 'center', justifyContent: 'center',
+                  marginRight: 12, borderWidth: 1.5, borderColor: C.redBorder,
                 }}>
                   <Text style={{ fontSize: 20 }}>⛽</Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>
+                  <Text style={{ ...T.bodyBold, color: C.text }}>
                     {e.litres}L @ ₹{e.pricePerLitre}/L
                   </Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
+                  <Text style={{ ...T.caption, color: C.textMuted, marginTop: 2 }}>
                     {formatDate(e.date)}{e.note ? ` · ${e.note}` : ''}
                   </Text>
                 </View>
-                <Text style={{ fontSize: 16, fontWeight: '900', color: '#EF4444', marginRight: 10 }}>
+                <Text style={{ fontSize: 16, fontWeight: '900' as const, color: C.red, marginRight: 10 }}>
                   −₹{e.total}
                 </Text>
                 <TouchableOpacity onPress={() => deleteEntry(i)} style={{ padding: 6 }}>
-                  <Ionicons name="trash-outline" size={16} color="#94A3B8" />
+                  <Ionicons name="trash-outline" size={16} color={C.textDim} />
                 </TouchableOpacity>
               </View>
             ))}

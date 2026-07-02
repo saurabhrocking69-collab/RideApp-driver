@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Text, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { C } from './theme';
 
 export type ZoneAlert = {
   from: string;
@@ -11,11 +12,11 @@ export type ZoneAlert = {
 };
 
 const ALERT_META: Record<string, { icon: string; color: string; label: string }> = {
-  police:   { icon: 'shield-checkmark', color: '#EF4444', label: 'Police Check' },
-  traffic:  { icon: 'car',              color: '#F97316', label: 'Traffic Jam' },
-  demand:   { icon: 'trending-up',      color: '#16A34A', label: 'High Demand' },
-  accident: { icon: 'warning',          color: '#EAB308', label: 'Accident' },
-  closed:   { icon: 'close-circle',     color: '#64748B', label: 'Road Closed' },
+  police:   { icon: 'shield-checkmark', color: C.red,      label: 'Police Check' },
+  traffic:  { icon: 'car',              color: '#F97316',  label: 'Traffic Jam' },
+  demand:   { icon: 'trending-up',      color: C.green,    label: 'High Demand' },
+  accident: { icon: 'warning',          color: '#EAB308',  label: 'Accident' },
+  closed:   { icon: 'close-circle',     color: C.textMuted, label: 'Road Closed' },
 };
 
 interface Props {
@@ -63,7 +64,7 @@ export function ZoneAlertBanner({ alert, onDismiss }: Props) {
       zIndex: 9999,
     }}>
       <View style={{
-        backgroundColor: '#0F172A',
+        backgroundColor: C.bgDark,
         borderRadius: 20,
         overflow: 'hidden',
         elevation: 18,
@@ -94,12 +95,12 @@ export function ZoneAlertBanner({ alert, onDismiss }: Props) {
                   {meta.label.toUpperCase()}
                 </Text>
               </View>
-              <Text style={{ color: '#64748B', fontSize: 10 }}>{alert.distKm} km door</Text>
+              <Text style={{ color: C.textMuted, fontSize: 10 }}>{alert.distKm} km door</Text>
             </View>
             <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', lineHeight: 18 }}>
               {alert.message || `Driver ${alert.from} ne alert bheja`}
             </Text>
-            <Text style={{ color: '#475569', fontSize: 10, marginTop: 3 }}>
+            <Text style={{ color: C.textDim, fontSize: 10, marginTop: 3 }}>
               Driver {alert.from} · nearby zone
             </Text>
           </View>
@@ -117,11 +118,11 @@ export function ZoneAlertBanner({ alert, onDismiss }: Props) {
 
 // ── Zone Alert Sender — full-screen Modal card ────────────────────────────────
 const ALERT_TYPES = [
-  { key: 'police',   emoji: '🚔', label: 'Police Check', desc: 'Police nakabandi hai aage', color: '#EF4444' },
+  { key: 'police',   emoji: '🚔', label: 'Police Check', desc: 'Police nakabandi hai aage', color: C.red },
   { key: 'traffic',  emoji: '🚧', label: 'Traffic Jam',  desc: 'Rasta bhara hua hai',       color: '#F97316' },
-  { key: 'demand',   emoji: '🔥', label: 'High Demand',  desc: 'Rides bahut aa rahi hain',  color: '#16A34A' },
+  { key: 'demand',   emoji: '🔥', label: 'High Demand',  desc: 'Rides bahut aa rahi hain',  color: C.green },
   { key: 'accident', emoji: '⚠️', label: 'Accident',     desc: 'Hadsa hua hai, sambhal ke', color: '#EAB308' },
-  { key: 'closed',   emoji: '🚫', label: 'Road Closed',  desc: 'Rasta band hai, doosra lo', color: '#64748B' },
+  { key: 'closed',   emoji: '🚫', label: 'Road Closed',  desc: 'Rasta band hai, doosra lo', color: C.textMuted },
 ];
 
 const HOW_IT_WORKS = [
@@ -194,44 +195,44 @@ export function ZoneAlertSender({ visible, onSend, onClose, sentCount }: SenderP
         >
           <TouchableOpacity activeOpacity={1} onPress={() => {}}>
             <View style={{
-              backgroundColor: '#0F172A',
+              backgroundColor: C.bgDark,
               borderRadius: 28,
               overflow: 'hidden',
               elevation: 32,
               shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 24,
             }}>
               {/* Top color accent strip */}
-              <View style={{ height: 4, backgroundColor: '#E91E63' }} />
+              <View style={{ height: 4, backgroundColor: C.pink }} />
 
               <View style={{ padding: 20 }}>
                 {/* Header row */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.3 }}>📡 Zone Alert Bhejo</Text>
-                    <Text style={{ color: '#64748B', fontSize: 12, marginTop: 3 }}>3km ke andar sabhi Sppero Buddy ko</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 3 }}>3km ke andar sabhi Sppero Buddy ko</Text>
                   </View>
                   <TouchableOpacity
                     onPress={() => setShowInfo(s => !s)}
                     style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center', marginRight: 8 }}
                   >
-                    <Ionicons name="information-circle-outline" size={20} color="#94A3B8" />
+                    <Ionicons name="information-circle-outline" size={20} color={C.textDim} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={onClose}
                     style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.07)', alignItems: 'center', justifyContent: 'center' }}
                   >
-                    <Ionicons name="close" size={18} color="#94A3B8" />
+                    <Ionicons name="close" size={18} color={C.textDim} />
                   </TouchableOpacity>
                 </View>
 
                 {/* Info panel — toggleable */}
                 {showInfo && (
-                  <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
-                    <Text style={{ color: '#F472B6', fontSize: 12, fontWeight: '800', marginBottom: 8 }}>Ye Feature Kya Hai?</Text>
+                  <View style={{ backgroundColor: C.pinkGlass, borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: C.pinkBorder }}>
+                    <Text style={{ color: C.pink, fontSize: 12, fontWeight: '800', marginBottom: 8 }}>Ye Feature Kya Hai?</Text>
                     {HOW_IT_WORKS.map((h, i) => (
                       <View key={i} style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: i < HOW_IT_WORKS.length - 1 ? 6 : 0 }}>
                         <Text style={{ fontSize: 14 }}>{h.icon}</Text>
-                        <Text style={{ color: '#CBD5E1', fontSize: 11, lineHeight: 16, flex: 1 }}>{h.text}</Text>
+                        <Text style={{ color: C.textDim, fontSize: 11, lineHeight: 16, flex: 1 }}>{h.text}</Text>
                       </View>
                     ))}
                   </View>
@@ -239,10 +240,10 @@ export function ZoneAlertSender({ visible, onSend, onClose, sentCount }: SenderP
 
                 {/* Sent confirmation */}
                 {showSent ? (
-                  <View style={{ backgroundColor: '#16A34A22', borderRadius: 18, borderWidth: 1, borderColor: '#16A34A55', padding: 22, alignItems: 'center', marginVertical: 8 }}>
+                  <View style={{ backgroundColor: C.greenGlass, borderRadius: 18, borderWidth: 1, borderColor: C.greenBorder, padding: 22, alignItems: 'center', marginVertical: 8 }}>
                     <Text style={{ fontSize: 40, marginBottom: 8 }}>✅</Text>
-                    <Text style={{ color: '#4ADE80', fontSize: 17, fontWeight: '900' }}>{sentCount} Drivers Ko Bheja!</Text>
-                    <Text style={{ color: '#86EFAC', fontSize: 12, marginTop: 4 }}>Sabko real-time alert mil gaya</Text>
+                    <Text style={{ color: C.green, fontSize: 17, fontWeight: '900' }}>{sentCount} Drivers Ko Bheja!</Text>
+                    <Text style={{ color: C.green, fontSize: 12, marginTop: 4, opacity: 0.7 }}>Sabko real-time alert mil gaya</Text>
                   </View>
                 ) : (
                   <>
@@ -265,8 +266,8 @@ export function ZoneAlertSender({ visible, onSend, onClose, sentCount }: SenderP
                             }}
                           >
                             <Text style={{ fontSize: 28, marginBottom: 6 }}>{a.emoji}</Text>
-                            <Text style={{ color: isSelected ? a.color : '#E2E8F0', fontSize: 12, fontWeight: '900', marginBottom: 3 }}>{a.label}</Text>
-                            <Text style={{ color: '#64748B', fontSize: 10, textAlign: 'center', lineHeight: 13 }}>{a.desc}</Text>
+                            <Text style={{ color: isSelected ? a.color : C.textDim, fontSize: 12, fontWeight: '900', marginBottom: 3 }}>{a.label}</Text>
+                            <Text style={{ color: C.textMuted, fontSize: 10, textAlign: 'center', lineHeight: 13 }}>{a.desc}</Text>
                           </TouchableOpacity>
                         );
                       })}
@@ -274,8 +275,8 @@ export function ZoneAlertSender({ visible, onSend, onClose, sentCount }: SenderP
 
                     {selected && (
                       <View style={{ marginTop: 14, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                        <Ionicons name="time-outline" size={14} color="#94A3B8" />
-                        <Text style={{ color: '#94A3B8', fontSize: 11 }}>Alert bheja ja raha hai...</Text>
+                        <Ionicons name="time-outline" size={14} color={C.textDim} />
+                        <Text style={{ color: C.textDim, fontSize: 11 }}>Alert bheja ja raha hai...</Text>
                       </View>
                     )}
                   </>
