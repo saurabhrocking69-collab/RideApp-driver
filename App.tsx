@@ -1846,7 +1846,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const confirmDirectPayment = async (method: 'cash' | 'upi_direct') => {
     setLoading(true);
     try {
-      await apiPost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
+      const res = await apiPost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
+      if (res?._error || (!res?.success && res?.error)) {
+        setResult('❌ ' + (res?.error || res?.message || 'Payment confirm nahi hua — retry karo'));
+        setLoading(false);
+        return;
+      }
       setPaymentWaiting(false);
       const fare = parseFloat(paymentFare || '0');
       setTripSummary({
@@ -1855,7 +1860,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         earned: '₹' + (fare * 0.85).toFixed(0),
         fee: '₹' + (fare * 0.15).toFixed(0),
       });
-    } catch (_e) { setResult('❌ Error'); }
+    } catch (_e) { setResult('❌ Error — retry karo'); }
     setLoading(false);
   };
 
