@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, Image, Alert,
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules
@@ -69,7 +69,7 @@ const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLa
     ${driverLat && driverLng ? `
     new google.maps.Marker({
       position: { lat: ${driverLat}, lng: ${driverLng} }, map,
-      label: { text: '🚗', fontSize: '22px' },
+      label: { text: 'ðŸš—', fontSize: '22px' },
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
       title: 'Driver'
     });
@@ -78,7 +78,7 @@ const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLa
     ${customerLat && customerLng ? `
     new google.maps.Marker({
       position: { lat: ${customerLat}, lng: ${customerLng} }, map,
-      label: { text: '🧑', fontSize: '22px' },
+      label: { text: 'ðŸ§‘', fontSize: '22px' },
       icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
       title: 'Customer'
     });
@@ -99,8 +99,8 @@ const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLa
   return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
 };
 
-// ─── Count-Up — earnings number badhta dikhe ───
-const CountUp = ({ value, style, prefix = '₹' }: any) => {
+// â”€â”€â”€ Count-Up â€” earnings number badhta dikhe â”€â”€â”€
+const CountUp = ({ value, style, prefix = 'â‚¹' }: any) => {
   const [display, setDisplay] = useState(0);
   useEffect(() => {
     const target = parseFloat(String(value).replace(/[^0-9.]/g, '')) || 0;
@@ -117,7 +117,7 @@ const CountUp = ({ value, style, prefix = '₹' }: any) => {
   return <Text style={style}>{prefix}{display.toFixed(0)}</Text>;
 };
 
-// ─── Celebration — trip complete pe ───
+// â”€â”€â”€ Celebration â€” trip complete pe â”€â”€â”€
 const Celebration = () => {
   const particles = useRef([0,1,2,3,4,5,6,7,8,9].map(() => ({
     x: new Animated.Value(0),
@@ -144,7 +144,7 @@ const Celebration = () => {
           position: 'absolute', fontSize: 20, opacity: p.o,
           transform: [{ translateX: p.x }, { translateY: p.y }, { rotate: p.r.interpolate({ inputRange: [0,1], outputRange: ['0deg', '360deg'] }) }]
         }}>
-          {['🎉','💰','✨','🎊','⭐'][i % 5]}
+          {['ðŸŽ‰','ðŸ’°','âœ¨','ðŸŽŠ','â­'][i % 5]}
         </Animated.Text>
       ))}
     </View>
@@ -179,7 +179,7 @@ const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () 
   return (
     <View style={{ marginTop: SP.sm, backgroundColor: C.glassMid, borderRadius: R.xs, padding: 12, borderWidth: 1, borderColor: C.glassBorder }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600' }}>⏱️ Auto-reject in</Text>
+        <Text style={{ fontSize: 12, color: C.textMuted, fontWeight: '600' }}>â±ï¸ Auto-reject in</Text>
         <View style={{ backgroundColor: left <= 5 ? C.pinkGlass : C.greenGlass, borderRadius: R.full, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: left <= 5 ? C.pinkBorder : C.greenBorder }}>
           <Text style={{ fontSize: 13, fontWeight: '900', color: barColor }}>{left}s</Text>
         </View>
@@ -191,7 +191,7 @@ const CountdownBar = ({ seconds, onTimeout }: { seconds: number; onTimeout?: () 
   );
 };
 
-// ─── Bouncy Button ───
+// â”€â”€â”€ Bouncy Button â”€â”€â”€
 const Bouncy = ({ children, onPress, style, disabled }: any) => {
   const scale = useRef(new Animated.Value(1)).current;
   const pressIn  = () => Animated.spring(scale, { toValue: 0.94, friction: 5, useNativeDriver: true }).start();
@@ -205,7 +205,7 @@ const Bouncy = ({ children, onPress, style, disabled }: any) => {
   );
 };
 
-// ─── PulseView — scale pulse loop ───
+// â”€â”€â”€ PulseView â€” scale pulse loop â”€â”€â”€
 const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -217,7 +217,7 @@ const PulseView = ({ children, style }: any) => {
   return <Animated.View style={[style, { transform: [{ scale: anim }] }]}>{children}</Animated.View>;
 };
 
-// ─── FloatingDots — animated bouncing dots ───
+// â”€â”€â”€ FloatingDots â€” animated bouncing dots â”€â”€â”€
 const FloatingDots = ({ color = C.pink }: any) => {
   const dots = [useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current, useRef(new Animated.Value(0)).current];
   useEffect(() => {
@@ -239,7 +239,7 @@ const FloatingDots = ({ color = C.pink }: any) => {
   );
 };
 
-// ─── ScreenIn — screen slide-in transition ───
+// â”€â”€â”€ ScreenIn â€” screen slide-in transition â”€â”€â”€
 const ScreenIn = ({ children, style }: any) => {
   const x = useRef(new Animated.Value(45)).current;
   const o = useRef(new Animated.Value(0)).current;
@@ -252,14 +252,14 @@ const ScreenIn = ({ children, style }: any) => {
   return <Animated.View style={[style, { transform: [{ translateX: x }], opacity: o }]}>{children}</Animated.View>;
 };
 
-// ─── TripStatusBar — matched → arrived → started → done ───
+// â”€â”€â”€ TripStatusBar â€” matched â†’ arrived â†’ started â†’ done â”€â”€â”€
 const TripStatusBar = ({ status }: { status: string }) => {
   const idx = status === 'matched' ? 0 : status === 'arrived' ? 1 : status === 'started' ? 2 : 3;
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(anim, { toValue: idx, friction: 8, tension: 60, useNativeDriver: false }).start();
   }, [idx]);
-  const steps = [{ icon: '🚗', label: 'Jao' }, { icon: '📍', label: 'Pahunche' }, { icon: '🛣️', label: 'Trip' }, { icon: '✅', label: 'Done' }];
+  const steps = [{ icon: 'ðŸš—', label: 'Jao' }, { icon: 'ðŸ“', label: 'Pahunche' }, { icon: 'ðŸ›£ï¸', label: 'Trip' }, { icon: 'âœ…', label: 'Done' }];
   return (
     <View style={{ paddingHorizontal: 4, paddingBottom: 10, paddingTop: 2 }}>
       <View style={{ height: 3, backgroundColor: '#F8FAFC', borderRadius: 2, marginHorizontal: 10, marginBottom: 8, overflow: 'hidden' }}>
@@ -269,7 +269,7 @@ const TripStatusBar = ({ status }: { status: string }) => {
         {steps.map((s, i) => (
           <View key={i} style={{ flex: 1, alignItems: 'center' }}>
             <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: i <= idx ? C.green : '#E2E8F0', alignItems: 'center', justifyContent: 'center', transform: [{ scale: i === idx ? 1.2 : 1 }], elevation: i === idx ? 4 : 0, borderWidth: i > idx ? 1 : 0, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 12 }}>{i <= idx ? s.icon : '·'}</Text>
+              <Text style={{ fontSize: 12 }}>{i <= idx ? s.icon : 'Â·'}</Text>
             </View>
             <Text style={{ fontSize: 9, marginTop: 3, color: i <= idx ? C.green : '#475569', fontWeight: i === idx ? 'bold' : 'normal' }}>{s.label}</Text>
           </View>
@@ -279,7 +279,7 @@ const TripStatusBar = ({ status }: { status: string }) => {
   );
 };
 
-// ─── AnimatedBar — target progress fill animation ───
+// â”€â”€â”€ AnimatedBar â€” target progress fill animation â”€â”€â”€
 const AnimatedBar = ({ pct, color }: { pct: number; color: string }) => {
   const anim = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -288,7 +288,7 @@ const AnimatedBar = ({ pct, color }: { pct: number; color: string }) => {
   return <Animated.View style={{ height: 8, borderRadius: 4, backgroundColor: color, width: anim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] }) }} />;
 };
 
-// ─── MapOverlay — LIVE badge + route bar over map ───
+// â”€â”€â”€ MapOverlay â€” LIVE badge + route bar over map â”€â”€â”€
 const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
   const pulse = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -310,7 +310,7 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
         <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'rgba(26,26,46,0.88)', paddingHorizontal: 12, paddingVertical: 8, flexDirection: 'row', alignItems: 'center' }}>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green, marginRight: 6 }} />
           <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{pickup}</Text>
-          <Text style={{ color: '#555', fontSize: 12, marginHorizontal: 5 }}>→</Text>
+          <Text style={{ color: '#555', fontSize: 12, marginHorizontal: 5 }}>â†’</Text>
           <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.pink, marginRight: 6 }} />
           <Text style={{ color: '#fff', fontSize: 11, flex: 1 }} numberOfLines={1}>{drop}</Text>
         </View>
@@ -321,13 +321,13 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
 
 type Screen = 'splash' | 'login' | 'home';
 
-// ─── Background Location Task ────────────────────────────────────────────────
+// â”€â”€â”€ Background Location Task â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // MUST be defined at module level, before any component mounts.
 // When app is minimized/screen locked, this task fires every ~5s and pings backend.
 const DRIVER_LOCATION_TASK = 'sppero-driver-bg-location';
 const _BG_API = 'https://rideapp-backend-production-5e1c.up.railway.app';
 
-// Fetch with timeout + 1 retry — handles Jio's packet-drop and slow-DNS issues
+// Fetch with timeout + 1 retry â€” handles Jio's packet-drop and slow-DNS issues
 async function _bgFetch(url: string, opts?: RequestInit, timeoutMs = 8000): Promise<Response | null> {
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
@@ -350,27 +350,27 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     const phone = await AsyncStorage.getItem('driverPhone');
     if (!phone) return;
 
-    // 1. Location ping — retry once on failure (critical for Jio mobile data)
+    // 1. Location ping â€” retry once on failure (critical for Jio mobile data)
     _bgFetch(`${_BG_API}/api/driver/update-location`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone, lat: latitude, lng: longitude }),
     }).catch(() => {});
 
-    // 2. Poll for new ride — retry once; local notification bypasses FCM + battery restrictions
+    // 2. Poll for new ride â€” retry once; local notification bypasses FCM + battery restrictions
     const rRes = await _bgFetch(`${_BG_API}/api/driver/pending-ride?phone=${phone}`);
-    if (!rRes) return; // both attempts failed — Jio down, skip this tick
+    if (!rRes) return; // both attempts failed â€” Jio down, skip this tick
     const rd = await rRes.json().catch(() => null);
     if (!rd?.ride) return;
     const lastId = await AsyncStorage.getItem('_bgLastRideId');
     if (lastId === String(rd.ride.id)) return; // already notified for this ride
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
-    // Local notification — bypasses FCM entirely, guaranteed delivery from background task.
+    // Local notification â€” bypasses FCM entirely, guaranteed delivery from background task.
     // ride_requests_v2: MAX importance, bypassDnd, 3s vibration.
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '🚖 Nayi Ride Request!',
-        body: `₹${rd.ride.fare || '?'} · ${(rd.ride.pickup || 'Pickup location').slice(0, 60)}`,
+        title: 'ðŸš– Nayi Ride Request!',
+        body: `â‚¹${rd.ride.fare || '?'} Â· ${(rd.ride.pickup || 'Pickup location').slice(0, 60)}`,
         sound: 'default',
         data: { type: 'new_ride' },
         ...(Platform.OS === 'android' ? { channelId: 'ride_requests_v2' } : {}),
@@ -391,10 +391,10 @@ async function startBgLocation(): Promise<boolean> {
     await Location.startLocationUpdatesAsync(DRIVER_LOCATION_TASK, {
       accuracy: Location.Accuracy.Balanced,
       timeInterval: 8000,      // fire every 8 seconds
-      distanceInterval: 0,     // no distance gate — time-only, works for stationary drivers
+      distanceInterval: 0,     // no distance gate â€” time-only, works for stationary drivers
       foregroundService: {
-        notificationTitle: '🟢 Sppero Buddy — Online',
-        notificationBody: 'Location active — ride requests aa rahi hain',
+        notificationTitle: 'ðŸŸ¢ Sppero Buddy â€” Online',
+        notificationBody: 'Location active â€” ride requests aa rahi hain',
         notificationColor: C.pink,
       },
       pausesUpdatesAutomatically: false,
@@ -417,7 +417,7 @@ function App() {
   const splashTag   = useRef(new Animated.Value(0)).current;
   const splashFade  = useRef(new Animated.Value(1)).current;
   const dstore = useDriverStore();
-  // Store watcher — guaranteed UI update
+  // Store watcher â€” guaranteed UI update
   useEffect(() => {
     const unsub = useDriverStore.subscribe((state) => {
       setActiveRide(state.activeRide);
@@ -473,10 +473,10 @@ function App() {
   const [hourlyChatMsgs, setHourlyChatMsgs] = useState<any[]>([]);
   const [hourlyChatInput, setHourlyChatInput] = useState('');
 
-  // ── Wallet / Earnings State ──────────────────
+  // â”€â”€ Wallet / Earnings State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [driverOffers, setDriverOffers] = useState<any[]>([]);
   const [offerDismissed, setOfferDismissed] = useState<Set<number>>(new Set());
-  // ── Bonus System State ───────────────────────
+  // â”€â”€ Bonus System State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [bonusDash, setBonusDash] = useState<any>(null);
   const [bonusHistory, setBonusHistory] = useState<any[]>([]);
   const [bonusHistoryLoaded, setBonusHistoryLoaded] = useState(false);
@@ -499,7 +499,7 @@ function App() {
   const [commPayLoading, setCommPayLoading] = useState(false);
   const [commResult, setCommResult] = useState('');
 
-  // ── Demand Heatmap + Driver Level + Prediction ────────────
+  // â”€â”€ Demand Heatmap + Driver Level + Prediction â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [demandZones, setDemandZones] = useState<any[]>([]);
   const [zonesLoading, setZonesLoading] = useState(false);
   const zonesIntervalRef = useRef<any>(null);
@@ -512,12 +512,12 @@ function App() {
   const [extAccLoading, setExtAccLoading] = useState(false);
   const [hExtendLoading, setHExtendLoading] = useState(false);
 
-  // ── Zone Alerts ───────────────────────────────────
+  // â”€â”€ Zone Alerts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [zoneAlert, setZoneAlert]           = useState<ZoneAlert | null>(null);
   const [showZoneAlertSender, setShowZoneAlertSender] = useState(false);
   const [zoneAlertSentCount, setZoneAlertSentCount]   = useState<number | null>(null);
 
-  // ── Surge + Admin Notif + Referral ───────────────
+  // â”€â”€ Surge + Admin Notif + Referral â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [surgeMultiplier, setSurgeMultiplier] = useState(1.0);
   const [autoAcceptSurge, setAutoAcceptSurge] = useState(false);
   const [dailyGoal, setDailyGoal] = useState(1500);
@@ -526,12 +526,12 @@ function App() {
   const [referralInfo, setReferralInfo] = useState<any>(null);
   const [referralLoaded, setReferralLoaded] = useState(false);
 
-  // ── Driver UPI ───────────────────────────────
+  // â”€â”€ Driver UPI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [driverUpiId, setDriverUpiId] = useState('');
   const [upiInput, setUpiInput] = useState('');
   const [upiSaving, setUpiSaving] = useState(false);
 
-  // ── Hourly Booking State ──────────────────────
+  // â”€â”€ Hourly Booking State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
   const activeHourlyRideRef = useRef<any>(null);
@@ -584,7 +584,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       .finally(() => setDrvCmpLoading(false));
   }, [driverSubScreen, phone]);
 
-  // ── Splash + Auto login ────────────────────────
+  // â”€â”€ Splash + Auto login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     // Logo spring pop-in
     Animated.parallel([
@@ -595,7 +595,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setTimeout(() => {
       Animated.timing(splashTag, { toValue: 1, duration: 380, useNativeDriver: true }).start();
     }, 620);
-    // After 2.6s — check session then fade out
+    // After 2.6s â€” check session then fade out
     const timer = setTimeout(async () => {
       // Clean up any stale background location task from previous session
       stopBgLocation().catch(() => {});
@@ -627,7 +627,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }, 2600);
     return () => clearTimeout(timer);
   }, []);
-  // ── Initial GPS (for pickup distance before going online) ─
+  // â”€â”€ Initial GPS (for pickup distance before going online) â”€
   useEffect(() => {
     (async () => {
       try {
@@ -640,7 +640,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     })();
   }, []);
 
-  // ── Login banner glow + caption cycling ─────
+  // â”€â”€ Login banner glow + caption cycling â”€â”€â”€â”€â”€
   useEffect(() => {
     if (screen !== 'login') return;
     const glow = Animated.loop(Animated.sequence([
@@ -664,10 +664,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => { glow.stop(); clearInterval(iv); };
   }, [screen]);
 
-  // ── Notification Handler ──────────────────────
+  // â”€â”€ Notification Handler â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (Platform.OS === 'android') {
-      // v2 channel — Android locks channel settings after first creation; v2 forces
+      // v2 channel â€” Android locks channel settings after first creation; v2 forces
       // correct MAX+bypassDnd settings on every device regardless of previous installs.
       Notifications.setNotificationChannelAsync('ride_requests_v2', {
         name: 'Ride Requests',
@@ -717,7 +717,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     });
 
     // Notification arrives while app is alive (foreground OR minimized with fg service)
-    // → start looping alarm immediately, then fetch ride details
+    // â†’ start looping alarm immediately, then fetch ride details
     const sub1 = Notifications.addNotificationReceivedListener(n => {
       const data = n.request.content.data as any;
       if (data?.type === 'new_ride') {
@@ -726,7 +726,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
     });
 
-    // Tap: notification tapped (background/killed) → open home + poll
+    // Tap: notification tapped (background/killed) â†’ open home + poll
     const handleDriverNotifTap = (response: any) => {
       const data = response?.notification?.request?.content?.data as any;
       if (data?.type === 'new_ride') {
@@ -740,7 +740,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleDriverNotifTap(r); });
 
-    // AppState: app comes back to foreground → immediate poll + socket reconnect
+    // AppState: app comes back to foreground â†’ immediate poll + socket reconnect
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         useDriverStore.getState().triggerPoll?.();
@@ -761,7 +761,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   }, []);
 
 
-  // ── FCM Token Register ────────────────────────
+  // â”€â”€ FCM Token Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const registerFCM = async (userPhone: string) => {
     try {
       const { status: existing } = await Notifications.getPermissionsAsync();
@@ -772,7 +772,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
       if (finalStatus !== 'granted') return;
 
-      // Native FCM token — bypasses Expo relay entirely, goes direct to Firebase Admin.
+      // Native FCM token â€” bypasses Expo relay entirely, goes direct to Firebase Admin.
       // This fixes killed-app notifications on Android (Expo relay requires FCM V1 creds
       // configured in Expo dashboard; native path skips that dependency completely).
       let token: string | null = null;
@@ -792,7 +792,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch (_e) {}
   };
 
-  // ── Battery Optimization Prompt ───────────────
+  // â”€â”€ Battery Optimization Prompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Indian phones (MIUI, ColorOS, MIUI, Realme) aggressively kill background processes
   // including FCM delivery. Ask once to disable battery restriction for this app.
   const promptBatteryOptimization = async () => {
@@ -801,12 +801,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (shown) return;
     await AsyncStorage.setItem('batteryOptPromptShown', '1').catch(() => {});
     Alert.alert(
-      '⚡ Notifications Enable Karo',
+      'âš¡ Notifications Enable Karo',
       'Nai ride requests theek se paane ke liye:\n\n1. "Band Karo" tap karo\n2. "Allow" select karo\n\nIsse app background mein bhi notifications milenge.',
       [
         { text: 'Baad Mein', style: 'cancel' },
         {
-          text: '✅ Band Karo',
+          text: 'âœ… Band Karo',
           onPress: async () => {
             try {
               await Linking.sendIntent('android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', [
@@ -820,7 +820,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       ]
     );
   };
-  // ── Android Back Button ───────────────────────
+  // â”€â”€ Android Back Button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const backAction = () => {
       if (screen === 'splash') return true; // Block back on splash
@@ -840,7 +840,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => backHandler.remove();
   }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen]);
 
-  // Load earnings-tab data when tab becomes active (not in render body — avoids infinite loop on network failure)
+  // Load earnings-tab data when tab becomes active (not in render body â€” avoids infinite loop on network failure)
   useEffect(() => {
     if (activeTab === 'earnings' && phone) {
       if (!walletLoaded) { loadDriverWallet(phone); loadCommissionHistory(phone); }
@@ -856,15 +856,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
   }, [activeTab]);
 
-  // ── Polling rides ──────────────────────────────
+  // â”€â”€ Polling rides â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const startPolling = (dp: string) => {
     useDriverStore.getState().startPolling(dp, () => {
       Vibration.vibrate([0, 800, 200, 800, 200, 800]); // ~3 seconds
       setActiveTab('live');
       Notifications.scheduleNotificationAsync({
         content: {
-          title: '🚖 Nayi Ride Request!',
-          body: 'Passenger aapka intezaar kar raha hai — jaldi dekho!',
+          title: 'ðŸš– Nayi Ride Request!',
+          body: 'Passenger aapka intezaar kar raha hai â€” jaldi dekho!',
           sound: 'default',
           data: { type: 'new_ride' },
           ...(Platform.OS === 'android' ? { channelId: 'ride_requests_v2' } : {}),
@@ -890,9 +890,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await fetch(`${API}/api/driver/upi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, upi_id: upiInput.trim() }) });
       const d = await res.json();
-      if (d.success) { setDriverUpiId(d.upi_id); setResult('✅ UPI ID save ho gaya!'); }
-      else setResult('❌ ' + (d.error || 'Error'));
-    } catch (_e) { setResult('❌ Server error'); }
+      if (d.success) { setDriverUpiId(d.upi_id); setResult('âœ… UPI ID save ho gaya!'); }
+      else setResult('âŒ ' + (d.error || 'Error'));
+    } catch (_e) { setResult('âŒ Server error'); }
     setUpiSaving(false);
   };
 
@@ -915,7 +915,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const fetchDemandZones = async () => {
     setZonesLoading(true);
     try {
-      // GPS optional — backend defaults to city center if not provided
+      // GPS optional â€” backend defaults to city center if not provided
       const lat = driverGps?.lat ?? driverGps?.latitude ?? '';
       const lng = driverGps?.lng ?? driverGps?.longitude ?? '';
       const qs = lat && lng ? `?lat=${lat}&lng=${lng}` : '';
@@ -944,9 +944,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await fetch(`${API}/api/bonus/claim-daily`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, rule_id, tier_index }) });
       const d = await res.json();
-      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      setBonusMsg(d.success ? 'âœ… ' + d.message : 'âŒ ' + (d.error || 'Error'));
       if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
-    } catch (_e) { setBonusMsg('❌ Server error'); }
+    } catch (_e) { setBonusMsg('âŒ Server error'); }
     setBonusClaiming(false);
   };
   const claimStreakBonus = async () => {
@@ -954,21 +954,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await fetch(`${API}/api/bonus/claim-streak`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
       const d = await res.json();
-      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      setBonusMsg(d.success ? 'âœ… ' + d.message : 'âŒ ' + (d.error || 'Error'));
       if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
-    } catch (_e) { setBonusMsg('❌ Server error'); }
+    } catch (_e) { setBonusMsg('âŒ Server error'); }
     setBonusClaiming(false);
   };
   const redeemBonus = async () => {
     const amt = parseFloat(bonusRedeemAmt);
-    if (isNaN(amt) || amt < 50) { setBonusMsg('❌ Minimum ₹50 redeem karo'); return; }
+    if (isNaN(amt) || amt < 50) { setBonusMsg('âŒ Minimum â‚¹50 redeem karo'); return; }
     setBonusRedeemLoading(true); setBonusMsg('');
     try {
       const res = await fetch(`${API}/api/bonus/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
-      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      setBonusMsg(d.success ? 'âœ… ' + d.message : 'âŒ ' + (d.error || 'Error'));
       if (d.success) { setBonusRedeemAmt(''); loadBonusDash(phone); loadDriverWallet(phone); }
-    } catch (_e) { setBonusMsg('❌ Server error'); }
+    } catch (_e) { setBonusMsg('âŒ Server error'); }
     setBonusRedeemLoading(false);
   };
 
@@ -998,21 +998,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
   const requestPayout = async () => {
     const amt = parseFloat(payoutInput);
-    if (!amt || amt < 100) { setResult('❌ Min ₹100 chahiye payout ke liye'); return; }
-    if (amt > driverWallet.balance) { setResult('❌ Wallet mein itna balance nahi hai'); return; }
+    if (!amt || amt < 100) { setResult('âŒ Min â‚¹100 chahiye payout ke liye'); return; }
+    if (amt > driverWallet.balance) { setResult('âŒ Wallet mein itna balance nahi hai'); return; }
     setPayoutLoading(true);
     try {
       const res = await fetch(`${API}/api/driver/payout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
       if (d.success) {
-        setResult('✅ ' + (d.message || 'Payout request submit ho gaya — admin 24-48 ghante mein process karega'));
+        setResult('âœ… ' + (d.message || 'Payout request submit ho gaya â€” admin 24-48 ghante mein process karega'));
         setPayoutInput('');
-      } else setResult('❌ ' + (d.message || d.error || 'Error'));
-    } catch (_e) { setResult('❌ Server error'); }
+      } else setResult('âŒ ' + (d.message || d.error || 'Error'));
+    } catch (_e) { setResult('âŒ Server error'); }
     setPayoutLoading(false);
   };
 
-  // ── Location tracking (foreground: UI updates + backend ping) ──────────────
+  // â”€â”€ Location tracking (foreground: UI updates + backend ping) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Background task handles backend pings when app is minimized.
   useEffect(() => {
     if (!isOnline) return;
@@ -1027,7 +1027,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           ({ coords }) => {
             if (!mounted) return;
             setDriverGps({ lat: coords.latitude, lng: coords.longitude });
-            // Retry once on failure — handles Jio packet drops
+            // Retry once on failure â€” handles Jio packet drops
             const body = JSON.stringify({ phone, lat: coords.latitude, lng: coords.longitude });
             fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
               .catch(() => new Promise(r => setTimeout(r, 2000)).then(() =>
@@ -1040,10 +1040,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => { mounted = false; sub?.remove(); };
   }, [isOnline, phone]);
 
-  // ── Keep gpsRef in sync (for use inside intervals) ──
+  // â”€â”€ Keep gpsRef in sync (for use inside intervals) â”€â”€
   useEffect(() => { driverGpsRef.current = driverGps; }, [driverGps]);
 
-  // ── Voice navigation ──
+  // â”€â”€ Voice navigation â”€â”€
   const navPhase = activeRide?.status === 'started' ? 'to_drop' : 'to_pickup';
   const navActive = !!activeRide && (activeRide.status === 'matched' || activeRide.status === 'started') && !navMuted;
   const navDestLat = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lat) || null : parseFloat(activeRide?.drop_lat) || null;
@@ -1057,7 +1057,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     phase: navPhase,
   });
 
-  // ── Live location posting to backend during active ride (every 4s) ──
+  // â”€â”€ Live location posting to backend during active ride (every 4s) â”€â”€
   useEffect(() => {
     if (!activeRide?.id || !phone) return;
     const iv = setInterval(() => {
@@ -1072,7 +1072,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [activeRide?.id, phone]);
 
-  // ── Live distance to pickup (matched / arrived) ──
+  // â”€â”€ Live distance to pickup (matched / arrived) â”€â”€
   useEffect(() => {
     if (!activeRide || !driverGps) { setDistToPickup(''); return; }
     if ((activeRide.status === 'matched' || activeRide.status === 'arrived') && activeRide.pickup_lat && activeRide.pickup_lng) {
@@ -1083,7 +1083,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
   }, [driverGps?.lat, driverGps?.lng, activeRide?.status]);
 
-  // ── Live remaining time/distance during trip (started) ──
+  // â”€â”€ Live remaining time/distance during trip (started) â”€â”€
   useEffect(() => {
     if (activeRide?.status !== 'started') { setTripRemainingEta(''); return; }
     const fetchRemaining = async () => {
@@ -1093,7 +1093,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${gps.lat},${gps.lng}&destinations=${activeRide.drop_lat},${activeRide.drop_lng}&key=${MAPS_KEY}`);
         const data = await res.json();
         const el = data.rows?.[0]?.elements?.[0];
-        if (el?.status === 'OK') setTripRemainingEta(el.duration.text + ' · ' + el.distance.text + ' baaki');
+        if (el?.status === 'OK') setTripRemainingEta(el.duration.text + ' Â· ' + el.distance.text + ' baaki');
       } catch (_e) {}
     };
     fetchRemaining();
@@ -1101,21 +1101,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [activeRide?.status, activeRide?.id]);
 
-  // ── Auto-switch to Live tab when a ride or request appears ──
+  // â”€â”€ Auto-switch to Live tab when a ride or request appears â”€â”€
   useEffect(() => {
     if (rideReq || activeRide || hourlyRideReq || activeHourlyRide) {
       setActiveTab('live');
     }
   }, [!!rideReq, !!activeRide, !!hourlyRideReq, !!activeHourlyRide]);
 
-  // ── Auto-accept high-surge rides ──
+  // â”€â”€ Auto-accept high-surge rides â”€â”€
   useEffect(() => {
     if (!autoAcceptSurge || !rideReq || activeRide || surgeMultiplier < 1.5) return;
     const t = setTimeout(() => { acceptRide(); }, 800); // small delay so UI can show briefly
     return () => clearTimeout(t);
   }, [rideReq?.id, autoAcceptSurge, surgeMultiplier]);
 
-  // ── Chat polling ───────────────────────────────
+  // â”€â”€ Chat polling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!showChat || !activeRide?.id) return;
     const load = async () => {
@@ -1126,7 +1126,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [showChat, activeRide?.id]);
 
-  // ── Hourly chat polling ──────────────────────
+  // â”€â”€ Hourly chat polling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!showHourlyChat || !activeHourlyRide?.id) return;
     const load = async () => {
@@ -1153,7 +1153,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch (_e) {}
   };
 
-  // ── Hourly ride polling ───────────────────────
+  // â”€â”€ Hourly ride polling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!isOnline || !phone) return;
     let stopped = false;
@@ -1180,7 +1180,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => { stopped = true; clearInterval(iv); };
   }, [isOnline, phone, activeRide?.id]);
 
-  // Extension request polling — active for 15 min after trip summary shown
+  // Extension request polling â€” active for 15 min after trip summary shown
   useEffect(() => {
     if (!tripSummary || !phone || tripSummary.isHourly) return;
     let stopped = false;
@@ -1199,7 +1199,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => { stopped = true; clearInterval(iv); };
   }, [tripSummary, phone]);
 
-  // Extension response countdown — paused while accept is loading
+  // Extension response countdown â€” paused while accept is loading
   const extAccLoadingRef = useRef(false);
   useEffect(() => { extAccLoadingRef.current = extAccLoading; }, [extAccLoading]);
   useEffect(() => {
@@ -1229,8 +1229,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extDrop, fare: extFare, status: 'matched', payment_method: 'wallet' };
         setActiveRide({ ...newRide, id: data.new_ride_id });
         setExtRequest(null); setTripSummary(null);
-      } else { Alert.alert('Extension Accept Failed', data.error || 'Accept nahi hua — dobara try karo'); }
-    } catch (_e) { Alert.alert('Network Error', _e instanceof Error && _e.name === 'AbortError' ? 'Request timeout — retry karo' : 'Server se connect nahi hua'); }
+      } else { Alert.alert('Extension Accept Failed', data.error || 'Accept nahi hua â€” dobara try karo'); }
+    } catch (_e) { Alert.alert('Network Error', _e instanceof Error && _e.name === 'AbortError' ? 'Request timeout â€” retry karo' : 'Server se connect nahi hua'); }
     clearTimeout(timeout);
     setExtAccLoading(false);
   };
@@ -1276,7 +1276,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     prevHourlyGpsRef.current = driverGps;
   }, [driverGps]);
 
-  // ── Unread badge + toast during standard ride ──
+  // â”€â”€ Unread badge + toast during standard ride â”€â”€
   useEffect(() => {
     if (!activeRide?.id || showChat) return;
     const iv = setInterval(async () => {
@@ -1298,7 +1298,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [activeRide?.id, showChat]);
 
-  // ── Unread toast during hourly ride (background) ──
+  // â”€â”€ Unread toast during hourly ride (background) â”€â”€
   useEffect(() => {
     if (!activeHourlyRide?.id || showHourlyChat) return;
     let lastCount = 0;
@@ -1322,7 +1322,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   }, [activeHourlyRide?.id, showHourlyChat]);
 
 
-  // ── Surge + Admin Notifications polling ───────────────
+  // â”€â”€ Surge + Admin Notifications polling â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (screen !== 'home' || !phone) return;
     const fetchSurge = async () => {
@@ -1345,7 +1345,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [screen, phone]);
 
-  // ── Load referral info + favourite count when profile tab opens ─────────
+  // â”€â”€ Load referral info + favourite count when profile tab opens â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (activeTab === 'profile' && phone) {
       if (!referralLoaded) loadReferralInfo();
@@ -1354,7 +1354,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
   }, [activeTab, phone]);
 
-  // ── Navigate ───────────────────────────────────
+  // â”€â”€ Navigate â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const navigateTo = (location: string, lat?: number, lng?: number) => {
     // Coordinates available hain toh use karo (accurate)
     if (lat && lng) {
@@ -1363,7 +1363,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         Linking.openURL(`https://maps.google.com/?daddr=${lat},${lng}`)
       );
     } else {
-      // Fallback — address se
+      // Fallback â€” address se
       const url = `google.navigation:q=${encodeURIComponent(location)}`;
       Linking.openURL(url).catch(() => 
         Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(location)}`)
@@ -1371,47 +1371,47 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
   };
 
-  // ── ETA ────────────────────────────────────────
+  // â”€â”€ ETA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchEta = async (origin: string, dest: string) => {
     try {
       const res  = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
       const data = await res.json();
       const el   = data.rows?.[0]?.elements?.[0];
-      if (el?.status === 'OK') setEta(el.duration.text + ' · ' + el.distance.text);
+      if (el?.status === 'OK') setEta(el.duration.text + ' Â· ' + el.distance.text);
     } catch (_e) {}
   };
 
-  // ── Login ──────────────────────────────────────
+  // â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const doLogin = async () => {
-    if (loginPhone.length !== 10) { setResult('❌ 10 digit number daalo'); return; }
+    if (loginPhone.length !== 10) { setResult('âŒ 10 digit number daalo'); return; }
     setLoading(true);
     try {
       // Pehle OTP bhejo
       const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
       const otpData = await otpRes.json();
-      if (otpData.error) { setResult('❌ ' + otpData.error); setLoading(false); return; }
+      if (otpData.error) { setResult('âŒ ' + otpData.error); setLoading(false); return; }
       if (otpData.otp) setDevOtp(otpData.otp);
       setLoginOtpSent(true);
       setLoginResendTimer(60); setLoginCanResend(false);
       setResult('');
-    } catch (_e) { setResult('❌ Server error'); }
+    } catch (_e) { setResult('âŒ Server error'); }
     setLoading(false);
   };
 
   const verifyLoginOtp = async (otpOverride?: string) => {
     const otpToUse = otpOverride || loginOtp;
-    if (!otpToUse || otpToUse.length !== 6) { setResult('❌ 6 digit OTP daalo'); return; }
+    if (!otpToUse || otpToUse.length !== 6) { setResult('âŒ 6 digit OTP daalo'); return; }
     setLoading(true);
     try {
       // OTP verify karo
       const verRes = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, otp: otpToUse, name: '' }) });
       const verData = await verRes.json();
-      if (!verData.token) { setResult('❌ ' + (verData.error || 'Galat OTP')); setLoading(false); return; }
+      if (!verData.token) { setResult('âŒ ' + (verData.error || 'Galat OTP')); setLoading(false); return; }
 
       // Driver info lo
       const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
       const data = await res.json();
-      if (!data.success) { setResult('❌ ' + data.message); setLoading(false); return; }
+      if (!data.success) { setResult('âŒ ' + data.message); setLoading(false); return; }
       if (data.driver.status === 'approved') {
         setPhone(data.driver.phone); setDriverInfo(data.driver); setScreen('home'); setResult('');
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
@@ -1420,7 +1420,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         promptBatteryOptimization();
         loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone);
       } else { setDriverInfo(data.driver); }
-    } catch (_e) { setResult('❌ Server error'); }
+    } catch (_e) { setResult('âŒ Server error'); }
     setLoading(false);
   };
 
@@ -1454,7 +1454,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => clearInterval(iv);
   }, [loginOtpSent]);
 
-  // ── Registration ───────────────────────────────
+  // â”€â”€ Registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const updateReg = (field: string, value: string) => setRegData((p: any) => ({ ...p, [field]: value }));
 
   const doUpload = async (field: string, base64: string) => {
@@ -1463,21 +1463,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const up   = await fetch(`${API}/api/upload`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: `data:image/jpeg;base64,${base64}` }) });
       const data = await up.json();
       if (data.success) setRegData((p: any) => ({ ...p, [field]: data.url }));
-      else setResult('❌ Upload fail');
-    } catch (_e) { setResult('❌ Upload error'); }
+      else setResult('âŒ Upload fail');
+    } catch (_e) { setResult('âŒ Upload error'); }
     setUploading('');
   };
 
   const fromCamera = async (field: string) => {
     const p = await ImagePicker.requestCameraPermissionsAsync();
-    if (!p.granted) { setResult('❌ Camera permission do'); return; }
+    if (!p.granted) { setResult('âŒ Camera permission do'); return; }
     const r = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true, cameraType: field === 'face_photo' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back });
     if (!r.canceled && r.assets?.[0]?.base64) doUpload(field, r.assets[0].base64);
   };
 
   const fromGallery = async (field: string) => {
     const p = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!p.granted) { setResult('❌ Gallery permission do'); return; }
+    if (!p.granted) { setResult('âŒ Gallery permission do'); return; }
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true });
     if (!r.canceled && r.assets?.[0]?.base64) doUpload(field, r.assets[0].base64);
   };
@@ -1489,26 +1489,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res  = await fetch(`${API}/api/driver/register-buddy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...regData, name: regData.dl_name }) });
       const data = await res.json();
       if (data.success) setRegStep(99);
-      else setResult('❌ ' + (data.error || 'Registration fail'));
-    } catch (_e) { setResult('❌ Server error'); }
+      else setResult('âŒ ' + (data.error || 'Registration fail'));
+    } catch (_e) { setResult('âŒ Server error'); }
     setLoading(false);
   };
 
-  // ── Online toggle ──────────────────────────────
+  // â”€â”€ Online toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const toggleOnline = async (val: boolean) => {
     setIsOnline(val);
     if (val) {
       // Try to start background location tracking.
-      // If granted → foreground service notification is shown by the location task
-      //              (shows "🟢 Sppero Buddy — Online | Location active" in status bar)
-      // If denied  → fall back to a custom persistent notification for process priority
+      // If granted â†’ foreground service notification is shown by the location task
+      //              (shows "ðŸŸ¢ Sppero Buddy â€” Online | Location active" in status bar)
+      // If denied  â†’ fall back to a custom persistent notification for process priority
       const bgStarted = await startBgLocation();
       if (!bgStarted) {
         Notifications.scheduleNotificationAsync({
           identifier: 'driver_online_status',
           content: {
-            title: '🟢 Sppero Buddy — Online',
-            body: 'Ride requests receive ho rahi hain. Screen lock karo — notification aayegi.',
+            title: 'ðŸŸ¢ Sppero Buddy â€” Online',
+            body: 'Ride requests receive ho rahi hain. Screen lock karo â€” notification aayegi.',
             sticky: true,
             autoDismiss: false,
             data: { type: 'driver_status' },
@@ -1517,16 +1517,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           trigger: null,
         }).then(id => { onlineNotifIdRef.current = id; }).catch(() => {});
 
-        // Guide user to grant background location — only on Android, once per install
+        // Guide user to grant background location â€” only on Android, once per install
         if (Platform.OS === 'android') {
           AsyncStorage.getItem('bgLocPromptShown').then(shown => {
             if (shown) return;
             AsyncStorage.setItem('bgLocPromptShown', '1').catch(() => {});
             Alert.alert(
-              '📍 Background Location Allow Karo',
+              'ðŸ“ Background Location Allow Karo',
               'App minimize karne ke baad bhi aapki location update hoti rahe, iske liye:\n\n' +
               '1. "Settings Kholein" tap karo\n' +
-              '2. Location → "Allow all the time" select karo\n\n' +
+              '2. Location â†’ "Allow all the time" select karo\n\n' +
               'Isse customer aapko map pe live track kar sakenge.',
               [
                 { text: 'Settings Kholein', onPress: () => Linking.openSettings() },
@@ -1537,34 +1537,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
       }
 
-      // Refresh FCM token every time driver goes online — prevents stale token failures
+      // Refresh FCM token every time driver goes online â€” prevents stale token failures
       registerFCM(phone).catch(() => {});
 
-      // Battery optimization prompt — once per install on Android.
+      // Battery optimization prompt â€” once per install on Android.
       // Required on ALL phones (Xiaomi/Samsung/Nothing) so background ride alerts work.
-      // Linking.openSettings() opens the app's info page → battery section is there.
+      // Linking.openSettings() opens the app's info page â†’ battery section is there.
       if (Platform.OS === 'android') {
         AsyncStorage.getItem('_battOpShown').then(shown => {
           if (shown) return;
           AsyncStorage.setItem('_battOpShown', '1').catch(() => {});
           Alert.alert(
-            '🔔 Ride Alert Setup — 1 Min',
+            'ðŸ”” Ride Alert Setup â€” 1 Min',
             'App minimize karne ke baad bhi ride alert aaye, iske liye battery restriction hatao:\n\n' +
-            '📱 Sabhi phones:\n  Settings → Battery → Battery Optimization → Sppero Buddy → "Don\'t Optimize"\n\n' +
-            '🔴 Xiaomi/Redmi: Auto-start bhi ON karo\n' +
-            '🔵 Samsung: "Unrestricted" choose karo\n' +
-            '⚫ Nothing/CMF: App Battery Management → "No Restriction"\n\n' +
+            'ðŸ“± Sabhi phones:\n  Settings â†’ Battery â†’ Battery Optimization â†’ Sppero Buddy â†’ "Don\'t Optimize"\n\n' +
+            'ðŸ”´ Xiaomi/Redmi: Auto-start bhi ON karo\n' +
+            'ðŸ”µ Samsung: "Unrestricted" choose karo\n' +
+            'âš« Nothing/CMF: App Battery Management â†’ "No Restriction"\n\n' +
             'Yeh sirf ek baar karna hai.',
             [
               { text: 'Baad Mein', style: 'cancel' },
-              { text: '⚙️ Settings Kholo', onPress: () => Linking.openSettings() },
+              { text: 'âš™ï¸ Settings Kholo', onPress: () => Linking.openSettings() },
             ]
           );
         }).catch(() => {});
       }
 
-      // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
-      setResult('🟢 Online hain — rides aayengi!');
+      // Start polling + socket IMMEDIATELY â€” don't wait for server roundtrip
+      setResult('ðŸŸ¢ Online hain â€” rides aayengi!');
       (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
       startPolling(phone);
       fetchDemandZones();
@@ -1574,7 +1574,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       loadDriverOffers();
       if (!socketRef.current) {
         const s = io(API, {
-          transports: ['polling', 'websocket'], // polling first — passes through Jio/BSNL carrier NAT; upgrades to WebSocket when stable
+          transports: ['polling', 'websocket'], // polling first â€” passes through Jio/BSNL carrier NAT; upgrades to WebSocket when stable
           reconnection: true,
           reconnectionAttempts: Infinity,
           reconnectionDelay: 2000,
@@ -1605,8 +1605,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               setTripSummary({
                 fare: String(d.fare),
                 payment_method: d.payment_method,
-                earned: '₹' + (fare * 0.85).toFixed(0),
-                fee: '₹' + (fare * 0.15).toFixed(0),
+                earned: 'â‚¹' + (fare * 0.85).toFixed(0),
+                fee: 'â‚¹' + (fare * 0.15).toFixed(0),
               });
             }
           } catch (_e) {}
@@ -1625,7 +1625,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         socketRef.current = s;
         (globalThis as any).__driverSocket = s;
       }
-      // Tell server we're online — retry aggressively in background
+      // Tell server we're online â€” retry aggressively in background
       (async () => {
         for (let i = 0; i < 8; i++) {
           const r = await apiPost('/api/driver/toggle-online', { phone, is_online: true });
@@ -1634,7 +1634,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
       })();
     } else {
-      setResult('🔴 Offline hain');
+      setResult('ðŸ”´ Offline hain');
       // Stop background location task (also removes foreground service notification)
       stopBgLocation().catch(() => {});
       // Dismiss fallback notification if it was showing (permission-denied path)
@@ -1648,7 +1648,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       socketRef.current?.disconnect();
       socketRef.current = null;
       (globalThis as any).__driverSocket = null;
-      // Offline update — fire and forget with retry
+      // Offline update â€” fire and forget with retry
       (async () => {
         for (let i = 0; i < 5; i++) {
           const r = await apiPost('/api/driver/toggle-online', { phone, is_online: false });
@@ -1659,15 +1659,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
   };
 
-  // ── Ride actions ───────────────────────────────
+  // â”€â”€ Ride actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const acceptRide = async () => {
     if (!rideReq) return;
     setLoading(true);
     const data = await apiPost('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
     if (data._error) {
-      setResult('❌ ' + data.message);
+      setResult('âŒ ' + data.message);
     } else if (data.success) {
-      setResult('✅ Ride accept ki!');
+      setResult('âœ… Ride accept ki!');
       socketRef.current?.emit('joinRide', { rideId: rideReq.id });
       // Clear store + React state immediately so subscription can't restore stale rideReq
       useDriverStore.setState({ pendingRide: null });
@@ -1676,7 +1676,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       // Trigger an immediate poll so activeRide populates in <1s instead of waiting 2s
       useDriverStore.getState().triggerPoll();
     } else {
-      setResult('❌ ' + (data.message || 'Ride kisi aur ko mil gayi'));
+      setResult('âŒ ' + (data.message || 'Ride kisi aur ko mil gayi'));
       useDriverStore.setState({ pendingRide: null });
       setRideReq(null);
     }
@@ -1688,9 +1688,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setRideReq(null);
     useDriverStore.getState().clearAll();
     if (isOnline) startPolling(phone);
-    setResult('❌ Ride reject ki');
+    setResult('âŒ Ride reject ki');
     if (req?.id) {
-      // apiPost has 10s timeout — raw fetch can hang indefinitely and block queue advancement
+      // apiPost has 10s timeout â€” raw fetch can hang indefinitely and block queue advancement
       apiPost('/api/rides/reject-offer', { ride_id: req.id, driver_phone: phone }).catch(() => {});
     }
   };
@@ -1698,18 +1698,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const markArrived = async () => {
     setLoading(true);
     const data = await apiPost('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
-    if (data._error) setResult('❌ ' + data.message);
+    if (data._error) setResult('âŒ ' + data.message);
     else setActiveRide({ ...activeRide, status: 'arrived' });
     setLoading(false);
   };
 
   const startTrip = async () => {
-    if (otpInput.length !== 4) { setResult('❌ 4 digit OTP daalo'); return; }
+    if (otpInput.length !== 4) { setResult('âŒ 4 digit OTP daalo'); return; }
     setLoading(true);
     const data = await apiPost('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
-    if (data._error) setResult('❌ ' + data.message);
+    if (data._error) setResult('âŒ ' + data.message);
     else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
-    else setResult('❌ ' + (data.message || 'Galat OTP!'));
+    else setResult('âŒ ' + (data.message || 'Galat OTP!'));
     setLoading(false);
   };
 
@@ -1733,10 +1733,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (distKm > 0.8) {
         const confirm = await new Promise<boolean>(resolve =>
           Alert.alert(
-            '⚠️ Aap drop location se door hain',
+            'âš ï¸ Aap drop location se door hain',
             `Aap abhi drop se ${distKm.toFixed(1)}km door hain.\n\nAbhi complete karne se platform policy violation hoga aur customer ko alert jaayega. Kya waqai complete karna chahte ho?`,
             [
-              { text: 'Cancel — Drop Karo Pehle', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Cancel â€” Drop Karo Pehle', style: 'cancel', onPress: () => resolve(false) },
               { text: 'Haan, Complete Karo', style: 'destructive', onPress: () => resolve(true) },
             ]
           )
@@ -1756,8 +1756,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (res.ok || data.success) {
         if (data.early_completion) {
           Alert.alert(
-            '⚠️ Early Completion Flagged',
-            `Trip complete hua — lekin system ne detect kiya ki aap drop se ${data.dist_from_drop}km door the.\n\nCustomer ko alert bheja gaya hai aur yeh policy violation record hua.`,
+            'âš ï¸ Early Completion Flagged',
+            `Trip complete hua â€” lekin system ne detect kiya ki aap drop se ${data.dist_from_drop}km door the.\n\nCustomer ko alert bheja gaya hai aur yeh policy violation record hua.`,
             [{ text: 'Samajh Gaya' }]
           );
         }
@@ -1771,10 +1771,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setActiveRide(null);
         setOtpInput(''); setShowChat(false); setUnreadChat(0); setChatMsgs([]);
       } else {
-        setResult('❌ ' + (data.message || data.error || 'Complete nahi hua, retry karo'));
+        setResult('âŒ ' + (data.message || data.error || 'Complete nahi hua, retry karo'));
       }
     } catch (_e) {
-      setResult('❌ Network error — check internet aur retry karo');
+      setResult('âŒ Network error â€” check internet aur retry karo');
     }
     setLoading(false);
   };
@@ -1808,7 +1808,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const saveBank = async () => {
-    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('❌ Account number aur IFSC dono chahiye'); return; }
+    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('âŒ Account number aur IFSC dono chahiye'); return; }
     setBankSaving(true); setBankMsg('');
     try {
       const res = await fetch(`${API}/api/driver/bank`, {
@@ -1816,9 +1816,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         body: JSON.stringify({ phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder }),
       });
       const d = await res.json();
-      if (d.success) { setBankMsg('✅ Bank details save ho gayi!'); setBankEditing(false); }
-      else setBankMsg('❌ ' + (d.error || 'Error'));
-    } catch (_e) { setBankMsg('❌ Network error'); }
+      if (d.success) { setBankMsg('âœ… Bank details save ho gayi!'); setBankEditing(false); }
+      else setBankMsg('âŒ ' + (d.error || 'Error'));
+    } catch (_e) { setBankMsg('âŒ Network error'); }
     setBankSaving(false);
   };
 
@@ -1835,8 +1835,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           const fare = parseFloat(data.fare || 0);
           setTripSummary({
             fare: data.fare, payment_method: data.payment_method,
-            earned: '₹' + (fare * 0.85).toFixed(0),
-            fee: '₹' + (fare * 0.15).toFixed(0),
+            earned: 'â‚¹' + (fare * 0.85).toFixed(0),
+            fee: 'â‚¹' + (fare * 0.15).toFixed(0),
           });
           clearInterval(iv);
         } else if (data.payment_status === 'cash_pending') {
@@ -1852,7 +1852,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await apiPost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
       if (res?._error || (!res?.success && res?.error)) {
-        setResult('❌ ' + (res?.error || res?.message || 'Payment confirm nahi hua — retry karo'));
+        setResult('âŒ ' + (res?.error || res?.message || 'Payment confirm nahi hua â€” retry karo'));
         setLoading(false);
         return;
       }
@@ -1861,10 +1861,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setTripSummary({
         fare: paymentFare,
         payment_method: method === 'upi_direct' ? 'upi' : 'cash',
-        earned: '₹' + (fare * 0.85).toFixed(0),
-        fee: '₹' + (fare * 0.15).toFixed(0),
+        earned: 'â‚¹' + (fare * 0.85).toFixed(0),
+        fee: 'â‚¹' + (fare * 0.15).toFixed(0),
       });
-    } catch (_e) { setResult('❌ Error — retry karo'); }
+    } catch (_e) { setResult('âŒ Error â€” retry karo'); }
     setLoading(false);
   };
 
@@ -1873,22 +1873,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const cd = await apiPost('/api/rides/cancel-smart', { ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
       if (cd.success) {
-        setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancel ki');
+        setResult(cd.message ? 'âš ï¸ ' + cd.message : 'âŒ Trip cancel ki');
         setActiveRide(null);
         useDriverStore.setState({ activeRide: null });
         setShowDriverCancelModal(false);
       } else {
-        setResult('❌ Cancel nahi hua — retry karo');
+        setResult('âŒ Cancel nahi hua â€” retry karo');
       }
     } catch (_e) {
-      setResult('❌ Network error — retry karo');
+      setResult('âŒ Network error â€” retry karo');
       setActiveRide(null);
       useDriverStore.setState({ activeRide: null });
     }
     setLoading(false);
   };
 
-  // ── Chat ───────────────────────────────────────
+  // â”€â”€ Chat â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const sendChat = async (text?: string) => {
     const msg = text ?? chatInput;
     if (!msg.trim() || !activeRide?.id) return;
@@ -1905,11 +1905,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await r.json();
       if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
       if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
-      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
+      else if (data.method === 'exotel') Alert.alert('ðŸ“ž Calling', 'Customer ko call aa rahi hai...');
     } catch (_e) { Alert.alert('Error', 'Network error'); }
   };
 
-  // ── Hourly ride functions ──────────────────────
+  // â”€â”€ Hourly ride functions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const acceptHourlyRide = async () => {
     if (!hourlyRideReq) return;
     setLoading(true);
@@ -1917,8 +1917,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res = await fetch(`${API}/api/hourly/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: hourlyRideReq.id, driver_phone: phone }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide({ ...hourlyRideReq, driver_phone: phone, status: 'matched' }); setHourlyRideReq(null); }
-      else { setResult('❌ ' + (data.message || 'Accept nahi hua')); setHourlyRideReq(null); }
-    } catch (_e) { setResult('❌ Network error'); }
+      else { setResult('âŒ ' + (data.message || 'Accept nahi hua')); setHourlyRideReq(null); }
+    } catch (_e) { setResult('âŒ Network error'); }
     setLoading(false);
   };
 
@@ -1929,8 +1929,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res = await fetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide((p: any) => ({ ...p, status: 'active', started_at: new Date().toISOString() })); setHourlyOtpInput(''); setResult(''); }
-      else setResult('❌ ' + (data.message || 'Galat OTP!'));
-    } catch (_e) { setResult('❌ Network error'); }
+      else setResult('âŒ ' + (data.message || 'Galat OTP!'));
+    } catch (_e) { setResult('âŒ Network error'); }
     setLoading(false);
   };
 
@@ -1946,14 +1946,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           setResult('');
         } else {
           if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
-          setTripSummary({ fare: data.total_fare, payment_method: 'wallet', earned: '₹' + parseFloat(data.driver_earning).toFixed(0), fee: '₹' + (data.total_fare - data.driver_earning).toFixed(0), isHourly: true, extraKmInfo: data.extra_km > 0 ? `+${data.extra_km} km extra — ₹${data.extra_km_charge}` : null });
+          setTripSummary({ fare: data.total_fare, payment_method: 'wallet', earned: 'â‚¹' + parseFloat(data.driver_earning).toFixed(0), fee: 'â‚¹' + (data.total_fare - data.driver_earning).toFixed(0), isHourly: true, extraKmInfo: data.extra_km > 0 ? `+${data.extra_km} km extra â€” â‚¹${data.extra_km_charge}` : null });
           setActiveHourlyRide(null); setHourlyTimerSec(0); setLiveKm(0);
           setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
         }
       } else if (data.too_early || data.time_locked) {
-        setResult(`🔒 ${data.message}`);
-      } else setResult('❌ ' + (data.message || 'Complete nahi hua'));
-    } catch (_e) { setResult('❌ Network error'); }
+        setResult(`ðŸ”’ ${data.message}`);
+      } else setResult('âŒ ' + (data.message || 'Complete nahi hua'));
+    } catch (_e) { setResult('âŒ Network error'); }
     setLoading(false);
   };
 
@@ -1980,7 +1980,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) {
         if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
-        setTripSummary({ fare: activeHourlyRide.base_fare, payment_method: 'wallet', earned: '₹' + data.driver_earning, fee: '₹' + Math.round(data.driver_earning * 0.12 / 0.88), isHourly: true, earlyEnd: true });
+        setTripSummary({ fare: activeHourlyRide.base_fare, payment_method: 'wallet', earned: 'â‚¹' + data.driver_earning, fee: 'â‚¹' + Math.round(data.driver_earning * 0.12 / 0.88), isHourly: true, earlyEnd: true });
         setActiveHourlyRide(null); setHourlyTimerSec(0);
         setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
       }
@@ -2005,12 +2005,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
-        setResult('✅ Extension accept ho gaya!');
+        setResult('âœ… Extension accept ho gaya!');
         setTimeout(() => setResult(''), 3000);
       } else {
-        setResult('❌ ' + (data.message || data.error || 'Accept nahi hua'));
+        setResult('âŒ ' + (data.message || data.error || 'Accept nahi hua'));
       }
-    } catch (_e) { setResult('❌ Network error — dobara try karo'); }
+    } catch (_e) { setResult('âŒ Network error â€” dobara try karo'); }
     setHExtendLoading(false);
   };
 
@@ -2020,34 +2020,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       await fetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
-    } catch (_e) { setResult('❌ Network error'); }
+    } catch (_e) { setResult('âŒ Network error'); }
     setHExtendLoading(false);
   };
 
-  // ── PhotoBox ───────────────────────────────────
+  // â”€â”€ PhotoBox â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const PhotoBox = ({ field, label, icon, cameraOnly }: any) => (
     <View style={rs.photoBox}>
       {regData[field] ? (
-        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>✅</Text><Text style={{ color: C.green, fontWeight: '600', marginTop: 4 }}>Uploaded</Text></View>
+        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>âœ…</Text><Text style={{ color: C.green, fontWeight: '600', marginTop: 4 }}>Uploaded</Text></View>
       ) : uploading === field ? (
-        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>⏳</Text><Text style={{ color: '#666', marginTop: 4 }}>Uploading...</Text></View>
+        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>â³</Text><Text style={{ color: '#666', marginTop: 4 }}>Uploading...</Text></View>
       ) : (
         <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 28 }}>{icon}</Text><Text style={{ color: '#666', fontWeight: '600', marginTop: 4, marginBottom: 10 }}>{label}</Text></View>
       )}
       {cameraOnly ? (
         <View style={{ marginTop: 8, width: '100%' }}>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Selfie Lo</Text></TouchableOpacity>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>ðŸ“· Selfie Lo</Text></TouchableOpacity>
         </View>
       ) : (
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Camera</Text></TouchableOpacity>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromGallery(field)}><Text style={rs.uploadBtnTxt}>🖼️ Gallery</Text></TouchableOpacity>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>ðŸ“· Camera</Text></TouchableOpacity>
+          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromGallery(field)}><Text style={rs.uploadBtnTxt}>ðŸ–¼ï¸ Gallery</Text></TouchableOpacity>
         </View>
       )}
     </View>
   );
 
-  // ═══ SPLASH SCREEN ═══
+  // â•â•â• SPLASH SCREEN â•â•â•
   if (screen === 'splash') return (
     <Animated.View style={{ flex: 1, backgroundColor: '#080E18', alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
       {/* Green glow circle top-right */}
@@ -2057,7 +2057,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       {/* Center glow ring */}
       <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, borderWidth: 1, borderColor: 'rgba(76,175,80,0.12)' }} />
 
-      {/* Logo box — spring animated */}
+      {/* Logo box â€” spring animated */}
       <Animated.View style={{
         width: 114, height: 114, borderRadius: 30, backgroundColor: '#0F1923',
         borderWidth: 2, borderColor: C.green,
@@ -2067,7 +2067,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         opacity: splashLogo,
         transform: [{ scale: splashScale }],
       }}>
-        <Text style={{ fontSize: 52 }}>🚗</Text>
+        <Text style={{ fontSize: 52 }}>ðŸš—</Text>
       </Animated.View>
 
       {/* Brand name */}
@@ -2078,7 +2078,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ width: 48, height: 2, backgroundColor: C.green, borderRadius: 1, marginTop: 8, opacity: 0.7 }} />
       </Animated.View>
 
-      {/* Tagline — slides up */}
+      {/* Tagline â€” slides up */}
       <Animated.View style={{
         opacity: splashTag,
         transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
@@ -2107,7 +2107,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </Animated.View>
   );
 
-  // ═══ REGISTRATION STEP 1 — Phone + OTP ═══
+  // â•â•â• REGISTRATION STEP 1 â€” Phone + OTP â•â•â•
   if (screen === 'login' && regStep === 1) return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={rs.regHeader}>
@@ -2125,9 +2125,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Ionicons name="phone-portrait" size={26} color="#4CAF50" style={{ marginRight:10 }} />
               <Text style={[rs.bigTitle, { marginTop:0 }]}>Phone Number</Text>
             </View>
-            <Text style={rs.subTitle}>Aapka mobile number daalo — OTP se verify hoga</Text>
+            <Text style={rs.subTitle}>Aapka mobile number daalo â€” OTP se verify hoga</Text>
             <View style={[s.driverItem, { marginTop: 20 }]}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>🇮🇳 +91</Text>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>ðŸ‡®ðŸ‡³ +91</Text>
               <TextInput style={{ flex: 1, fontSize: 18 }} placeholder="10 digit number" keyboardType="numeric" maxLength={10} value={regData.phone} onChangeText={(v) => updateReg('phone', v)} />
             </View>
             {result ? <Text style={s.err}>{result}</Text> : null}
@@ -2138,21 +2138,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 try {
                   const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) });
                   const data = await res.json();
-                  if (data.error) { setResult('❌ ' + data.error); }
+                  if (data.error) { setResult('âŒ ' + data.error); }
                   else { if (data.otp) setDevOtp(data.otp); setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
-                } catch (_e) { setResult('❌ Server error'); }
+                } catch (_e) { setResult('âŒ Server error'); }
                 setLoading(false);
               }}>
-              <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
+              <Text style={s.btnTxt}>{loading ? 'â³ OTP bhej raha hai...' : 'OTP Bhejo ðŸ“±'}</Text>
             </TouchableOpacity>
           </View>
         ) : (
           <View>
-            <Text style={rs.bigTitle}>🔐 OTP Verify Karo</Text>
+            <Text style={rs.bigTitle}>ðŸ” OTP Verify Karo</Text>
             <Text style={rs.subTitle}>+91 {regData.phone} pe OTP bheja gaya</Text>
             <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 12, marginTop: 16, marginBottom: 20, flexDirection: 'row', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>💡</Text>
-              <Text style={{ fontSize: 12, color: '#F59E0B', flex: 1 }}>SMS aane par OTP copy karo — boxes mein auto fill ho jaayega!</Text>
+              <Text style={{ fontSize: 16, marginRight: 8 }}>ðŸ’¡</Text>
+              <Text style={{ fontSize: 12, color: '#F59E0B', flex: 1 }}>SMS aane par OTP copy karo â€” boxes mein auto fill ho jaayega!</Text>
             </View>
             {/* 6 OTP Boxes */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -2175,12 +2175,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   setLoginOtp(devOtp);
                 }}
                 style={{ backgroundColor: '#1e3a5f', borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
+                <Text style={{ fontSize: 16, marginRight: 8 }}>ðŸ§ª</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ color: '#7dd3fc', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
                   <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
                 </View>
-                <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
+                <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill â†’</Text>
               </TouchableOpacity>
             ) : null}
             {result ? <Text style={s.err}>{result}</Text> : null}
@@ -2193,24 +2193,24 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
                   const data = await res.json();
                   if (data.token) { setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
-                  else setResult('❌ ' + (data.error || 'Galat OTP'));
-                } catch (_e) { setResult('❌ Server error'); }
+                  else setResult('âŒ ' + (data.error || 'Galat OTP'));
+                } catch (_e) { setResult('âŒ Server error'); }
                 setLoading(false);
               }}>
-              <Text style={s.btnTxt}>{loading ? '⏳ Verify ho raha hai...' : '✅ Verify & Aage Badho'}</Text>
+              <Text style={s.btnTxt}>{loading ? 'â³ Verify ho raha hai...' : 'âœ… Verify & Aage Badho'}</Text>
             </TouchableOpacity>
             {/* Resend */}
             <View style={{ alignItems: 'center', marginTop: 16 }}>
               {loginCanResend ? (
                 <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setResult(''); fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) }); setLoginResendTimer(60); setLoginCanResend(false); }}>
-                  <Text style={{ color: C.pink, fontWeight: 'bold' }}>🔄 OTP Dobara Bhejo</Text>
+                  <Text style={{ color: C.pink, fontWeight: 'bold' }}>ðŸ”„ OTP Dobara Bhejo</Text>
                 </TouchableOpacity>
               ) : (
                 <Text style={{ color: '#999', fontSize: 13 }}>Dobara bhejne ke liye <Text style={{ color: C.pink, fontWeight: 'bold' }}>{loginResendTimer}s</Text> wait karo</Text>
               )}
             </View>
             <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); }} style={{ alignItems: 'center', marginTop: 12 }}>
-              <Text style={{ color: '#666', fontSize: 13 }}>← Number change karo</Text>
+              <Text style={{ color: '#666', fontSize: 13 }}>â† Number change karo</Text>
             </TouchableOpacity>
             <View style={{ height: 60 }} />
           </View>
@@ -2219,7 +2219,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </KeyboardAvoidingView>
   );
 
-  // ═══ REGISTRATION STEP 2 — Vehicle Type ═══
+  // â•â•â• REGISTRATION STEP 2 â€” Vehicle Type â•â•â•
   if (screen === 'login' && regStep === 2) return (
     <View style={s.screen}>
       <View style={rs.regHeader}><TouchableOpacity onPress={() => setRegStep(1)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity><Text style={rs.regTitle}>Step 2 of 5</Text><View style={{ width: 50 }} /></View>
@@ -2234,9 +2234,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           { id:'auto',          mci:'rickshaw',         ion:undefined,        label:'Auto',          sub:'',                                      color: null },
           { id:'car',           mci:undefined,          ion:'car-sport',      label:'Car / Taxi',    sub:'',                                      color: null },
           { id:'eriksha',       mci:undefined,          ion:'flash',          label:'E-Riksha',      sub:'',                                      color: null },
-          { id:'green_bike',    mci:undefined,          ion:'leaf',           label:'Green Bike',    sub:'Electric Bike / Scooty — Eco Friendly', color: '#2e7d32' },
-          { id:'electric_auto', mci:undefined,          ion:'flash-outline',  label:'Electric Auto', sub:'Electric 3-Wheeler — Zero Emission',    color: '#1565c0' },
-          { id:'luxury',        mci:undefined,          ion:'diamond',        label:'Ultra Luxury',  sub:'BMW · Mercedes · Audi · Land Rover · Lexus', color: '#c9a227' },
+          { id:'green_bike',    mci:undefined,          ion:'leaf',           label:'Green Bike',    sub:'Electric Bike / Scooty â€” Eco Friendly', color: '#2e7d32' },
+          { id:'electric_auto', mci:undefined,          ion:'flash-outline',  label:'Electric Auto', sub:'Electric 3-Wheeler â€” Zero Emission',    color: '#1565c0' },
+          { id:'luxury',        mci:undefined,          ion:'diamond',        label:'Ultra Luxury',  sub:'BMW Â· Mercedes Â· Audi Â· Land Rover Â· Lexus', color: '#c9a227' },
         ].map(v => (
           <TouchableOpacity key={v.id}
             style={[rs.vehBox, regData.vehicle_type === v.id && rs.vehBoxActive,
@@ -2251,15 +2251,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={[{ fontSize: 18, fontWeight: '600', color: '#0F172A' }, regData.vehicle_type === v.id && { color: C.green }]}>{v.label}</Text>
               {v.sub ? <Text style={{ fontSize: 11, color: regData.vehicle_type === v.id ? '#ddd' : (v.color || '#64748B'), marginTop: 2 }}>{v.sub}</Text> : null}
             </View>
-            {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>✓</Text>}
+            {regData.vehicle_type === v.id && <Text style={{ color: '#fff', fontSize: 20 }}>âœ“</Text>}
           </TouchableOpacity>
         ))}
-        <TouchableOpacity style={[s.btn, !regData.vehicle_type && { opacity: 0.5 }]} disabled={!regData.vehicle_type} onPress={() => { setResult(''); setRegStep(3); }}><Text style={s.btnTxt}>Aage badho →</Text></TouchableOpacity>
+        <TouchableOpacity style={[s.btn, !regData.vehicle_type && { opacity: 0.5 }]} disabled={!regData.vehicle_type} onPress={() => { setResult(''); setRegStep(3); }}><Text style={s.btnTxt}>Aage badho â†’</Text></TouchableOpacity>
       </ScrollView>
     </View>
   );
 
-  // ═══ REGISTRATION STEP 3 — DL ═══
+  // â•â•â• REGISTRATION STEP 3 â€” DL â•â•â•
   if (screen === 'login' && regStep === 3) {
     const dlCleaned = regData.dl_number.replace(/\s/g, '').toUpperCase();
     const dlValid = dlCleaned.length === 0 || /^[A-Z]{2}[0-9]{13}$/.test(dlCleaned);
@@ -2277,13 +2277,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Ionicons name="document-text" size={26} color="#4CAF50" style={{ marginRight:10 }} />
             <Text style={[rs.bigTitle, { marginTop:0 }]}>Driving License</Text>
           </View>
-          <Text style={rs.subTitle}>DL ki details — naam, number aur photo</Text>
+          <Text style={rs.subTitle}>DL ki details â€” naam, number aur photo</Text>
 
           <View style={rs.adviceBox}>
-            <Text style={rs.adviceTitle}>📸 DL Photo Tips:</Text>
-            <Text style={rs.adviceText}>• DL ka front side — clear aur bright photo lo</Text>
-            <Text style={rs.adviceText}>• Sab kuch readable ho — naam, number, expiry</Text>
-            <Text style={[rs.adviceText, { marginTop: 6, fontWeight: '700', color: '#c62828' }]}>⚠️ Expired DL mat submit karo — reject ho jayega</Text>
+            <Text style={rs.adviceTitle}>ðŸ“¸ DL Photo Tips:</Text>
+            <Text style={rs.adviceText}>â€¢ DL ka front side â€” clear aur bright photo lo</Text>
+            <Text style={rs.adviceText}>â€¢ Sab kuch readable ho â€” naam, number, expiry</Text>
+            <Text style={[rs.adviceText, { marginTop: 6, fontWeight: '700', color: '#c62828' }]}>âš ï¸ Expired DL mat submit karo â€” reject ho jayega</Text>
           </View>
 
           <Text style={rs.fieldLabel}>DL pe likha naam *</Text>
@@ -2302,28 +2302,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {dlCleaned.length === 0 ? (
               <Text style={{ fontSize: 11, color: '#64748B' }}>Format: XX00 YYYY XXXXXXX (2 letter + 13 digits)</Text>
             ) : dlValid && dlCleaned.length === 15 ? (
-              <Text style={{ fontSize: 11, color: '#2e7d32', fontWeight: '700' }}>✅ DL number format sahi hai</Text>
+              <Text style={{ fontSize: 11, color: '#2e7d32', fontWeight: '700' }}>âœ… DL number format sahi hai</Text>
             ) : (
-              <Text style={{ fontSize: 11, color: '#e65100' }}>⚠️ {15 - dlCleaned.length} characters baaki — Format: UP14 2021 0012345</Text>
+              <Text style={{ fontSize: 11, color: '#e65100' }}>âš ï¸ {15 - dlCleaned.length} characters baaki â€” Format: UP14 2021 0012345</Text>
             )}
           </View>
 
           <Text style={rs.fieldLabel}>DL Photo (front side clear) *</Text>
-          <PhotoBox field="dl_photo" label="DL Photo" icon="📄" />
+          <PhotoBox field="dl_photo" label="DL Photo" icon="ðŸ“„" />
 
           {result ? <Text style={s.err}>{result}</Text> : null}
           <TouchableOpacity
             style={[s.btn, !step3Ok && { opacity: 0.5 }]}
             disabled={!step3Ok}
             onPress={() => { setResult(''); setRegStep(4); }}>
-            <Text style={s.btnTxt}>Aage badho →</Text>
+            <Text style={s.btnTxt}>Aage badho â†’</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     );
   }
 
-  // ═══ REGISTRATION STEP 4 — Vehicle ═══
+  // â•â•â• REGISTRATION STEP 4 â€” Vehicle â•â•â•
   if (screen === 'login' && regStep === 4) {
     const needBrand  = ['bike','car','luxury','green_bike'].includes(regData.vehicle_type);
     const needModel  = !['eriksha'].includes(regData.vehicle_type);
@@ -2365,13 +2365,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
           <Text style={rs.subTitle}>
             {regData.vehicle_type === 'eriksha'       ? 'E-Riksha: photo zaruri, number optional' :
-             regData.vehicle_type === 'luxury'        ? 'Premium vehicle — brand, model aur number' :
-             regData.vehicle_type === 'green_bike'    ? 'Electric Bike — brand, model, number aur photos' :
-             regData.vehicle_type === 'electric_auto' ? 'Electric Auto — model, number aur photos' :
+             regData.vehicle_type === 'luxury'        ? 'Premium vehicle â€” brand, model aur number' :
+             regData.vehicle_type === 'green_bike'    ? 'Electric Bike â€” brand, model, number aur photos' :
+             regData.vehicle_type === 'electric_auto' ? 'Electric Auto â€” model, number aur photos' :
              'Brand, model, number aur photos'}
           </Text>
 
-          {/* ── Brand ── */}
+          {/* â”€â”€ Brand â”€â”€ */}
           {needBrand && (
             <>
               <Text style={rs.fieldLabel}>Vehicle Brand / Company *</Text>
@@ -2387,7 +2387,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     ))}
                   </View>
                   {regData.vehicle_brand
-                    ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>✅ {regData.vehicle_brand}</Text>
+                    ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>âœ… {regData.vehicle_brand}</Text>
                     : <Text style={{ color: '#e65100', fontSize: 12 }}>Ek brand select karo</Text>}
                 </View>
               ) : (
@@ -2401,7 +2401,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </>
           )}
 
-          {/* ── Model ── */}
+          {/* â”€â”€ Model â”€â”€ */}
           {needModel && (
             <>
               <Text style={rs.fieldLabel}>Vehicle Model *</Text>
@@ -2416,12 +2416,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     ))}
                   </View>
                   {regData.vehicle_model
-                    ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>✅ Model: {regData.vehicle_model}</Text>
+                    ? <Text style={{ color: '#2e7d32', fontSize: 12 }}>âœ… Model: {regData.vehicle_model}</Text>
                     : <Text style={{ color: '#e65100', fontSize: 12 }}>{regData.vehicle_brand ? 'Model select karo' : 'Pehle brand select karo'}</Text>}
                 </View>
               ) : regData.vehicle_type === 'luxury' ? (
                 <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                  <Text style={{ color: '#F59E0B', fontSize: 13 }}>Pehle upar brand select karo — fir model dikhega</Text>
+                  <Text style={{ color: '#F59E0B', fontSize: 13 }}>Pehle upar brand select karo â€” fir model dikhega</Text>
                 </View>
               ) : (
                 <>
@@ -2431,13 +2431,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     value={regData.vehicle_model}
                     onChangeText={(v) => updateReg('vehicle_model', v)}
                   />
-                  <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Model = brand ke baad ka specific name (eg. Hyundai → Creta)</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Model = brand ke baad ka specific name (eg. Hyundai â†’ Creta)</Text>
                 </>
               )}
             </>
           )}
 
-          {/* ── Vehicle Number ── */}
+          {/* â”€â”€ Vehicle Number â”€â”€ */}
           <Text style={rs.fieldLabel}>Vehicle Number {needNum ? '*' : '(optional)'}</Text>
           <TextInput
             style={rs.input}
@@ -2448,29 +2448,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           />
           {regData.vehicle_no ? (
             <Text style={{ fontSize: 11, marginTop: 5, color: vnValid ? '#2e7d32' : '#e65100' }}>
-              {vnValid ? '✅ Format sahi — ' + vnCleaned : '⚠️ Format: UP32AB1234 (2 letter + 2 digit + letters + 4 digit)'}
+              {vnValid ? 'âœ… Format sahi â€” ' + vnCleaned : 'âš ï¸ Format: UP32AB1234 (2 letter + 2 digit + letters + 4 digit)'}
             </Text>
           ) : null}
 
-          {/* ── Photos ── */}
+          {/* â”€â”€ Photos â”€â”€ */}
           <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Vehicle Front Photo *</Text>
           <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Number plate clearly visible honi chahiye</Text>
-          <PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="🚗" />
+          <PhotoBox field="vehicle_photo" label="Vehicle Photo" icon="ðŸš—" />
 
           <Text style={[rs.fieldLabel, { marginTop: 14 }]}>RC (Registration Certificate) Photo</Text>
-          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Optional — lekin jaldi verify hoga agar doge</Text>
-          <PhotoBox field="rc_photo" label="RC Photo" icon="📋" />
+          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Optional â€” lekin jaldi verify hoga agar doge</Text>
+          <PhotoBox field="rc_photo" label="RC Photo" icon="ðŸ“‹" />
 
           {result ? <Text style={s.err}>{result}</Text> : null}
           <TouchableOpacity style={[s.btn, !step4Ok && { opacity: 0.5 }]} disabled={!step4Ok} onPress={() => { setResult(''); setRegStep(5); }}>
-            <Text style={s.btnTxt}>Aage badho →</Text>
+            <Text style={s.btnTxt}>Aage badho â†’</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     );
   }
 
-  // ═══ REGISTRATION STEP 5 — Aadhaar + Selfie ═══
+  // â•â•â• REGISTRATION STEP 5 â€” Aadhaar + Selfie â•â•â•
   if (screen === 'login' && regStep === 5) {
     const aadhaarDigits = regData.aadhaar_number.replace(/\D/g, '');
     const aadhaarOk = aadhaarDigits.length === 12;
@@ -2488,12 +2488,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Ionicons name="id-card" size={26} color="#94A3B8" style={{ marginRight:10 }} />
             <Text style={[rs.bigTitle, { marginTop:0 }]}>Aadhaar & Selfie</Text>
           </View>
-          <Text style={rs.subTitle}>Last step — aur aap ho jayenge!</Text>
+          <Text style={rs.subTitle}>Last step â€” aur aap ho jayenge!</Text>
 
           <View style={[rs.adviceBox, { backgroundColor: 'rgba(16,185,129,0.08)', borderColor: 'rgba(16,185,129,0.25)', borderWidth: 1 }]}>
-            <Text style={[rs.adviceTitle, { color: C.green }]}>🔒 Privacy Note:</Text>
-            <Text style={[rs.adviceText, { color: '#6EE7B7' }]}>• Aapka Aadhaar sirf verification ke liye hai</Text>
-            <Text style={[rs.adviceText, { color: '#6EE7B7' }]}>• Documents securely store kiye jaate hain</Text>
+            <Text style={[rs.adviceTitle, { color: C.green }]}>ðŸ”’ Privacy Note:</Text>
+            <Text style={[rs.adviceText, { color: '#6EE7B7' }]}>â€¢ Aapka Aadhaar sirf verification ke liye hai</Text>
+            <Text style={[rs.adviceText, { color: '#6EE7B7' }]}>â€¢ Documents securely store kiye jaate hain</Text>
           </View>
 
           <Text style={rs.fieldLabel}>Aadhaar Number *</Text>
@@ -2507,65 +2507,65 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           />
           {aadhaarDigits.length > 0 && (
             <Text style={{ fontSize: 11, marginTop: 5, color: aadhaarOk ? '#2e7d32' : '#e65100' }}>
-              {aadhaarOk ? '✅ 12 digit Aadhaar sahi hai' : `⚠️ ${12 - aadhaarDigits.length} digit aur chahiye`}
+              {aadhaarOk ? 'âœ… 12 digit Aadhaar sahi hai' : `âš ï¸ ${12 - aadhaarDigits.length} digit aur chahiye`}
             </Text>
           )}
 
           <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Aadhaar Photo *</Text>
-          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Front side — naam aur number clearly visible ho</Text>
-          <PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="🪪" />
+          <Text style={{ fontSize: 11, color: '#64748B', marginBottom: 8 }}>Front side â€” naam aur number clearly visible ho</Text>
+          <PhotoBox field="aadhaar_photo" label="Aadhaar Photo" icon="ðŸªª" />
 
           <Text style={[rs.fieldLabel, { marginTop: 18 }]}>Live Selfie *</Text>
           <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 10, marginBottom: 8, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 16, marginRight: 8 }}>🔒</Text>
-            <Text style={{ fontSize: 11, color: '#F59E0B', flex: 1 }}>Sirf live camera se selfie — gallery se upload nahi hoga. Saaf light mein, seedha chehra.</Text>
+            <Text style={{ fontSize: 16, marginRight: 8 }}>ðŸ”’</Text>
+            <Text style={{ fontSize: 11, color: '#F59E0B', flex: 1 }}>Sirf live camera se selfie â€” gallery se upload nahi hoga. Saaf light mein, seedha chehra.</Text>
           </View>
-          <PhotoBox field="face_photo" label="Live Selfie" icon="🤳" cameraOnly />
+          <PhotoBox field="face_photo" label="Live Selfie" icon="ðŸ¤³" cameraOnly />
 
           {result ? <Text style={s.err}>{result}</Text> : null}
           <TouchableOpacity
             style={[s.btn, !step5Ok && { opacity: 0.5 }, { marginTop: 20 }]}
             disabled={!step5Ok || loading}
             onPress={submitRegistration}>
-            <Text style={s.btnTxt}>{loading ? '⏳ Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
+            <Text style={s.btnTxt}>{loading ? 'â³ Submit ho raha hai...' : 'âœ… Registration Submit Karo'}</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     );
   }
 
-  // ═══ REGISTRATION DONE ═══
+  // â•â•â• REGISTRATION DONE â•â•â•
   if (screen === 'login' && regStep === 99) return (
     <View style={s.screen}>
       <View style={s.hero}>
-        <Text style={{ fontSize: 70 }}>🎉</Text>
+        <Text style={{ fontSize: 70 }}>ðŸŽ‰</Text>
         <Text style={s.heroTitle}>Application Submit!</Text>
         <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Sppero Buddy Captain</Text>
       </View>
       <View style={{ padding: 24, alignItems: 'center' }}>
         <Text style={{ fontSize: 16, color: '#94A3B8', textAlign: 'center', lineHeight: 26 }}>
-          Aapki Sppero Buddy Captain application submit ho gayi! ✅{'\n\n'}Admin aapke sare documents — DL, Aadhaar, Vehicle aur Selfie — verify karega.
+          Aapki Sppero Buddy Captain application submit ho gayi! âœ…{'\n\n'}Admin aapke sare documents â€” DL, Aadhaar, Vehicle aur Selfie â€” verify karega.
         </Text>
         <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 16, marginTop: 16, width: '100%', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-          <Text style={{ color: C.green, textAlign: 'center', fontWeight: '600', fontSize: 13 }}>✅ Verification hone ke baad app khud notify kar dega</Text>
+          <Text style={{ color: C.green, textAlign: 'center', fontWeight: '600', fontSize: 13 }}>âœ… Verification hone ke baad app khud notify kar dega</Text>
         </View>
         <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 16, marginTop: 10, width: '100%', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-          <Text style={{ color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>⏳ Status: Verification Pending</Text>
+          <Text style={{ color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>â³ Status: Verification Pending</Text>
         </View>
         <TouchableOpacity style={[s.btn, { marginTop: 24, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}>
-          <Text style={s.btnTxt}>🏠 Login Screen pe jao</Text>
+          <Text style={s.btnTxt}>ðŸ  Login Screen pe jao</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  // ═══ VERIFICATION STATUS ═══
+  // â•â•â• VERIFICATION STATUS â•â•â•
   if (screen === 'login' && driverInfo && driverInfo.status !== 'approved') {
     const statusConfig: any = {
-      pending:   { icon: '⏳', title: 'Verification Pending',    bg: '#fff3e0', col: '#ef6c00', msg: 'Aapke documents admin verify kar raha hai. Thodi der mein status update hoga.' },
-      rejected:  { icon: '❌', title: 'Documents Reject Ho Gaye', bg: '#ffebee', col: '#c62828', msg: 'Aapke documents mein problem hai — neeche admin message padho aur resubmit karo.' },
-      resubmit:  { icon: '📋', title: 'Documents Resubmit Karein', bg: '#e3f2fd', col: '#1565c0', msg: 'Admin ne kuch documents dobara maange hain — neeche message padho aur upload karo.' },
-      suspended: { icon: '🚫', title: 'Account Suspended',        bg: '#ffebee', col: '#c62828', msg: 'Aapka account suspend kar diya gaya hai. Support se contact karo.' },
+      pending:   { icon: 'â³', title: 'Verification Pending',    bg: '#fff3e0', col: '#ef6c00', msg: 'Aapke documents admin verify kar raha hai. Thodi der mein status update hoga.' },
+      rejected:  { icon: 'âŒ', title: 'Documents Reject Ho Gaye', bg: '#ffebee', col: '#c62828', msg: 'Aapke documents mein problem hai â€” neeche admin message padho aur resubmit karo.' },
+      resubmit:  { icon: 'ðŸ“‹', title: 'Documents Resubmit Karein', bg: '#e3f2fd', col: '#1565c0', msg: 'Admin ne kuch documents dobara maange hain â€” neeche message padho aur upload karo.' },
+      suspended: { icon: 'ðŸš«', title: 'Account Suspended',        bg: '#ffebee', col: '#c62828', msg: 'Aapka account suspend kar diya gaya hai. Support se contact karo.' },
     };
     const cfg = statusConfig[driverInfo.status] || statusConfig.pending;
     return (
@@ -2581,31 +2581,31 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
           {driverInfo.admin_message ? (
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 18, marginBottom: 20, borderWidth: 2, borderColor: cfg.col }}>
-              <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 6, fontWeight: '600' }}>📩 Admin ka message:</Text>
+              <Text style={{ fontSize: 13, color: '#94A3B8', marginBottom: 6, fontWeight: '600' }}>ðŸ“© Admin ka message:</Text>
               <Text style={{ fontSize: 15, color: '#0F172A', fontWeight: '500', lineHeight: 22 }}>{driverInfo.admin_message}</Text>
             </View>
           ) : null}
           {(driverInfo.status === 'rejected' || driverInfo.status === 'resubmit') && (
             <TouchableOpacity style={s.btn} onPress={() => { setRegData((p: any) => ({ ...p, phone: driverInfo.phone })); setDriverInfo(null); setRegStep(2); }}>
-              <Text style={s.btnTxt}>📄 Documents Resubmit Karo</Text>
+              <Text style={s.btnTxt}>ðŸ“„ Documents Resubmit Karo</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity style={[s.btn, { backgroundColor: 'transparent', borderWidth: 1, borderColor: '#E2E8F0', marginTop: 10 }]} onPress={() => { setDriverInfo(null); setLoginPhone(''); setResult(''); }}>
-            <Text style={[s.btnTxt, { color: '#64748B' }]}>← Wapas Login pe jao</Text>
+            <Text style={[s.btnTxt, { color: '#64748B' }]}>â† Wapas Login pe jao</Text>
           </TouchableOpacity>
         </View>
       </View>
     );
   }
 
-  // ═══ LOGIN ═══
+  // â•â•â• LOGIN â•â•â•
   if (screen === 'login') {
     const LOGIN_CAPTIONS = [
-      { emoji: '👑', line1: 'Become Your', line2: 'Own Boss', sub: 'No office. No fixed hours. You decide when you drive.' },
-      { emoji: '🗺️', line1: 'Help People Reach', line2: 'Their Destination', sub: 'Every ride is a story of trust & service.' },
-      { emoji: '💰', line1: 'Earn ₹800+', line2: 'Every Day', sub: 'Steady income credited instantly to your wallet.' },
-      { emoji: '🛺', line1: 'India Ka Apna', line2: 'Ride Platform', sub: 'Built for Bharat. Powered by 10,000+ Captains.' },
-      { emoji: '⭐', line1: 'Join & Keep', line2: 'Earning Daily', sub: 'Morning, afternoon or night — your schedule, your earnings.' },
+      { emoji: 'ðŸ‘‘', line1: 'Become Your', line2: 'Own Boss', sub: 'No office. No fixed hours. You decide when you drive.' },
+      { emoji: 'ðŸ—ºï¸', line1: 'Help People Reach', line2: 'Their Destination', sub: 'Every ride is a story of trust & service.' },
+      { emoji: 'ðŸ’°', line1: 'Earn â‚¹800+', line2: 'Every Day', sub: 'Steady income credited instantly to your wallet.' },
+      { emoji: 'ðŸ›º', line1: 'India Ka Apna', line2: 'Ride Platform', sub: 'Built for Bharat. Powered by 10,000+ Captains.' },
+      { emoji: 'â­', line1: 'Join & Keep', line2: 'Earning Daily', sub: 'Morning, afternoon or night â€” your schedule, your earnings.' },
     ];
     const cap = LOGIN_CAPTIONS[loginCaptionIdx];
 
@@ -2613,7 +2613,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#08080F' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
         <StatusBar barStyle="light-content" backgroundColor="#08080F" />
 
-        {/* ══════════ IMMERSIVE ADS BANNER ══════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â• IMMERSIVE ADS BANNER â•â•â•â•â•â•â•â•â•â• */}
         {!loginOtpSent && (
           <View style={{ flex: 1, backgroundColor: '#08080F', overflow: 'hidden' }}>
 
@@ -2668,7 +2668,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 transform: [{ scale: loginGlowAnim.interpolate({ inputRange: [0.25, 1], outputRange: [1, 1.12] }) }],
               }}>
                 <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(233,30,99,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.5)', elevation: 12, shadowColor: C.pink, shadowOpacity: 0.6, shadowRadius: 16 }}>
-                  <Ionicons name="car-sport" size={44} color=C.pink />
+                  <Ionicons name="car-sport" size={44} color={C.pink} />
                 </View>
               </Animated.View>
               {/* Headlight beams */}
@@ -2712,9 +2712,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Stats strip */}
             <View style={{ position: 'absolute', bottom: 135, left: 16, right: 16, flexDirection: 'row', gap: 8 }}>
               {[
-                { val: '₹800+', sub: 'per day avg' },
+                { val: 'â‚¹800+', sub: 'per day avg' },
                 { val: '10K+',  sub: 'Captains' },
-                { val: '4.8 ★', sub: 'App rating' },
+                { val: '4.8 â˜…', sub: 'App rating' },
               ].map((st, i) => (
                 <View key={i} style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 13, paddingVertical: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)' }}>
                   <Text style={{ color: '#F5C518', fontSize: 15, fontWeight: '900' }}>{st.val}</Text>
@@ -2725,7 +2725,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         )}
 
-        {/* ══════════ LOGIN CARD ══════════ */}
+        {/* â•â•â•â•â•â•â•â•â•â• LOGIN CARD â•â•â•â•â•â•â•â•â•â• */}
         <View style={{
           backgroundColor: '#FFFFFF',
           borderTopLeftRadius: loginOtpSent ? 0 : 28,
@@ -2756,7 +2756,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {!loginOtpSent && <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 18 }} />}
 
           <Text style={{ color: '#0F172A', fontSize: 21, fontWeight: '900', marginBottom: 4 }}>
-            {loginOtpSent ? '🔑 OTP Enter Karo' : '🚗 Captain Login'}
+            {loginOtpSent ? 'ðŸ”‘ OTP Enter Karo' : 'ðŸš— Captain Login'}
           </Text>
           <Text style={{ color: '#64748B', fontSize: 13, marginBottom: 22, lineHeight: 19 }}>
             {loginOtpSent
@@ -2769,7 +2769,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Phone input */}
               <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1.5, borderColor: loginPhone.length > 0 ? C.pink : '#E2E8F0', paddingHorizontal: 14, marginBottom: 16 }}>
                 <View style={{ backgroundColor: C.pink, borderRadius: 9, paddingHorizontal: 9, paddingVertical: 5, marginRight: 12 }}>
-                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>🇮🇳 +91</Text>
+                  <Text style={{ color: '#fff', fontSize: 12, fontWeight: '800' }}>ðŸ‡®ðŸ‡³ +91</Text>
                 </View>
                 <TextInput
                   style={{ flex: 1, fontSize: 18, fontWeight: '700', color: '#0F172A', paddingVertical: 14 }}
@@ -2781,7 +2781,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   onChangeText={setLoginPhone}
                 />
                 {loginPhone.length === 10 && (
-                  <Ionicons name="checkmark-circle" size={22} color=C.green />
+                  <Ionicons name="checkmark-circle" size={22} color={C.green} />
                 )}
               </View>
 
@@ -2793,7 +2793,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 disabled={loginPhone.length !== 10 || loading}
                 onPress={doLogin}>
                 <Text style={{ color: loginPhone.length !== 10 ? '#94A3B8' : '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 }}>
-                  {loading ? '⏳ OTP bhej rahe hain...' : 'OTP Bhejo →'}
+                  {loading ? 'â³ OTP bhej rahe hain...' : 'OTP Bhejo â†’'}
                 </Text>
               </Bouncy>
 
@@ -2810,14 +2810,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 style={{ borderRadius: 18, overflow: 'hidden', borderWidth: 2, borderColor: '#F5C518', elevation: 6, shadowColor: '#F5C518', shadowOpacity: 0.3, shadowRadius: 10 }}>
                 <View style={{ backgroundColor: '#0D0B02', padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#F5C518', alignItems: 'center', justifyContent: 'center', elevation: 4, shadowColor: '#F5C518', shadowOpacity: 0.5, shadowRadius: 6 }}>
-                    <Text style={{ fontSize: 24 }}>⭐</Text>
+                    <Text style={{ fontSize: 24 }}>â­</Text>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#F5C518', fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>Become Sppero Buddy</Text>
-                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 3, lineHeight: 16 }}>Register as Captain · Free · Just 5 minutes</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, marginTop: 3, lineHeight: 16 }}>Register as Captain Â· Free Â· Just 5 minutes</Text>
                   </View>
                   <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F5C518', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: '#0D0B02', fontSize: 16, fontWeight: '900' }}>›</Text>
+                    <Text style={{ color: '#0D0B02', fontSize: 16, fontWeight: '900' }}>â€º</Text>
                   </View>
                 </View>
               </Bouncy>
@@ -2826,8 +2826,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               {/* OTP sent notice */}
               <View style={{ backgroundColor: 'rgba(233,30,99,0.06)', borderRadius: 14, padding: 14, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
-                <Text style={{ fontSize: 20 }}>📱</Text>
-                <Text style={{ fontSize: 12, color: C.pink, flex: 1, fontWeight: '600', lineHeight: 18 }}>SMS se OTP copy karke paste karo — 6 boxes mein auto-fill ho jaayega!</Text>
+                <Text style={{ fontSize: 20 }}>ðŸ“±</Text>
+                <Text style={{ fontSize: 12, color: C.pink, flex: 1, fontWeight: '600', lineHeight: 18 }}>SMS se OTP copy karke paste karo â€” 6 boxes mein auto-fill ho jaayega!</Text>
               </View>
 
               {/* 6 OTP Boxes */}
@@ -2846,12 +2846,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {devOtp ? (
                 <TouchableOpacity onPress={() => { const d = devOtp.split(''); setLoginOtpDigits(d); setLoginOtp(devOtp); }} style={{ backgroundColor: '#1e3a5f', borderRadius: 12, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 16 }}>🧪</Text>
+                  <Text style={{ fontSize: 16 }}>ðŸ§ª</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#7dd3fc', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
                     <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
                   </View>
-                  <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
+                  <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill â†’</Text>
                 </TouchableOpacity>
               ) : null}
 
@@ -2863,7 +2863,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 disabled={loading || loginOtpDigits.join('').length < 6}
                 onPress={() => verifyLoginOtp()}>
                 <Text style={{ color: (loading || loginOtpDigits.join('').length < 6) ? '#94A3B8' : '#fff', fontSize: 16, fontWeight: '900' }}>
-                  {loading ? '⏳ Verify ho raha hai...' : '✅ Login Karo'}
+                  {loading ? 'â³ Verify ho raha hai...' : 'âœ… Login Karo'}
                 </Text>
               </Bouncy>
 
@@ -2871,13 +2871,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ alignItems: 'center', marginBottom: 12 }}>
                 {loginCanResend
                   ? <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setLoginOtp(''); setResult(''); doLogin(); }}>
-                      <Text style={{ color: C.pink, fontWeight: '800', fontSize: 13 }}>🔄 OTP Dobara Bhejo</Text>
+                      <Text style={{ color: C.pink, fontWeight: '800', fontSize: 13 }}>ðŸ”„ OTP Dobara Bhejo</Text>
                     </TouchableOpacity>
                   : <Text style={{ color: '#94A3B8', fontSize: 12 }}>Dobara bhejne ke liye <Text style={{ color: C.pink, fontWeight: '700' }}>{loginResendTimer}s</Text> wait karo</Text>
                 }
               </View>
               <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setResult(''); }} style={{ alignItems: 'center', paddingVertical: 4 }}>
-                <Text style={{ color: '#64748B', fontSize: 12 }}>← Number change karo</Text>
+                <Text style={{ color: '#64748B', fontSize: 12 }}>â† Number change karo</Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -2886,106 +2886,106 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     );
   }
 
-  // ═══ PAYMENT WAITING SCREEN ═══
+  // â•â•â• PAYMENT WAITING SCREEN â•â•â•
   if (paymentWaiting) return (
     <ScreenIn style={s.screen}>
       {/* Hero */}
       <View style={[s.hero, { paddingTop: 50, paddingBottom: 26, overflow: 'hidden' }]}>
         <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.08)', top: -80, right: -50 }} />
-        <Text style={s.heroTitle}>Trip Complete! 🏁</Text>
-        <Text style={{ color: C.green, fontSize: 50, fontWeight: '900', marginTop: 6, letterSpacing: -1 }}>₹{paymentFare}</Text>
+        <Text style={s.heroTitle}>Trip Complete! ðŸ</Text>
+        <Text style={{ color: C.green, fontSize: 50, fontWeight: '900', marginTop: 6, letterSpacing: -1 }}>â‚¹{paymentFare}</Text>
         <View style={{ backgroundColor: 'rgba(16,185,129,0.18)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, marginTop: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.35)' }}>
-          <Text style={{ color: C.green, fontSize: 13, fontWeight: '700' }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} · 15% fee ke baad</Text>
+          <Text style={{ color: C.green, fontSize: 13, fontWeight: '700' }}>Net kamai: â‚¹{(parseFloat(paymentFare) * 0.85).toFixed(0)} Â· 15% fee ke baad</Text>
         </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 36 }}>
 
-        {/* ── Cash or UPI confirm (always visible) ── */}
+        {/* â”€â”€ Cash or UPI confirm (always visible) â”€â”€ */}
         <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 1.8, marginBottom: 12, textTransform: 'uppercase' }}>
-          {paymentMethod === 'cash' ? 'Customer ne cash select kiya — confirm karo' : 'Payment mili? Confirm karo'}
+          {paymentMethod === 'cash' ? 'Customer ne cash select kiya â€” confirm karo' : 'Payment mili? Confirm karo'}
         </Text>
 
         {paymentMethod === 'cash' ? (
           <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 18, padding: 18, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.4)' }}>
-            <Text style={{ fontSize: 15, fontWeight: '900', color: '#F59E0B', marginBottom: 6 }}>💵 Customer Ne Cash Chuna</Text>
+            <Text style={{ fontSize: 15, fontWeight: '900', color: '#F59E0B', marginBottom: 6 }}>ðŸ’µ Customer Ne Cash Chuna</Text>
             <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 16, lineHeight: 20 }}>
-              Customer ne app mein cash select ki hai. Unse ₹{paymentFare} cash lo aur neeche confirm karo.
+              Customer ne app mein cash select ki hai. Unse â‚¹{paymentFare} cash lo aur neeche confirm karo.
             </Text>
             <Bouncy
               style={{ backgroundColor: C.green, borderRadius: 14, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
               onPress={() => confirmDirectPayment('cash')} disabled={loading}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>✅  ₹{paymentFare} Cash Mil Gaya</Text>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>âœ…  â‚¹{paymentFare} Cash Mil Gaya</Text>
             </Bouncy>
           </View>
         ) : (
           <View style={{ backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)', alignItems: 'center' }}>
             <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>Customer abhi app mein payment kar raha hai...</Text>
-            <FloatingDots color=C.green />
+            <FloatingDots color={C.green} />
           </View>
         )}
 
-        {/* ── Direct confirm buttons ── */}
+        {/* â”€â”€ Direct confirm buttons â”€â”€ */}
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
           <Bouncy
             style={{ flex: 1, backgroundColor: 'rgba(16,185,129,0.10)', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(16,185,129,0.35)', opacity: loading ? 0.6 : 1 }}
             onPress={() => confirmDirectPayment('cash')} disabled={loading}>
-            <Text style={{ fontSize: 28, marginBottom: 4 }}>💵</Text>
+            <Text style={{ fontSize: 28, marginBottom: 4 }}>ðŸ’µ</Text>
             <Text style={{ fontSize: 13, fontWeight: '900', color: C.green }}>Cash Mila</Text>
-            <Text style={{ fontSize: 11, color: 'rgba(16,185,129,0.7)', marginTop: 2 }}>₹{paymentFare}</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(16,185,129,0.7)', marginTop: 2 }}>â‚¹{paymentFare}</Text>
           </Bouncy>
           <Bouncy
             style={{ flex: 1, backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.3)', opacity: loading ? 0.6 : 1 }}
             onPress={() => confirmDirectPayment('upi_direct')} disabled={loading}>
-            <Text style={{ fontSize: 28, marginBottom: 4 }}>📱</Text>
+            <Text style={{ fontSize: 28, marginBottom: 4 }}>ðŸ“±</Text>
             <Text style={{ fontSize: 13, fontWeight: '900', color: C.pink }}>UPI Mila</Text>
-            <Text style={{ fontSize: 11, color: 'rgba(233,30,99,0.6)', marginTop: 2 }}>₹{paymentFare}</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(233,30,99,0.6)', marginTop: 2 }}>â‚¹{paymentFare}</Text>
           </Bouncy>
         </View>
 
-        {/* ── Divider ── */}
+        {/* â”€â”€ Divider â”€â”€ */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
           <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
           <Text style={{ color: 'rgba(255,255,255,0.35)', marginHorizontal: 14, fontSize: 12, fontWeight: '700' }}>YA CUSTOMER KO DIKHAO</Text>
           <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
         </View>
 
-        {/* ── My UPI QR ── */}
+        {/* â”€â”€ My UPI QR â”€â”€ */}
         {driverUpiId ? (() => {
           const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=Sppero%20Trip`;
           const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(upiLink)}`;
           return (
             <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 18, marginBottom: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)' }}>
-              <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', marginBottom: 4 }}>📱 Customer Ko Dikhao</Text>
-              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 14 }}>GPay · PhonePe · Paytm · Any UPI</Text>
+              <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', marginBottom: 4 }}>ðŸ“± Customer Ko Dikhao</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 14 }}>GPay Â· PhonePe Â· Paytm Â· Any UPI</Text>
               <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 8 }}>
                 <Image source={{ uri: qrUrl }} style={{ width: 210, height: 210, borderRadius: 10 }} resizeMode="contain" />
               </View>
               <Text style={{ fontSize: 12, color: C.pink, marginTop: 12, fontWeight: '700' }}>{driverUpiId}</Text>
               <View style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 8, marginTop: 10, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 8 }}>
-                <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>₹{paymentFare}</Text>
+                <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>â‚¹{paymentFare}</Text>
               </View>
             </View>
           );
         })() : (
           <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 13, color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>⚠️ Profile mein UPI ID set karo QR dikhane ke liye</Text>
+            <Text style={{ fontSize: 13, color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>âš ï¸ Profile mein UPI ID set karo QR dikhane ke liye</Text>
           </View>
         )}
 
-        {/* ── Net earning note ── */}
+        {/* â”€â”€ Net earning note â”€â”€ */}
         <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 18 }}>💡</Text>
+          <Text style={{ fontSize: 18 }}>ðŸ’¡</Text>
           <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18, flex: 1 }}>
-            15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
+            15% platform fee ke baad aapki net kamai â‚¹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
           </Text>
         </View>
 
-        {/* ── Payment not received ── */}
+        {/* â”€â”€ Payment not received â”€â”€ */}
         <TouchableOpacity
           onPress={() => Alert.alert(
-            '⚠️ Payment Nahi Mili?',
-            `Customer ne ₹${paymentFare} cash payment nahi ki?\n\nYeh report 10 minute ke andar hi ki ja sakti hai. Customer ka account flag hoga aur Sppero team investigate karegi.`,
+            'âš ï¸ Payment Nahi Mili?',
+            `Customer ne â‚¹${paymentFare} cash payment nahi ki?\n\nYeh report 10 minute ke andar hi ki ja sakti hai. Customer ka account flag hoga aur Sppero team investigate karegi.`,
             [
               { text: 'Cancel', style: 'cancel' },
               { text: 'Haan, Report Karo', style: 'destructive', onPress: async () => {
@@ -2997,33 +2997,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   });
                   const d = await res.json();
                   if (d.success) {
-                    Alert.alert('✅ Report Ho Gayi',
+                    Alert.alert('âœ… Report Ho Gayi',
                       'Customer ko flag kar diya gaya. Sppero team 24 ghante mein review karegi.\n\nYeh record customer ke account pe jayega.',
                       [{ text: 'OK', onPress: () => setPaymentWaiting(false) }]
                     );
                   } else {
-                    Alert.alert('❌ Error', d.error || 'Report nahi ho saki');
+                    Alert.alert('âŒ Error', d.error || 'Report nahi ho saki');
                   }
                 } catch {
-                  Alert.alert('❌ Network Error', 'Dobara try karo');
+                  Alert.alert('âŒ Network Error', 'Dobara try karo');
                 }
               }},
             ]
           )}
           style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 16, padding: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
-          <Text style={{ fontSize: 22 }}>🚨</Text>
+          <Text style={{ fontSize: 22 }}>ðŸš¨</Text>
           <View style={{ flex: 1 }}>
             <Text style={{ fontWeight: '900', fontSize: 13, color: '#ef4444' }}>Customer Ne Payment Nahi Ki</Text>
             <Text style={{ fontSize: 11, color: 'rgba(239,68,68,0.65)', marginTop: 2 }}>Cash liye bina chale gaye? Report karo</Text>
           </View>
-          <Text style={{ color: '#ef4444', fontSize: 20 }}>›</Text>
+          <Text style={{ color: '#ef4444', fontSize: 20 }}>â€º</Text>
         </TouchableOpacity>
 
       </ScrollView>
     </ScreenIn>
   );
 
-  // ═══ DRIVER CANCEL MODAL ═══
+  // â•â•â• DRIVER CANCEL MODAL â•â•â•
   if (showDriverCancelModal) return (
     <View style={s.screen}>
       <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
@@ -3031,7 +3031,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 16 }} />
           <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0F172A', marginBottom: 6 }}>Trip Cancel karein?</Text>
           <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '600' }}>⚠️ Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
+            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '600' }}>âš ï¸ Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
           </View>
           <Text style={{ fontSize: 14, fontWeight: '600', color: '#64748B', marginBottom: 10 }}>Cancel ka reason?</Text>
           {['Customer nahi mila', 'Galat location', 'Emergency aa gayi', 'Vehicle problem', 'Customer rude tha'].map((reason, i) => (
@@ -3045,7 +3045,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             style={{ backgroundColor: C.pink, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8, opacity: cancelReason ? 1 : 0.5 }}
             disabled={!cancelReason || loading}
             onPress={cancelTrip}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{loading ? '⏳ Cancel ho raha hai...' : '✕ Trip Cancel Karo'}</Text>
+            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{loading ? 'â³ Cancel ho raha hai...' : 'âœ• Trip Cancel Karo'}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={{ padding: 14, alignItems: 'center' }} onPress={() => { setShowDriverCancelModal(false); setCancelReason(''); }}>
             <Text style={{ color: '#64748B', fontWeight: 'bold', fontSize: 14 }}>Nahi, trip rakhni hai</Text>
@@ -3056,47 +3056,47 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   );
 
 
-  // ═══ TRIP SUMMARY ═══
+  // â•â•â• TRIP SUMMARY â•â•â•
   if (tripSummary) return (
     <ScreenIn style={s.screen}>
       <View style={[s.hero, { paddingTop: 50 }]}>
         <Celebration />
-        <Text style={{ fontSize: 60 }}>🎉</Text>
+        <Text style={{ fontSize: 60 }}>ðŸŽ‰</Text>
         <Text style={s.heroTitle}>Trip Complete!</Text>
         <CountUp value={tripSummary.earned} style={{ color: C.green, fontSize: 36, fontWeight: 'bold', marginTop: 8 }} />
         <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Aapki kamai is trip se</Text>
       </View>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
+          <Text style={[s.sectionTitle, { marginBottom: 16 }]}>ðŸ’° Earning Summary</Text>
           {/* Payment method badge */}
           <View style={{ backgroundColor: tripSummary.payment_method === 'cash' ? 'rgba(16,185,129,0.12)' : tripSummary.payment_method === 'wallet' ? 'rgba(233,30,99,0.08)' : 'rgba(168,85,247,0.12)', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: tripSummary.payment_method === 'cash' ? 'rgba(16,185,129,0.3)' : tripSummary.payment_method === 'wallet' ? 'rgba(233,30,99,0.3)' : 'rgba(168,85,247,0.3)' }}>
             <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0F172A' }}>
-              {tripSummary.payment_method === 'cash' ? '💵 Cash Payment' : tripSummary.payment_method === 'wallet' ? '💰 Wallet Payment' : '💳 Online Payment'}
+              {tripSummary.payment_method === 'cash' ? 'ðŸ’µ Cash Payment' : tripSummary.payment_method === 'wallet' ? 'ðŸ’° Wallet Payment' : 'ðŸ’³ Online Payment'}
             </Text>
           </View>
           {tripSummary.isHourly && (
             <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: C.green }}>⏱️ Hourly Trip · 💰 Wallet Payment</Text>
-              {tripSummary.earlyEnd && <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>Early end — 70% minimum protection applied</Text>}
-              {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#F59E0B', marginTop: 4 }}>📍 {tripSummary.extraKmInfo}</Text>}
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: C.green }}>â±ï¸ Hourly Trip Â· ðŸ’° Wallet Payment</Text>
+              {tripSummary.earlyEnd && <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>Early end â€” 70% minimum protection applied</Text>}
+              {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#F59E0B', marginTop: 4 }}>ðŸ“ {tripSummary.extraKmInfo}</Text>}
             </View>
           )}
-          {[['Total Fare', '₹' + tripSummary.fare],[`Platform Fee (${tripSummary.isHourly ? '12' : '15'}%)`, tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
+          {[['Total Fare', 'â‚¹' + tripSummary.fare],[`Platform Fee (${tripSummary.isHourly ? '12' : '15'}%)`, tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
             <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#334155' }}>
               <Text style={{ fontSize: 14, color: '#94A3B8' }}>{k}</Text>
               <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? C.green : '#E2E8F0' }}>{v}</Text>
             </View>
           ))}
         </View>
-        {/* Ride Extension Request — same customer wants another trip */}
+        {/* Ride Extension Request â€” same customer wants another trip */}
         {extRequest && (
           <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: 'rgba(245,158,11,0.4)' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ fontSize: 28, marginRight: 10 }}>🔄</Text>
+              <Text style={{ fontSize: 28, marginRight: 10 }}>ðŸ”„</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#F59E0B', fontWeight: '800', fontSize: 15 }}>Ride Extension Request!</Text>
-                <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} — same customer</Text>
+                <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} â€” same customer</Text>
               </View>
               <View style={{ backgroundColor: C.pink, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{extRespSec}</Text>
@@ -3105,15 +3105,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ color: '#64748B', fontSize: 11 }}>Naya destination</Text>
               <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 14, marginTop: 2 }}>{extRequest.new_drop}</Text>
-              <Text style={{ color: C.green, fontWeight: 'bold', fontSize: 18, marginTop: 6 }}>₹{Math.round(extRequest.estimated_fare)}</Text>
+              <Text style={{ color: C.green, fontWeight: 'bold', fontSize: 18, marginTop: 6 }}>â‚¹{Math.round(extRequest.estimated_fare)}</Text>
               <Text style={{ color: '#64748B', fontSize: 11 }}>Estimated fare</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={acceptExtension} disabled={extAccLoading}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{extAccLoading ? '...' : '✅ Accept'}</Text>
+                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{extAccLoading ? '...' : 'âœ… Accept'}</Text>
               </Bouncy>
               <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectExtension}>
-                <Text style={{ color: '#94A3B8', fontWeight: 'bold', fontSize: 15 }}>✗ Reject</Text>
+                <Text style={{ color: '#94A3B8', fontWeight: 'bold', fontSize: 15 }}>âœ— Reject</Text>
               </Bouncy>
             </View>
           </View>
@@ -3122,11 +3122,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {!custRatingDone ? (
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, elevation: 3, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
             <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 2 }}>Customer ko Rate karo</Text>
-            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>Yeh customer kaisa tha? (1–5 stars)</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>Yeh customer kaisa tha? (1â€“5 stars)</Text>
             <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
               {[1,2,3,4,5].map(star => (
                 <TouchableOpacity key={star} onPress={() => setCustRatingStars(star)}>
-                  <Text style={{ fontSize: 38, opacity: star <= custRatingStars ? 1 : 0.25 }}>⭐</Text>
+                  <Text style={{ fontSize: 38, opacity: star <= custRatingStars ? 1 : 0.25 }}>â­</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -3144,26 +3144,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         ) : (
           <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 16, padding: 16, marginBottom: 16, alignItems: 'center', flexDirection: 'row', gap: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-            <Text style={{ fontSize: 22 }}>✅</Text>
+            <Text style={{ fontSize: 22 }}>âœ…</Text>
             <Text style={{ fontSize: 14, fontWeight: '700', color: C.green }}>Customer rating submit ho gaya!</Text>
           </View>
         )}
         <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(tripSummary?.ride_id || lastRideId || ''); setDrvCmpStep(1); setDrSubScreen('complaint-new'); setTripSummary(null); }}
           style={{ backgroundColor: 'rgba(233,69,96,0.08)', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: C.pink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-          <Text style={{ fontSize: 18 }}>⚠️</Text>
+          <Text style={{ fontSize: 18 }}>âš ï¸</Text>
           <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
         </TouchableOpacity>
-        <Bouncy style={[s.btn, { backgroundColor: C.green, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
+        <Bouncy style={[s.btn, { backgroundColor: C.green, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>ðŸ  Next Ride ke liye Ready</Text></Bouncy>
       </ScrollView>
     </ScreenIn>
   );
 
-  // ═══ CHAT (driver) ═══
+  // â•â•â• CHAT (driver) â•â•â•
   if (showChat) return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setShowChat(false)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
-        <Text style={s.greeting}>💬 {activeRide?.passenger_name || 'Customer'}</Text>
+        <Text style={s.greeting}>ðŸ’¬ {activeRide?.passenger_name || 'Customer'}</Text>
         <TouchableOpacity onPress={callCustomer} style={{ width: 36, alignItems: 'flex-end' }}><Ionicons name="call" size={20} color="#fff" /></TouchableOpacity>
       </View>
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }}>
@@ -3176,7 +3176,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ))}
       </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
-        {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke pickup point pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
+        {["Cancel mat karo, aa raha hun ðŸ™", "Pahunch raha hun jaldi", "Main aapke pickup point pe hun", "Main wait kar raha hun", "Please ready raho ðŸš—"].map(q => (
           <TouchableOpacity key={q} onPress={() => sendChat(q)} style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
             <Text style={{ fontSize: 12, color: '#334155', fontWeight: '600' }}>{q}</Text>
           </TouchableOpacity>
@@ -3184,7 +3184,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </ScrollView>
       <View style={cs.inputRow}>
         <TextInput style={cs.input} placeholder="Message likho..." value={chatInput} onChangeText={setChatInput} onSubmitEditing={() => sendChat()} />
-        <TouchableOpacity style={cs.send} onPress={() => sendChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+        <TouchableOpacity style={cs.send} onPress={() => sendChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>âž¤</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
@@ -3193,12 +3193,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <View style={s.topBar}>
         <TouchableOpacity onPress={() => setShowHourlyChat(false)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
-        <Text style={s.greeting}>💬 Customer (Hourly)</Text>
+        <Text style={s.greeting}>ðŸ’¬ Customer (Hourly)</Text>
         <View style={{ width: 36 }} />
       </View>
       <ScrollView style={{ flex: 1, padding: 14 }} contentContainerStyle={{ paddingBottom: 10 }} keyboardShouldPersistTaps="handled">
         {hourlyChatMsgs.length === 0 ? (
-          <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi — pehla message bhejo!</Text>
+          <Text style={{ textAlign: 'center', color: '#999', marginTop: 20, fontSize: 13 }}>Koi message nahi â€” pehla message bhejo!</Text>
         ) : hourlyChatMsgs.map((m, i) => (
           <View key={i} style={[cs.bubble, m.sender === 'driver' ? cs.mine : cs.theirs]}>
             <Text style={{ color: m.sender === 'driver' ? '#fff' : '#0F172A', fontSize: 14 }}>{m.message}</Text>
@@ -3206,7 +3206,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ))}
       </ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ maxHeight: 44, borderTopWidth: 1, borderTopColor: '#E2E8F0', backgroundColor: '#FFFFFF' }} contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 7, gap: 8 }}>
-        {["Cancel mat karo, aa raha hun 🙏", "Pahunch raha hun jaldi", "Main aapke location pe hun", "Main wait kar raha hun", "Please ready raho 🚗"].map(q => (
+        {["Cancel mat karo, aa raha hun ðŸ™", "Pahunch raha hun jaldi", "Main aapke location pe hun", "Main wait kar raha hun", "Please ready raho ðŸš—"].map(q => (
           <TouchableOpacity key={q} onPress={() => sendHourlyChat(q)} style={{ backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 4 }}>
             <Text style={{ fontSize: 12, color: '#334155', fontWeight: '600' }}>{q}</Text>
           </TouchableOpacity>
@@ -3214,12 +3214,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </ScrollView>
       <View style={cs.inputRow}>
         <TextInput style={cs.input} placeholder="Customer ko message karo..." value={hourlyChatInput} onChangeText={setHourlyChatInput} onSubmitEditing={() => sendHourlyChat()} />
-        <TouchableOpacity style={cs.send} onPress={() => sendHourlyChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>➤</Text></TouchableOpacity>
+        <TouchableOpacity style={cs.send} onPress={() => sendHourlyChat()}><Text style={{ color: '#fff', fontWeight: 'bold' }}>âž¤</Text></TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
   );
 
-  // ═══ HOME TAB — Uber style ═══
+  // â•â•â• HOME TAB â€” Uber style â•â•â•
   if (activeTab === 'home') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Full map background */}
@@ -3274,7 +3274,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           }
         }}
       />
-      {/* Zone Alert FAB — visible only when online and no active ride */}
+      {/* Zone Alert FAB â€” visible only when online and no active ride */}
       {isOnline && !activeRide && !showZoneAlertSender && (
         <TouchableOpacity
           onPress={() => setShowZoneAlertSender(true)}
@@ -3287,7 +3287,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             elevation: 10, shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 12,
             borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)',
           }}>
-          <Text style={{ fontSize: 22 }}>📢</Text>
+          <Text style={{ fontSize: 22 }}>ðŸ“¢</Text>
         </TouchableOpacity>
       )}
       {/* Top bar */}
@@ -3304,13 +3304,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ color: isOnline ? C.online : C.textDim, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }}>{isOnline ? 'LIVE' : 'OFF'}</Text>
             </View>
           </View>
-          <Text style={s.subTxt}>{driverInfo?.name || phone} · {driverInfo?.vehicle_no || ''}</Text>
+          <Text style={s.subTxt}>{driverInfo?.name || phone} Â· {driverInfo?.vehicle_no || ''}</Text>
           {driverLevel && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 3 }}>
               <Text style={{ fontSize: 12 }}>{driverLevel.levelEmoji}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.80)', fontSize: 10, fontWeight: '700' }}>{driverLevel.levelName}</Text>
               {driverLevel.nextLevel && (
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9 }}>· {driverLevel.progress}% to {driverLevel.nextLevelName}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 9 }}>Â· {driverLevel.progress}% to {driverLevel.nextLevelName}</Text>
               )}
             </View>
           )}
@@ -3321,10 +3321,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={{ flex: 1, backgroundColor: '#F1F5F9', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
           <View style={s.statsRow}>
-            {/* Earnings tile — green accent, hero number */}
+            {/* Earnings tile â€” green accent, hero number */}
             <View style={[s.statCard, { borderColor: C.greenBorder, backgroundColor: C.greenGlass }]}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.online + '22', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                <Text style={{ fontSize: 17 }}>💰</Text>
+                <Text style={{ fontSize: 17 }}>ðŸ’°</Text>
               </View>
               <CountUp value={earnings} style={[s.statValue, { color: C.online, fontSize: 20 }]} />
               <Text style={s.statLabel}>Aaj ki kamai</Text>
@@ -3332,7 +3332,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Rides tile */}
             <View style={s.statCard}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: C.plumGlass, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: C.plumBorder }}>
-                <Text style={{ fontSize: 17 }}>🚗</Text>
+                <Text style={{ fontSize: 17 }}>ðŸš—</Text>
               </View>
               <Text style={[s.statValue, { fontSize: 20 }]}>{rides}</Text>
               <Text style={s.statLabel}>Rides</Text>
@@ -3340,14 +3340,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Rating tile */}
             <View style={s.statCard}>
               <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(245,158,11,0.10)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.28)' }}>
-                <Text style={{ fontSize: 17 }}>⭐</Text>
+                <Text style={{ fontSize: 17 }}>â­</Text>
               </View>
               <Text style={[s.statValue, { fontSize: 20, color: '#92400E' }]}>{driverInfo?.rating || '4.8'}</Text>
               <Text style={s.statLabel}>Rating</Text>
             </View>
           </View>
 
-          {/* ── Earnings Optimizer ── */}
+          {/* â”€â”€ Earnings Optimizer â”€â”€ */}
           {(() => {
             const goalPct = Math.min((earnings / dailyGoal) * 100, 100);
             const left    = Math.max(dailyGoal - earnings, 0);
@@ -3364,19 +3364,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 22 }}>{done ? '🏆' : '🎯'}</Text>
+                    <Text style={{ fontSize: 22 }}>{done ? 'ðŸ†' : 'ðŸŽ¯'}</Text>
                     <View>
                       <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>
                         {done ? 'Goal Poora!' : 'Daily Goal'}
                       </Text>
                       <Text style={{ fontSize: 11, color: '#64748B' }}>
-                        ₹{earnings} / ₹{dailyGoal}
+                        â‚¹{earnings} / â‚¹{dailyGoal}
                       </Text>
                     </View>
                   </View>
                   {!done && (
                     <Text style={{ fontSize: 13, fontWeight: '800', color: C.pink }}>
-                      ₹{left} bacha
+                      â‚¹{left} bacha
                     </Text>
                   )}
                 </View>
@@ -3392,7 +3392,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {driverLevel?.nextLevel && (
                   <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'rgba(124,58,237,0.07)', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: 'rgba(124,58,237,0.2)' }}>
                     <Text style={{ fontSize: 12, color: '#7C3AED', fontWeight: '700' }}>
-                      {driverLevel.levelEmoji} {lvlLeft} aur rides → {driverLevel.nextLevelEmoji} {driverLevel.nextLevelName}
+                      {driverLevel.levelEmoji} {lvlLeft} aur rides â†’ {driverLevel.nextLevelEmoji} {driverLevel.nextLevelName}
                     </Text>
                     <Text style={{ fontSize: 11, fontWeight: '800', color: '#7C3AED' }}>{driverLevel.progress}%</Text>
                   </View>
@@ -3400,7 +3400,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Auto-accept toggle */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: '#F1F5F9' }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>⚡ Auto-Accept High Surge</Text>
+                    <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>âš¡ Auto-Accept High Surge</Text>
                     <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>1.5x+ surge pe ride auto-accept ho jayegi</Text>
                   </View>
                   <Switch
@@ -3414,13 +3414,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             );
           })()}
 
-          {/* Hot Zones — always visible when online */}
+          {/* Hot Zones â€” always visible when online */}
           {isOnline && !activeRide && !rideReq && !activeHourlyRide && !hourlyRideReq && (
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 16, marginBottom: 14, elevation: 4, borderWidth: 1.5, borderColor: '#E2E8F0', shadowColor: C.pink, shadowOpacity: 0.08, shadowRadius: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                   <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(233,30,99,0.1)', alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ fontSize: 18 }}>🔥</Text>
+                    <Text style={{ fontSize: 18 }}>ðŸ”¥</Text>
                   </View>
                   <View>
                     <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A' }}>Hot Zones</Text>
@@ -3433,7 +3433,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
               {demandZones.length === 0 ? (
                 <View style={{ alignItems: 'center', paddingVertical: 18 }}>
-                  <Text style={{ fontSize: 28, marginBottom: 8 }}>🗺️</Text>
+                  <Text style={{ fontSize: 28, marginBottom: 8 }}>ðŸ—ºï¸</Text>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>Abhi koi hot zone nahi</Text>
                   <Text style={{ fontSize: 11, color: '#64748B', marginTop: 4, textAlign: 'center' }}>Jaise hi aapke area mein ride activity badhe,{'\n'}zones yahan dikhenge</Text>
                 </View>
@@ -3443,14 +3443,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   : zone.heat === 'medium'
                   ? { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)', dot: '#F59E0B', label: 'Medium', labelBg: '#F59E0B' }
                   : { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)', dot: C.green, label: 'Low', labelBg: C.green };
-                const vehicleEmoji = zone.top_vehicle === 'bike' ? '🏍️' : zone.top_vehicle === 'auto' ? '🛺' : zone.top_vehicle === 'car' ? '🚕' : zone.top_vehicle === 'eriksha' ? '🛵' : '🚗';
+                const vehicleEmoji = zone.top_vehicle === 'bike' ? 'ðŸï¸' : zone.top_vehicle === 'auto' ? 'ðŸ›º' : zone.top_vehicle === 'car' ? 'ðŸš•' : zone.top_vehicle === 'eriksha' ? 'ðŸ›µ' : 'ðŸš—';
                 return (
                   <View key={i} style={{ backgroundColor: heatConfig.bg, borderRadius: 12, padding: 12, marginBottom: i < 4 ? 8 : 0, borderWidth: 1, borderColor: heatConfig.border, flexDirection: 'row', alignItems: 'center' }}>
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: heatConfig.dot, marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
                         {vehicleEmoji} {zone.dist_km < 0.5 ? 'Aapke paas' : `${zone.dist_km} km door`}
-                        {zone.avg_fare > 0 ? ` · avg ₹${zone.avg_fare}` : ''}
+                        {zone.avg_fare > 0 ? ` Â· avg â‚¹${zone.avg_fare}` : ''}
                       </Text>
                       <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
                         {zone.ride_count} ride{zone.ride_count > 1 ? 's' : ''} is area mein
@@ -3463,16 +3463,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 );
               })}
               <TouchableOpacity onPress={fetchDemandZones} style={{ marginTop: 10, alignItems: 'center', paddingVertical: 6 }}>
-                <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>🔄 Refresh zones</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', fontWeight: '600' }}>ðŸ”„ Refresh zones</Text>
               </TouchableOpacity>
             </View>
           )}
 
-          {/* ── Demand Prediction Card ── */}
+          {/* â”€â”€ Demand Prediction Card â”€â”€ */}
           {isOnline && !activeRide && !rideReq && !activeHourlyRide && demandPrediction && (
             <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 16, marginBottom: 12, elevation: 4, shadowColor: '#6366F1', shadowOpacity: 0.12, shadowRadius: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.15)' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-                <Text style={{ fontSize: 18, marginRight: 8 }}>📊</Text>
+                <Text style={{ fontSize: 18, marginRight: 8 }}>ðŸ“Š</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: '#1E1B4B' }}>Demand Forecast</Text>
                   <Text style={{ fontSize: 11, color: '#6B7280', marginTop: 1 }}>Aaj ke liye ride demand prediction</Text>
@@ -3490,7 +3490,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 )}
               </View>
 
-              {/* Hourly bar chart — 6am to 11pm */}
+              {/* Hourly bar chart â€” 6am to 11pm */}
               <View style={{ flexDirection: 'row', alignItems: 'flex-end', height: 50, gap: 2 }}>
                 {(demandPrediction.hourly || []).filter((_: any, i: number) => i >= 6 && i <= 22).map((h: any, idx: number) => {
                   const hour = h.hour;
@@ -3528,23 +3528,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {/* Sppero Buddy Recruit Banner */}
           {!activeRide && !rideReq && !activeHourlyRide && (
             <TouchableOpacity activeOpacity={0.92}
-              onPress={() => { const msg = `🚗 Sppero Buddy Captain bano aur kamai karo!\n\nMere saath join karo Sppero pe — India ka fastest growing ride platform.\n\n📲 App download karo: https://sppero.app\nMera referral: ${driverInfo?.phone || ''}`; Share.share({ message: msg }); }}
+              onPress={() => { const msg = `ðŸš— Sppero Buddy Captain bano aur kamai karo!\n\nMere saath join karo Sppero pe â€” India ka fastest growing ride platform.\n\nðŸ“² App download karo: https://sppero.app\nMera referral: ${driverInfo?.phone || ''}`; Share.share({ message: msg }); }}
               style={{ borderRadius: 20, marginBottom: 12, overflow: 'hidden', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 14 }}>
               <View style={{ backgroundColor: C.pink, padding: 16, flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 8 }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 }}>🚗 DRIVER REFERRAL</Text>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 }}>ðŸš— DRIVER REFERRAL</Text>
                   </View>
                   <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', opacity: 0.9 }}>Naya Sppero Buddy banao</Text>
-                  <Text style={{ color: '#FFD700', fontSize: 24, fontWeight: '900', lineHeight: 30, marginTop: 2 }}>₹500 Bonus Kamao!</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 4, lineHeight: 16 }}>Har naye driver jo join kare —{'\n'}₹500 aapके wallet mein!</Text>
+                  <Text style={{ color: '#FFD700', fontSize: 24, fontWeight: '900', lineHeight: 30, marginTop: 2 }}>â‚¹500 Bonus Kamao!</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 4, lineHeight: 16 }}>Har naye driver jo join kare â€”{'\n'}â‚¹500 aapà¤•à¥‡ wallet mein!</Text>
                 </View>
                 <View style={{ alignItems: 'center', marginLeft: 12 }}>
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#FFD700', marginBottom: 8 }}>
-                    <Text style={{ fontSize: 28 }}>🚗</Text>
+                    <Text style={{ fontSize: 28 }}>ðŸš—</Text>
                   </View>
                   <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 }}>
-                    <Text style={{ color: '#111', fontSize: 11, fontWeight: '900' }}>Invite →</Text>
+                    <Text style={{ color: '#111', fontSize: 11, fontWeight: '900' }}>Invite â†’</Text>
                   </View>
                 </View>
               </View>
@@ -3559,21 +3559,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {commissionData.pending_commission > 0 && !activeRide && (
             <TouchableOpacity onPress={() => { setActiveTab('earnings'); setWalletEarningsTab('commission'); }}
               style={{ backgroundColor: 'rgba(230,81,0,0.12)', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(230,81,0,0.35)' }}>
-              <Text style={{ fontSize: 20 }}>💰</Text>
+              <Text style={{ fontSize: 20 }}>ðŸ’°</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: '#FB923C' }}>Commission Due: ₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: '#FB923C' }}>Commission Due: â‚¹{commissionData.pending_commission.toFixed(0)}</Text>
                 <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Cash rides ki platform fee pending hai. Tap karke pay karo.</Text>
               </View>
-              <Text style={{ color: '#FB923C', fontWeight: '700', fontSize: 12 }}>Pay →</Text>
+              <Text style={{ color: '#FB923C', fontWeight: '700', fontSize: 12 }}>Pay â†’</Text>
             </TouchableOpacity>
           )}
 
           {/* Surge Active Banner */}
           {surgeMultiplier > 1.0 && !activeRide && (
             <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 12, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.35)' }}>
-              <Text style={{ fontSize: 20 }}>⚡</Text>
+              <Text style={{ fontSize: 20 }}>âš¡</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontWeight: '800', fontSize: 13, color: '#F59E0B' }}>Surge Active: {surgeMultiplier}x — Rides pe zyada kamai!</Text>
+                <Text style={{ fontWeight: '800', fontSize: 13, color: '#F59E0B' }}>Surge Active: {surgeMultiplier}x â€” Rides pe zyada kamai!</Text>
                 <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>Abhi sabhi ride fares {surgeMultiplier}x hain</Text>
               </View>
             </View>
@@ -3582,13 +3582,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {/* Admin Notification Banner */}
           {adminNotif && adminNotif.created_at !== adminNotifDismissed && (
             <View style={{ borderRadius: 14, marginBottom: 10, backgroundColor: 'rgba(233,30,99,0.08)', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.3)', padding: 12, flexDirection: 'row', alignItems: 'center' }}>
-              <Text style={{ fontSize: 22, marginRight: 10 }}>📩</Text>
+              <Text style={{ fontSize: 22, marginRight: 10 }}>ðŸ“©</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontWeight: '800', fontSize: 12, color: C.pink, marginBottom: 2 }}>Sppero Admin</Text>
                 <Text style={{ fontSize: 12, color: '#64748B' }}>{adminNotif.body || adminNotif.title}</Text>
               </View>
               <TouchableOpacity onPress={() => setAdminNotifDismissed(adminNotif.created_at)} style={{ padding: 6 }}>
-                <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
+                <Text style={{ fontSize: 16, color: '#aaa' }}>âœ•</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -3597,13 +3597,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {driverOffers.filter(o => !offerDismissed.has(o.id)).map((offer: any) => (
             <View key={offer.id} style={{ borderRadius: 14, marginBottom: 10, backgroundColor: offer.type === 'incentive' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', borderWidth: 1.5, borderColor: offer.type === 'incentive' ? 'rgba(16,185,129,0.4)' : 'rgba(245,158,11,0.4)', overflow: 'hidden' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', padding: 12 }}>
-                <Text style={{ fontSize: 22, marginRight: 10 }}>{offer.type === 'incentive' ? '💰' : '📢'}</Text>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>{offer.type === 'incentive' ? 'ðŸ’°' : 'ðŸ“¢'}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontWeight: '800', fontSize: 13, color: '#0F172A' }}>{offer.title}</Text>
                   {offer.body ? <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{offer.body}</Text> : null}
                 </View>
                 <TouchableOpacity onPress={() => setOfferDismissed(s => new Set([...s, offer.id]))} style={{ padding: 6 }}>
-                  <Text style={{ fontSize: 16, color: '#aaa' }}>✕</Text>
+                  <Text style={{ fontSize: 16, color: '#aaa' }}>âœ•</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -3615,18 +3615,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <TripStatusBar status={activeRide.status} />
               <View style={s.tripBadge}>
                 <Text style={s.tripBadgeTxt}>
-                  {activeRide.status === 'matched' && '🚗 Pickup ki taraf jao'}
-                  {activeRide.status === 'arrived' && '📍 Pickup pe pahunche'}
-                  {activeRide.status === 'started' && '🛣️ Trip chal rahi hai'}
+                  {activeRide.status === 'matched' && 'ðŸš— Pickup ki taraf jao'}
+                  {activeRide.status === 'arrived' && 'ðŸ“ Pickup pe pahunche'}
+                  {activeRide.status === 'started' && 'ðŸ›£ï¸ Trip chal rahi hai'}
                 </Text>
               </View>
               <View style={s.tripCustomer}>
                 <View style={s.tripAvatar}><Text style={{ color: '#fff', fontSize: 20, fontWeight: 'bold' }}>{activeRide.passenger_name?.[0] || 'P'}</Text></View>
                 <View style={{ flex: 1 }}>
                   <Text style={s.tripCustName}>{activeRide.passenger_name || 'Passenger'}</Text>
-                  <Text style={s.tripCustPhone}>📞 {activeRide.passenger_phone_masked || '**********'}</Text>
+                  <Text style={s.tripCustPhone}>ðŸ“ž {activeRide.passenger_phone_masked || '**********'}</Text>
                 </View>
-                <Text style={s.tripFare}>₹{activeRide.fare}</Text>
+                <Text style={s.tripFare}>â‚¹{activeRide.fare}</Text>
               </View>
 
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
@@ -3641,32 +3641,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
               {chatToast && (
                 <TouchableOpacity style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,30,99,0.5)', elevation: 6 }} onPress={() => { setChatToast(null); setUnreadChat(0); setShowChat(true); }}>
-                  <Ionicons name="chatbubble" size={16} color=C.pink />
+                  <Ionicons name="chatbubble" size={16} color={C.pink} />
                   <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
                   <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Tap to reply</Text>
                 </TouchableOpacity>
               )}
               {!chatToast && unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: C.pink, borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
-                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>💬 Customer ke {unreadChat} message — tap to read</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' }}>ðŸ’¬ Customer ke {unreadChat} message â€” tap to read</Text>
                 </TouchableOpacity>
               )}
 
               <View style={s.tripRoute}>
-                <Text style={s.tripFrom}>📍 {activeRide.pickup}</Text>
-                <Text style={s.tripArrow}>↓</Text>
-                <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
+                <Text style={s.tripFrom}>ðŸ“ {activeRide.pickup}</Text>
+                <Text style={s.tripArrow}>â†“</Text>
+                <Text style={s.tripTo}>ðŸŽ¯ {activeRide.drop_location}</Text>
               </View>
-              {eta ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+              {eta ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>ðŸ• {eta}</Text></View> : null}
 
               {distToPickup && (activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.25)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-                  <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>📍 {distToPickup}</Text>
+                  <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>ðŸ“ {distToPickup}</Text>
                 </View>
               )}
               {tripRemainingEta && activeRide.status === 'started' && (
                 <View style={{ backgroundColor: 'rgba(255,99,24,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,99,24,0.3)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-                  <Text style={{ color: '#F5C518', fontWeight: '700', fontSize: 14 }}>🛣️ {tripRemainingEta}</Text>
+                  <Text style={{ color: '#F5C518', fontWeight: '700', fontSize: 14 }}>ðŸ›£ï¸ {tripRemainingEta}</Text>
                 </View>
               )}
 
@@ -3684,61 +3684,61 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )}
 
               {activeRide.status === 'matched' && (
-                <Bouncy style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text></Bouncy>
+                <Bouncy style={s.tripBtn} onPress={markArrived} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : 'ðŸ“ Pickup pe pahunch gaya'}</Text></Bouncy>
               )}
 
               {activeRide.status === 'arrived' && (
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                  <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>🔐 Passenger se 4-digit OTP poocho</Text>
+                  <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>ðŸ” Passenger se 4-digit OTP poocho</Text>
                   <TextInput
                     style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
                     keyboardType="number-pad"
                     maxLength={4}
                     value={otpInput}
                     onChangeText={setOtpInput}
-                    placeholder="○ ○ ○ ○"
+                    placeholder="â—‹ â—‹ â—‹ â—‹"
                     placeholderTextColor="#D4A520"
                     autoFocus
                   />
-                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading || otpInput.length < 4}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading || otpInput.length < 4}><Text style={s.tripBtnTxt}>{loading ? '...' : 'ðŸš€ OTP Verify & Trip Shuru'}</Text></Bouncy>
                 </KeyboardAvoidingView>
               )}
 
               {activeRide.status === 'started' && (
                 <View>
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                    <Text style={s.tripBtnTxt}>{loading ? '...' : 'âœ… Trip Complete Karo'}</Text>
                   </Bouncy>
                 </View>
               )}
               <Bouncy style={s.cancelBtn} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
-                <Text style={s.cancelTxt}>✕ Cancel Trip</Text>
+                <Text style={s.cancelTxt}>âœ• Cancel Trip</Text>
               </Bouncy>
             </View>
           )}
 
-          {/* ─── FULL-SCREEN RIDE REQUEST MODAL (moved to Live tab) ─── */}
+          {/* â”€â”€â”€ FULL-SCREEN RIDE REQUEST MODAL (moved to Live tab) â”€â”€â”€ */}
           <Modal visible={false} animationType="slide" transparent={false} statusBarTranslucent>
             <View style={{ flex: 1, backgroundColor: '#F5C518' }}>
               {/* Orange header */}
               <View style={{ paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight||28)+16 : 56, paddingHorizontal: 20, paddingBottom: 28, alignItems: 'center' }}>
                 {rideReq?.is_favourite_request && (
                   <View style={{ backgroundColor: '#FBBF24', borderRadius: 20, paddingHorizontal: 18, paddingVertical: 6, marginBottom: 10, flexDirection: 'row', alignItems: 'center' }}>
-                    <Text style={{ color: '#1A1A2E', fontSize: 12, fontWeight: '900', letterSpacing: 1 }}>⭐ AAPKA REGULAR CUSTOMER</Text>
+                    <Text style={{ color: '#1A1A2E', fontSize: 12, fontWeight: '900', letterSpacing: 1 }}>â­ AAPKA REGULAR CUSTOMER</Text>
                   </View>
                 )}
                 <Text style={{ color: 'rgba(26,18,0,0.8)', fontSize: 11, fontWeight: '900', letterSpacing: 2.5, marginBottom: 8 }}>
-                  {rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE AAYI!'}
+                  {rideReq?.is_favourite_request ? 'â­ SEEDHI RIDE REQUEST' : 'ðŸ”” NAYI RIDE AAYI!'}
                 </Text>
                 <Text style={{ fontSize: 72, marginBottom: 4 }}>
-                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
+                  {rideReq?.ride_type === 'car' ? 'ðŸš•' : rideReq?.ride_type === 'bike' ? 'ðŸï¸' : rideReq?.ride_type === 'eriksha' ? 'ðŸ›µ' : rideReq?.ride_type === 'green_bike' ? 'âš¡' : rideReq?.ride_type === 'electric_auto' ? 'ðŸŒ¿' : 'ðŸ›º'}
                 </Text>
                 <Text style={{ color: '#1A1200', fontSize: 26, fontWeight: '900', letterSpacing: 0.5 }}>
                   {rideReq?.passenger_name || 'Passenger'}
                 </Text>
                 {surgeMultiplier > 1.0 && (
                   <View style={{ backgroundColor: '#FBBF24', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 5, marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                    <Text style={{ color: '#1A1A2E', fontWeight: '900', fontSize: 14 }}>⚡ {surgeMultiplier}x SURGE</Text>
+                    <Text style={{ color: '#1A1A2E', fontWeight: '900', fontSize: 14 }}>âš¡ {surgeMultiplier}x SURGE</Text>
                   </View>
                 )}
               </View>
@@ -3748,15 +3748,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Big fare card */}
                 <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, alignItems: 'center', elevation: 4, shadowColor: '#22C55E', shadowOpacity: 0.18, shadowRadius: 10 }}>
                   <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 4, fontWeight: '700', letterSpacing: 1.5 }}>AAPKI KAMAI</Text>
-                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
-                  <Text style={{ color: '#64748B', fontSize: 12 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>
+                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>â‚¹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                  <Text style={{ color: '#64748B', fontSize: 12 }}>Total: â‚¹{rideReq?.fare} Â· 12% commission</Text>
                 </View>
 
                 {/* Distance badges */}
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
                   {driverGps && rideReq?.pickup_lat && (
                     <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#BFDBFE' }}>
-                      <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '800' }}>📍 Aap se Pickup</Text>
+                      <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '800' }}>ðŸ“ Aap se Pickup</Text>
                       <Text style={{ color: '#1D4ED8', fontSize: 24, fontWeight: '900', marginTop: 3 }}>
                         {haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km
                       </Text>
@@ -3764,7 +3764,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   )}
                   {rideReq?.distance && (
                     <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: '#BBF7D0' }}>
-                      <Text style={{ color: C.green, fontSize: 11, fontWeight: '800' }}>🛣️ Trip Distance</Text>
+                      <Text style={{ color: C.green, fontSize: 11, fontWeight: '800' }}>ðŸ›£ï¸ Trip Distance</Text>
                       <Text style={{ color: '#15803D', fontSize: 24, fontWeight: '900', marginTop: 3 }}>{rideReq.distance} km</Text>
                     </View>
                   )}
@@ -3797,11 +3797,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Accept / Reject buttons */}
                 <View style={{ flexDirection: 'row', gap: 14, marginTop: 14 }}>
                   <TouchableOpacity style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 18, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB', elevation: 2 }} onPress={rejectRide}>
-                    <Text style={{ fontSize: 22 }}>✕</Text>
+                    <Text style={{ fontSize: 22 }}>âœ•</Text>
                     <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 13, marginTop: 2 }}>Reject</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={{ flex: 2, backgroundColor: '#22C55E', borderRadius: 16, padding: 18, alignItems: 'center', elevation: 6, shadowColor: '#22C55E', shadowOpacity: 0.45, shadowRadius: 12 }} onPress={acceptRide} disabled={loading}>
-                    <Text style={{ fontSize: 22 }}>✓</Text>
+                    <Text style={{ fontSize: 22 }}>âœ“</Text>
                     <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 15, marginTop: 2 }}>
                       {loading ? 'Accept ho raha...' : 'ACCEPT KARO'}
                     </Text>
@@ -3811,48 +3811,48 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           </Modal>
 
-          {/* ─── HOURLY RIDE REQUEST (moved to Live tab) ─── */}
+          {/* â”€â”€â”€ HOURLY RIDE REQUEST (moved to Live tab) â”€â”€â”€ */}
           {false && hourlyRideReq && !activeRide && !activeHourlyRide && (
             <SlideIn>
               <View style={[s.rideCard, { borderLeftWidth: 4, borderLeftColor: C.pink }]}>
                 <View style={s.rideHeader}>
                   <View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                      <View style={{ backgroundColor: C.pink, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>⏱️ HOURLY</Text></View>
+                      <View style={{ backgroundColor: C.pink, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>â±ï¸ HOURLY</Text></View>
                       <Text style={s.rideTitle}>{hourlyRideReq.package_hours >= 24 ? `${hourlyRideReq.package_hours/24} Day${hourlyRideReq.package_hours > 24?'s':''}` : hourlyRideReq.package_hours === 8 ? 'Full Day (8h)' : `${hourlyRideReq.package_hours} Hours`}</Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: '#64748B' }}>{hourlyRideReq.km_included} km included · {hourlyRideReq.is_roundtrip ? '🔄 Round trip' : '➡️ One way'}</Text>
+                    <Text style={{ fontSize: 11, color: '#64748B' }}>{hourlyRideReq.km_included} km included Â· {hourlyRideReq.is_roundtrip ? 'ðŸ”„ Round trip' : 'âž¡ï¸ One way'}</Text>
                   </View>
-                  <Text style={s.rideFare}>₹{hourlyRideReq.base_fare}</Text>
+                  <Text style={s.rideFare}>â‚¹{hourlyRideReq.base_fare}</Text>
                 </View>
                 <View style={s.rideDetails}>
-                  <Text style={s.rideFrom}>📍 {hourlyRideReq.pickup}</Text>
-                  {hourlyRideReq.drop_location && <><Text style={s.rideDivider}>↓</Text><Text style={s.rideTo}>🎯 {hourlyRideReq.drop_location}</Text></>}
-                  {!hourlyRideReq.drop_location && <Text style={[s.rideTo, { color: '#999' }]}>📍 Drop: Flexible</Text>}
+                  <Text style={s.rideFrom}>ðŸ“ {hourlyRideReq.pickup}</Text>
+                  {hourlyRideReq.drop_location && <><Text style={s.rideDivider}>â†“</Text><Text style={s.rideTo}>ðŸŽ¯ {hourlyRideReq.drop_location}</Text></>}
+                  {!hourlyRideReq.drop_location && <Text style={[s.rideTo, { color: '#999' }]}>ðŸ“ Drop: Flexible</Text>}
                 </View>
                 {hourlyRideReq.scheduled_at && (
                   <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 8, padding: 8, marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-                    <Text style={{ fontSize: 14 }}>📅</Text>
+                    <Text style={{ fontSize: 14 }}>ðŸ“…</Text>
                     <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700' }}>SCHEDULED: {new Date(hourlyRideReq.scheduled_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
                   </View>
                 )}
                 <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
+                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '600' }}>ðŸ’° Aapki kamai: â‚¹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
                 </View>
                 {!hourlyRideReq.scheduled_at && <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />}
                 <View style={[s.rideActions, { marginTop: 12 }]}>
-                  <Bouncy style={s.rejectBtn} onPress={() => setHourlyRideReq(null)}><Text style={s.rejectTxt}>✕ Skip</Text></Bouncy>
-                  <Bouncy style={s.acceptBtn} onPress={acceptHourlyRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : '✓ Accept'}</Text></Bouncy>
+                  <Bouncy style={s.rejectBtn} onPress={() => setHourlyRideReq(null)}><Text style={s.rejectTxt}>âœ• Skip</Text></Bouncy>
+                  <Bouncy style={s.acceptBtn} onPress={acceptHourlyRide} disabled={loading}><Text style={s.acceptTxt}>{loading ? '...' : 'âœ“ Accept'}</Text></Bouncy>
                 </View>
               </View>
             </SlideIn>
           )}
 
-          {/* ─── ACTIVE HOURLY RIDE (moved to Live tab) ─── */}
+          {/* â”€â”€â”€ ACTIVE HOURLY RIDE (moved to Live tab) â”€â”€â”€ */}
           {false && activeHourlyRide && (
             <View style={[s.tripCard, { borderLeftWidth: 4, borderLeftColor: C.pink }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <View style={{ backgroundColor: C.pink, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>⏱️ HOURLY TRIP</Text></View>
+                <View style={{ backgroundColor: C.pink, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>â±ï¸ HOURLY TRIP</Text></View>
                 {activeHourlyRide.status === 'active' && (
                   <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#0F172A', fontVariant: ['tabular-nums'] }}>
                     {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')}:{String(hourlyTimerSec%60).padStart(2,'0')}
@@ -3861,15 +3861,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
 
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
-                <Text style={{ color: '#94A3B8', fontSize: 13 }}>{activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} · {activeHourlyRide.km_included} km · ₹{activeHourlyRide.base_fare}</Text>
+                <Text style={{ color: '#94A3B8', fontSize: 13 }}>{activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} Â· {activeHourlyRide.km_included} km Â· â‚¹{activeHourlyRide.base_fare}</Text>
                 <Text style={{ color: activeHourlyRide.status === 'active' ? C.green : C.pink, fontSize: 12, fontWeight: '600' }}>
-                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : '🛣️ Trip chal rahi hai'}
+                  {activeHourlyRide.status === 'matched' ? 'ðŸš— Pickup pe jao' : 'ðŸ›£ï¸ Trip chal rahi hai'}
                 </Text>
               </View>
 
               <View style={s.tripRoute}>
-                <Text style={s.tripFrom}>📍 {activeHourlyRide.pickup}</Text>
-                {activeHourlyRide.drop_location && <><Text style={s.tripArrow}>↓</Text><Text style={s.tripTo}>🎯 {activeHourlyRide.drop_location}</Text></>}
+                <Text style={s.tripFrom}>ðŸ“ {activeHourlyRide.pickup}</Text>
+                {activeHourlyRide.drop_location && <><Text style={s.tripArrow}>â†“</Text><Text style={s.tripTo}>ðŸŽ¯ {activeHourlyRide.drop_location}</Text></>}
               </View>
 
               {/* Chat + Call buttons */}
@@ -3885,16 +3885,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   style={{ flex: 1, backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}
                   onPress={callCustomer}
                 >
-                  <Ionicons name="call" size={18} color=C.pink />
+                  <Ionicons name="call" size={18} color={C.pink} />
                   <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>Call</Text>
                 </TouchableOpacity>
               </View>
 
               {activeHourlyRide.status === 'matched' && (
                 <View style={{ marginTop: 10 }}>
-                  <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
+                  <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>ðŸ” Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
                   <TextInput style={{ borderWidth: 2, borderColor: C.green, borderRadius: 12, padding: 14, fontSize: 28, textAlign: 'center', letterSpacing: 10, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#FFFFFF', color: '#0F172A' }} placeholder="0000" placeholderTextColor="#475569" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
-                  <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                  <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : 'ðŸš€ OTP Verify & Trip Shuru'}</Text></Bouncy>
                   <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>
                     <Ionicons name="navigate" size={15} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
@@ -3914,7 +3914,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         }},
                       ]);
                     }}>
-                    <Text style={{ color: C.pink, fontWeight: '700', fontSize: 13 }}>✗ Pickup Nahi Pahunch Sakta — Cancel Karo</Text>
+                    <Text style={{ color: C.pink, fontWeight: '700', fontSize: 13 }}>âœ— Pickup Nahi Pahunch Sakta â€” Cancel Karo</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -3924,7 +3924,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   {/* KM + Time progress bars */}
                   <View style={{ marginBottom: 10 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <Text style={{ fontSize: 12, color: '#666' }}>📍 {liveKm.toFixed(1)} / {activeHourlyRide.km_included} km</Text>
+                      <Text style={{ fontSize: 12, color: '#666' }}>ðŸ“ {liveKm.toFixed(1)} / {activeHourlyRide.km_included} km</Text>
                       <Text style={{ fontSize: 12, fontWeight: '600', color: liveKm / (activeHourlyRide.km_included||1) > 0.9 ? C.pink : liveKm / (activeHourlyRide.km_included||1) > 0.8 ? '#ff9800' : '#2e7d32' }}>
                         {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache
                       </Text>
@@ -3933,9 +3933,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <View style={{ height: 6, borderRadius: 3, backgroundColor: liveKm / (activeHourlyRide.km_included||1) > 0.9 ? C.pink : liveKm / (activeHourlyRide.km_included||1) > 0.8 ? '#ff9800' : C.green, width: `${Math.min(100, (liveKm / (activeHourlyRide.km_included||1)) * 100)}%` as any }} />
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                      <Text style={{ fontSize: 12, color: '#666' }}>⏱️ {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')} elapsed</Text>
+                      <Text style={{ fontSize: 12, color: '#666' }}>â±ï¸ {String(Math.floor(hourlyTimerSec/3600)).padStart(2,'0')}:{String(Math.floor((hourlyTimerSec%3600)/60)).padStart(2,'0')} elapsed</Text>
                       <Text style={{ fontSize: 12, color: '#94A3B8' }}>
-                        {(() => { const rem = Math.max(0, parseFloat(activeHourlyRide.package_hours||0)*3600 - hourlyTimerSec); return rem > 0 ? `${String(Math.floor(rem/3600)).padStart(2,'0')}:${String(Math.floor((rem%3600)/60)).padStart(2,'0')} bache` : '⚠️ Time up!'; })()}
+                        {(() => { const rem = Math.max(0, parseFloat(activeHourlyRide.package_hours||0)*3600 - hourlyTimerSec); return rem > 0 ? `${String(Math.floor(rem/3600)).padStart(2,'0')}:${String(Math.floor((rem%3600)/60)).padStart(2,'0')} bache` : 'âš ï¸ Time up!'; })()}
                       </Text>
                     </View>
                     <View style={{ height: 6, backgroundColor: '#334155', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
@@ -3943,16 +3943,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     </View>
                     {liveKm / (activeHourlyRide.km_included||1) > 0.8 && (
                       <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                        <Text style={{ color: '#F59E0B', fontSize: 12, fontWeight: '700' }}>⚠️ {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache — extra charges lagengen!</Text>
+                        <Text style={{ color: '#F59E0B', fontSize: 12, fontWeight: '700' }}>âš ï¸ {Math.max(0, (activeHourlyRide.km_included||0) - liveKm).toFixed(1)} km bache â€” extra charges lagengen!</Text>
                       </View>
                     )}
                   </View>
 
                   <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 8, padding: 8, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-                    <Text style={{ color: C.green, fontSize: 12 }}>💰 Guaranteed: ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} min · Full milne par ₹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
+                    <Text style={{ color: C.green, fontSize: 12 }}>ðŸ’° Guaranteed: â‚¹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)} min Â· Full milne par â‚¹{Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)}</Text>
                   </View>
 
-                  {/* Return trip navigation — driver navigates back to original pickup */}
+                  {/* Return trip navigation â€” driver navigates back to original pickup */}
                   {activeHourlyRide.is_roundtrip && (
                     <TouchableOpacity
                       style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 12, padding: 13, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}
@@ -3966,12 +3966,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                           Linking.openURL(`google.navigation:q=${addr}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${addr}`));
                         }
                       }}>
-                      <Text style={{ fontSize: 22 }}>🔄</Text>
+                      <Text style={{ fontSize: 22 }}>ðŸ”„</Text>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontWeight: '700', color: C.pink, fontSize: 14 }}>Return — Pickup Navigate Karo</Text>
-                        <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }} numberOfLines={1}>📍 {activeHourlyRide.pickup}</Text>
+                        <Text style={{ fontWeight: '700', color: C.pink, fontSize: 14 }}>Return â€” Pickup Navigate Karo</Text>
+                        <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }} numberOfLines={1}>ðŸ“ {activeHourlyRide.pickup}</Text>
                       </View>
-                      <Text style={{ color: C.pink, fontSize: 18 }}>›</Text>
+                      <Text style={{ color: C.pink, fontSize: 18 }}>â€º</Text>
                     </TouchableOpacity>
                   )}
 
@@ -3983,21 +3983,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         const hrs = Math.floor(dec);
                         const mins = Math.round((dec - hrs) * 60);
                         const label = hrs > 0 && mins > 0 ? `${hrs}h ${mins}m` : hrs > 0 ? `${hrs}h` : `${mins} min`;
-                        return <Text style={{ fontWeight: 'bold', color: C.pink, marginBottom: 4 }}>📅 Customer +{label} Extend Chahta Hai</Text>;
+                        return <Text style={{ fontWeight: 'bold', color: C.pink, marginBottom: 4 }}>ðŸ“… Customer +{label} Extend Chahta Hai</Text>;
                       })()}
-                      <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Agree karne se trip extend hogi — paise escrow mein hain</Text>
+                      <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Agree karne se trip extend hogi â€” paise escrow mein hain</Text>
                       <View style={{ flexDirection: 'row', gap: 10 }}>
                         <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#334155' : C.green, borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
-                          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{hExtendLoading ? '⏳ ...' : '✅ Accept'}</Text>
+                          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{hExtendLoading ? 'â³ ...' : 'âœ… Accept'}</Text>
                         </Bouncy>
                         <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectExtend} disabled={hExtendLoading}>
-                          <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text>
+                          <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>âœ— Reject</Text>
                         </Bouncy>
                       </View>
                     </View>
                   )}
 
-                  {/* Complete / Time-Lock / Early End — unified block */}
+                  {/* Complete / Time-Lock / Early End â€” unified block */}
                   {(() => {
                     const totalSec = parseFloat(activeHourlyRide.package_hours || 0) * 3600;
                     const remSec = Math.max(0, totalSec - hourlyTimerSec);
@@ -4006,32 +4006,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     const remM = remTotalMin % 60;
                     const remStr = remH > 0 ? `${remH}h ${remM > 0 ? remM + 'm' : ''}` : `${remTotalMin}m`;
 
-                    // Early end section — reusable inside each state
+                    // Early end section â€” reusable inside each state
                     const EarlyEndSection = () => (
                       activeHourlyRide.early_end_requested_by === 'customer' ? (
                         <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 14, marginTop: 10, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                          <Text style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: 6 }}>⚠️ Customer Trip Khatam Karna Chahta Hai</Text>
+                          <Text style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: 6 }}>âš ï¸ Customer Trip Khatam Karna Chahta Hai</Text>
                           <Text style={{ color: '#94A3B8', fontSize: 12, marginBottom: 10 }}>Agree karne par actual time ke hisaab se proportional payment milegi.</Text>
                           <View style={{ flexDirection: 'row', gap: 10 }}>
-                            <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Agree</Text></Bouncy>
-                            <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text></Bouncy>
+                            <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={confirmHourlyEarlyEnd} disabled={hEarlyEndLoading}><Text style={{ color: '#fff', fontWeight: 'bold' }}>âœ… Agree</Text></Bouncy>
+                            <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectHourlyEarlyEnd}><Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>âœ— Reject</Text></Bouncy>
                           </View>
                         </View>
                       ) : activeHourlyRide.early_end_requested_by === 'driver' ? (
                         <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                          <Text style={{ color: '#F59E0B', fontSize: 12 }}>⏳ Customer ke confirm ka intezaar...</Text>
+                          <Text style={{ color: '#F59E0B', fontSize: 12 }}>â³ Customer ke confirm ka intezaar...</Text>
                         </View>
                       ) : (activeHourlyRide.early_end_reject_count || 0) >= 2 ? (
                         <View style={{ backgroundColor: 'rgba(233,69,96,0.1)', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: 'rgba(233,69,96,0.3)' }}>
-                          <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700' }}>🔒 2 baar reject — Support se contact karo</Text>
+                          <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700' }}>ðŸ”’ 2 baar reject â€” Support se contact karo</Text>
                         </View>
                       ) : activeHourlyRide.early_end_last_rejected_at && (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime()) < 15 * 60 * 1000 ? (
                         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                          <Text style={{ color: '#64748B', fontSize: 12 }}>⏳ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request</Text>
+                          <Text style={{ color: '#64748B', fontSize: 12 }}>â³ {Math.ceil((15 * 60 * 1000 - (Date.now() - new Date(activeHourlyRide.early_end_last_rejected_at).getTime())) / 60000)} min baad phir request</Text>
                         </View>
                       ) : (
                         <Bouncy style={[s.cancelBtn, { borderColor: '#ff9800', borderWidth: 1, marginTop: 8 }]} onPress={requestHourlyEarlyEnd} disabled={hEarlyEndLoading}>
-                          <Text style={[s.cancelTxt, { color: '#ff9800' }]}>⏹️ Early End Request (mutual agreement)</Text>
+                          <Text style={[s.cancelTxt, { color: '#ff9800' }]}>â¹ï¸ Early End Request (mutual agreement)</Text>
                         </Bouncy>
                       )
                     );
@@ -4039,7 +4039,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     // State 1: Legacy pending customer confirm
                     if (activeHourlyRide.pending_customer_confirm) return (
                       <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 14, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                        <Text style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: 4 }}>⏳ Customer Confirmation Ka Intezaar...</Text>
+                        <Text style={{ fontWeight: 'bold', color: '#F59E0B', marginBottom: 4 }}>â³ Customer Confirmation Ka Intezaar...</Text>
                         <Text style={{ fontSize: 12, color: '#94A3B8' }}>10 min mein auto-confirm ho jayega</Text>
                       </View>
                     );
@@ -4047,16 +4047,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     // State 2: 20-min startup lock
                     if (hourlyTimerSec < 20 * 60) return (
                       <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 14, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                        <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>🔒 Startup: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
+                        <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>ðŸ”’ Startup: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
                         <Text style={{ color: '#475569', fontSize: 11, marginTop: 3 }}>Trip start ke baad 20 min ka lock</Text>
                       </View>
                     );
 
-                    // State 3: Package time still remaining — locked, show early end option
+                    // State 3: Package time still remaining â€” locked, show early end option
                     if (remSec > 0) return (
                       <View style={{ marginBottom: 10 }}>
                         <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-                          <Text style={{ color: C.pink, fontWeight: '800', fontSize: 18, marginBottom: 4 }}>⏰ {remStr} Baaki</Text>
+                          <Text style={{ color: C.pink, fontWeight: '800', fontSize: 18, marginBottom: 4 }}>â° {remStr} Baaki</Text>
                           <Text style={{ color: '#64748B', fontSize: 12, textAlign: 'center', lineHeight: 18 }}>
                             Package time poori hone par hi{'\n'}Complete button aayega
                           </Text>
@@ -4065,10 +4065,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       </View>
                     );
 
-                    // State 4: Time complete — show complete button
+                    // State 4: Time complete â€” show complete button
                     return (
                       <Bouncy style={[s.tripBtn, { backgroundColor: C.green, marginBottom: 10 }]} onPress={completeHourlyTrip} disabled={loading}>
-                        <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                        <Text style={s.tripBtnTxt}>{loading ? '...' : 'âœ… Trip Complete Karo'}</Text>
                       </Bouncy>
                     );
                   })()}
@@ -4078,34 +4078,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           )}
 
           {isOnline && !rideReq && !activeRide && !activeHourlyRide && !hourlyRideReq && (
-            <View style={s.statusCard}><Text style={s.statusText}>✅ Online hain — Live tab pe rides dikhengi</Text></View>
+            <View style={s.statusCard}><Text style={s.statusText}>âœ… Online hain â€” Live tab pe rides dikhengi</Text></View>
           )}
           {!isOnline && (
-            <View style={s.statusCard}><Text style={s.statusText}>💤 Online ho jao rides lene ke liye</Text></View>
+            <View style={s.statusCard}><Text style={s.statusText}>ðŸ’¤ Online ho jao rides lene ke liye</Text></View>
           )}
           {(rideReq || activeRide || hourlyRideReq || activeHourlyRide) && (
             <TouchableOpacity onPress={() => setActiveTab('live')} style={{ backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: 'rgba(16,185,129,0.4)', elevation: 3 }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.green }} />
               <Text style={{ color: C.green, fontWeight: '800', fontSize: 14, flex: 1 }}>
-                {rideReq ? '🔔 Nayi Ride Request — Accept Karo!' : activeRide ? `🚗 Active Ride — ${activeRide.status === 'matched' ? 'Pickup pe jao' : activeRide.status === 'arrived' ? 'OTP Verify Karo' : 'Trip Chal Rahi Hai'}` : '⏱️ Hourly Ride Active'}
+                {rideReq ? 'ðŸ”” Nayi Ride Request â€” Accept Karo!' : activeRide ? `ðŸš— Active Ride â€” ${activeRide.status === 'matched' ? 'Pickup pe jao' : activeRide.status === 'arrived' ? 'OTP Verify Karo' : 'Trip Chal Rahi Hai'}` : 'â±ï¸ Hourly Ride Active'}
               </Text>
-              <Text style={{ color: C.green, fontSize: 18, fontWeight: '900' }}>›</Text>
+              <Text style={{ color: C.green, fontSize: 18, fontWeight: '900' }}>â€º</Text>
             </TouchableOpacity>
           )}
 
           {/* Rules & Info */}
           <View style={{ marginTop: 10 }}>
               <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: '#0F172A', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>📋 Standard Rides — Rules & Fees</Text>
+                <Text style={{ color: '#0F172A', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>ðŸ“‹ Standard Rides â€” Rules & Fees</Text>
                 {[
-                  ['💰 Commission', '15% platform fee — baaki aapki net kamai'],
-                  ['🎯 Ride Accept', '20 second window — miss hone par auto-reject'],
-                  ['📍 Arrive', '"Pickup pe pahuncha" dabao tab tak wait karo'],
-                  ['🔐 OTP Start', 'Customer ka 4-digit OTP verify karke trip shuru'],
-                  ['✅ Complete', 'Trip complete dabao — payment auto process hogi'],
-                  ['❌ Cancel', 'Baar baar cancel karne par account suspend ho sakta hai'],
-                  ['⭐ Rating', 'Achi service do — 4.5+ rating maintain karo'],
-                  ['💳 Payment', 'Cash ya wallet — payment waiting screen pe dikhe'],
+                  ['ðŸ’° Commission', '15% platform fee â€” baaki aapki net kamai'],
+                  ['ðŸŽ¯ Ride Accept', '20 second window â€” miss hone par auto-reject'],
+                  ['ðŸ“ Arrive', '"Pickup pe pahuncha" dabao tab tak wait karo'],
+                  ['ðŸ” OTP Start', 'Customer ka 4-digit OTP verify karke trip shuru'],
+                  ['âœ… Complete', 'Trip complete dabao â€” payment auto process hogi'],
+                  ['âŒ Cancel', 'Baar baar cancel karne par account suspend ho sakta hai'],
+                  ['â­ Rating', 'Achi service do â€” 4.5+ rating maintain karo'],
+                  ['ðŸ’³ Payment', 'Cash ya wallet â€” payment waiting screen pe dikhe'],
                 ].map(([icon, text], i) => (
                   <View key={i} style={{ flexDirection: 'row', marginBottom: 7 }}>
                     <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700', width: 100 }}>{icon}</Text>
@@ -4114,18 +4114,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 ))}
               </View>
               <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: C.pink, fontSize: 14, fontWeight: '800', marginBottom: 10 }}>⏱️ Hourly / Daily — Rules & Fees</Text>
+                <Text style={{ color: C.pink, fontSize: 14, fontWeight: '800', marginBottom: 10 }}>â±ï¸ Hourly / Daily â€” Rules & Fees</Text>
                 {[
-                  ['💰 Commission', '12% platform fee — standard rides se 3% kam!'],
-                  ['📦 Packages', '2h·4h·6h·8h same day | 1·2·3 din multi-day'],
-                  ['🔐 OTP Start', 'Customer ka OTP verify karo — tab timer shuroo'],
-                  ['⏰ Time Lock', 'Complete button tab tak nahi aayega jab tak poora package time khatam nahi — koi shortcut nahi'],
-                  ['🤝 Early End', 'Agar dono agree karein to mutual termination — "Early End Request" se hoga, direct complete nahi'],
-                  ['🔄 Extension', 'Customer time extend kar sakta hai — aapko notification aayega, accept/reject karein'],
-                  ['🗓️ Schedule', 'Scheduled rides 75 min window mein dikhti hain — accept karo, time pe jaao'],
-                  ['📍 Extra KM', 'Package KM se zyada chale to customer se extra charge lega system automatically'],
-                  ['🛡️ Escrow', 'Payment safely hold hota hai — trip complete ya early end pe aapko milega'],
-                  ['🚫 Misuse', 'Package time sirf customer ke kaam ke liye — personal use billing fraud hai'],
+                  ['ðŸ’° Commission', '12% platform fee â€” standard rides se 3% kam!'],
+                  ['ðŸ“¦ Packages', '2hÂ·4hÂ·6hÂ·8h same day | 1Â·2Â·3 din multi-day'],
+                  ['ðŸ” OTP Start', 'Customer ka OTP verify karo â€” tab timer shuroo'],
+                  ['â° Time Lock', 'Complete button tab tak nahi aayega jab tak poora package time khatam nahi â€” koi shortcut nahi'],
+                  ['ðŸ¤ Early End', 'Agar dono agree karein to mutual termination â€” "Early End Request" se hoga, direct complete nahi'],
+                  ['ðŸ”„ Extension', 'Customer time extend kar sakta hai â€” aapko notification aayega, accept/reject karein'],
+                  ['ðŸ—“ï¸ Schedule', 'Scheduled rides 75 min window mein dikhti hain â€” accept karo, time pe jaao'],
+                  ['ðŸ“ Extra KM', 'Package KM se zyada chale to customer se extra charge lega system automatically'],
+                  ['ðŸ›¡ï¸ Escrow', 'Payment safely hold hota hai â€” trip complete ya early end pe aapko milega'],
+                  ['ðŸš« Misuse', 'Package time sirf customer ke kaam ke liye â€” personal use billing fraud hai'],
                 ].map(([icon, text], i) => (
                   <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
                     <Text style={{ color: C.pink, fontSize: 11, fontWeight: '700', width: 105 }}>{icon}</Text>
@@ -4140,7 +4140,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </KeyboardAvoidingView>
   );
 
-  // ═══ LIVE TAB — Full-screen active ride control ═══
+  // â•â•â• LIVE TAB â€” Full-screen active ride control â•â•â•
   if (activeTab === 'live') {
     const PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 44;
     const isIdle = !rideReq && !activeRide && !hourlyRideReq && !activeHourlyRide;
@@ -4151,7 +4151,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ backgroundColor: C.bgDark, paddingTop: PT, paddingHorizontal: SP.md, paddingBottom: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <View>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, letterSpacing: 0.3 }}>⚡ Live</Text>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 22, letterSpacing: 0.3 }}>âš¡ Live</Text>
               <Text style={{ color: 'rgba(255,255,255,0.50)', fontSize: 12, marginTop: 1 }}>Active Ride Control</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
@@ -4164,14 +4164,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         </View>
 
-        {/* ── IDLE STATE ── */}
+        {/* â”€â”€ IDLE STATE â”€â”€ */}
         {isIdle && (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 80 }}>
             {isOnline ? (
               <>
                 <PulseView>
                   <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'rgba(16,185,129,0.4)' }}>
-                    <Text style={{ fontSize: 44 }}>🚗</Text>
+                    <Text style={{ fontSize: 44 }}>ðŸš—</Text>
                   </View>
                 </PulseView>
                 <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>Rides Ka Intezaar...</Text>
@@ -4180,7 +4180,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             ) : (
               <>
                 <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(239,68,68,0.1)', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'rgba(239,68,68,0.25)' }}>
-                  <Text style={{ fontSize: 44 }}>💤</Text>
+                  <Text style={{ fontSize: 44 }}>ðŸ’¤</Text>
                 </View>
                 <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>Abhi Offline Hain</Text>
                 <Text style={{ fontSize: 14, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>Home tab pe jaake online ho{'\n'}phir rides milne lagengi</Text>
@@ -4192,10 +4192,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         )}
 
-        {/* ── INCOMING STANDARD RIDE REQUEST ── */}
+        {/* â”€â”€ INCOMING STANDARD RIDE REQUEST â”€â”€ */}
         {rideReq && !activeRide && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
-            {/* Dark plum header — premium, urgent */}
+            {/* Dark plum header â€” premium, urgent */}
             <View style={{ backgroundColor: C.bgDark, paddingTop: 20, paddingHorizontal: SP.md, paddingBottom: SP.lg, alignItems: 'center', overflow: 'hidden' }}>
               {/* Subtle blob */}
               <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.08)', top: -60, right: -40 }} />
@@ -4204,7 +4204,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Favourite / new ride label */}
               {rideReq?.is_favourite_request ? (
                 <View style={{ backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 13 }}>⭐</Text>
+                  <Text style={{ fontSize: 13 }}>â­</Text>
                   <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>REGULAR CUSTOMER</Text>
                 </View>
               ) : (
@@ -4215,7 +4215,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {/* Vehicle emoji */}
               <Text style={{ fontSize: 60, marginBottom: SP.sm }}>
-                {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
+                {rideReq?.ride_type === 'car' ? 'ðŸš•' : rideReq?.ride_type === 'bike' ? 'ðŸï¸' : rideReq?.ride_type === 'eriksha' ? 'ðŸ›µ' : rideReq?.ride_type === 'green_bike' ? 'âš¡' : rideReq?.ride_type === 'electric_auto' ? 'ðŸŒ¿' : 'ðŸ›º'}
               </Text>
 
               {/* Passenger name */}
@@ -4224,16 +4224,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Surge badge */}
               {surgeMultiplier > 1.0 && (
                 <View style={{ backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: R.full, paddingHorizontal: 14, paddingVertical: 5, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                  <Text style={{ fontSize: 14 }}>⚡</Text>
+                  <Text style={{ fontSize: 14 }}>âš¡</Text>
                   <Text style={{ color: '#F59E0B', fontWeight: '900', fontSize: 13 }}>{surgeMultiplier}x SURGE</Text>
                 </View>
               )}
 
-              {/* Big earn number — the hero moment */}
+              {/* Big earn number â€” the hero moment */}
               <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.xl, paddingVertical: SP.md, marginTop: SP.md, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
-                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>
+                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>â‚¹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: â‚¹{rideReq?.fare} Â· 12% commission</Text>
               </View>
             </View>
 
@@ -4242,7 +4242,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
                 {driverGps && rideReq?.pickup_lat && (
                   <View style={{ flex: 1, backgroundColor: C.plumGlass, borderRadius: R.md, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.plumBorder }}>
-                    <Text style={{ color: C.plum, fontSize: 11, fontWeight: '800' }}>📍 Aap se Pickup</Text>
+                    <Text style={{ color: C.plum, fontSize: 11, fontWeight: '800' }}>ðŸ“ Aap se Pickup</Text>
                     <Text style={{ color: C.plum, fontSize: 22, fontWeight: '900', marginTop: 3 }}>
                       {haversineKm(driverGps.lat, driverGps.lng, rideReq.pickup_lat, rideReq.pickup_lng).toFixed(1)} km
                     </Text>
@@ -4250,7 +4250,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 )}
                 {rideReq?.distance && (
                   <View style={{ flex: 1, backgroundColor: C.greenGlass, borderRadius: R.md, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
-                    <Text style={{ color: C.online, fontSize: 11, fontWeight: '800' }}>🛣️ Trip Distance</Text>
+                    <Text style={{ color: C.online, fontSize: 11, fontWeight: '800' }}>ðŸ›£ï¸ Trip Distance</Text>
                     <Text style={{ color: C.online, fontSize: 22, fontWeight: '900', marginTop: 3 }}>{rideReq.distance} km</Text>
                   </View>
                 )}
@@ -4283,11 +4283,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Accept / Reject */}
               <View style={{ flexDirection: 'row', gap: 14, marginTop: SP.md }}>
                 <Bouncy style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, padding: 20, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }} onPress={rejectRide}>
-                  <Text style={{ fontSize: 24 }}>✕</Text>
+                  <Text style={{ fontSize: 24 }}>âœ•</Text>
                   <Text style={{ color: C.red, fontWeight: '800', fontSize: 14, marginTop: 4 }}>Reject</Text>
                 </Bouncy>
                 <Bouncy style={{ flex: 2, backgroundColor: C.online, borderRadius: R.md, padding: 20, alignItems: 'center', elevation: 8, shadowColor: C.online, shadowOpacity: 0.5, shadowRadius: 14 }} onPress={acceptRide} disabled={loading}>
-                  <Text style={{ fontSize: 24 }}>✓</Text>
+                  <Text style={{ fontSize: 24 }}>âœ“</Text>
                   <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 16, marginTop: 4 }}>
                     {loading ? 'Accept ho raha...' : 'ACCEPT KARO'}
                   </Text>
@@ -4297,25 +4297,25 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </ScrollView>
         )}
 
-        {/* ── INCOMING HOURLY RIDE REQUEST ── */}
+        {/* â”€â”€ INCOMING HOURLY RIDE REQUEST â”€â”€ */}
         {hourlyRideReq && !activeRide && !activeHourlyRide && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
             <View style={{ backgroundColor: C.pink, borderRadius: 16, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>⏱️ HOURLY</Text></View>
+              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>â±ï¸ HOURLY</Text></View>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18, flex: 1 }}>
                 {hourlyRideReq.package_hours >= 24 ? `${hourlyRideReq.package_hours / 24} Day${hourlyRideReq.package_hours > 24 ? 's' : ''}` : hourlyRideReq.package_hours === 8 ? 'Full Day (8h)' : `${hourlyRideReq.package_hours} Hours`}
               </Text>
-              <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>₹{hourlyRideReq.base_fare}</Text>
+              <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>â‚¹{hourlyRideReq.base_fare}</Text>
             </View>
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 3, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
                 <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '800' }}>📦 Included KM</Text>
+                  <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '800' }}>ðŸ“¦ Included KM</Text>
                   <Text style={{ color: '#1D4ED8', fontSize: 22, fontWeight: '900', marginTop: 2 }}>{hourlyRideReq.km_included} km</Text>
                 </View>
                 <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '800' }}>💰 Aapki Kamai</Text>
-                  <Text style={{ color: '#15803D', fontSize: 22, fontWeight: '900', marginTop: 2 }}>₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
+                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '800' }}>ðŸ’° Aapki Kamai</Text>
+                  <Text style={{ color: '#15803D', fontSize: 22, fontWeight: '900', marginTop: 2 }}>â‚¹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
                 </View>
               </View>
               <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 }}>PICKUP</Text>
@@ -4328,25 +4328,25 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
             {hourlyRideReq.scheduled_at && (
               <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-                <Text style={{ fontSize: 16 }}>📅</Text>
+                <Text style={{ fontSize: 16 }}>ðŸ“…</Text>
                 <Text style={{ color: C.pink, fontSize: 13, fontWeight: '700' }}>SCHEDULED: {new Date(hourlyRideReq.scheduled_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
               </View>
             )}
             {!hourlyRideReq.scheduled_at && <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />}
             <View style={{ flexDirection: 'row', gap: 14, marginTop: 14 }}>
               <TouchableOpacity style={{ flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 20, alignItems: 'center', borderWidth: 1.5, borderColor: '#E5E7EB', elevation: 2 }} onPress={() => setHourlyRideReq(null)}>
-                <Text style={{ fontSize: 26 }}>✕</Text>
+                <Text style={{ fontSize: 26 }}>âœ•</Text>
                 <Text style={{ color: '#EF4444', fontWeight: '800', fontSize: 14, marginTop: 4 }}>Skip</Text>
               </TouchableOpacity>
               <TouchableOpacity style={{ flex: 2, backgroundColor: '#22C55E', borderRadius: 16, padding: 20, alignItems: 'center', elevation: 6, shadowColor: '#22C55E', shadowOpacity: 0.45, shadowRadius: 12 }} onPress={acceptHourlyRide} disabled={loading}>
-                <Text style={{ fontSize: 26 }}>✓</Text>
+                <Text style={{ fontSize: 26 }}>âœ“</Text>
                 <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 16, marginTop: 4 }}>{loading ? 'Accept ho raha...' : 'ACCEPT KARO'}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         )}
 
-        {/* ── ACTIVE STANDARD RIDE ── */}
+        {/* â”€â”€ ACTIVE STANDARD RIDE â”€â”€ */}
         {activeRide && (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -4355,9 +4355,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Status banner */}
               <View style={{ backgroundColor: activeRide.status === 'matched' ? C.green : activeRide.status === 'arrived' ? '#2563EB' : C.green, borderRadius: 14, padding: 14, marginBottom: 14, alignItems: 'center' }}>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>
-                  {activeRide.status === 'matched' && '🚗 Pickup ki taraf jao'}
-                  {activeRide.status === 'arrived' && '📍 Pickup pe pahunche — OTP lo'}
-                  {activeRide.status === 'started' && '🛣️ Trip chal rahi hai'}
+                  {activeRide.status === 'matched' && 'ðŸš— Pickup ki taraf jao'}
+                  {activeRide.status === 'arrived' && 'ðŸ“ Pickup pe pahunche â€” OTP lo'}
+                  {activeRide.status === 'started' && 'ðŸ›£ï¸ Trip chal rahi hai'}
                 </Text>
               </View>
 
@@ -4369,14 +4369,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 17, fontWeight: '900', color: '#0F172A' }}>{activeRide.passenger_name || 'Passenger'}</Text>
-                    <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>📞 {activeRide.passenger_phone_masked || '**********'}</Text>
+                    <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>ðŸ“ž {activeRide.passenger_phone_masked || '**********'}</Text>
                   </View>
-                  <Text style={{ fontSize: 24, fontWeight: '900', color: C.green }}>₹{activeRide.fare}</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: C.green }}>â‚¹{activeRide.fare}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#BBF7D0' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
                     <View style={{ position: 'relative' }}>
-                      <Ionicons name="chatbubble" size={20} color=C.green />
+                      <Ionicons name="chatbubble" size={20} color={C.green} />
                       {unreadChat > 0 && <View style={s.chatBadge}><Text style={{ color: '#fff', fontSize: 9, fontWeight: 'bold' }}>{unreadChat}</Text></View>}
                     </View>
                     <Text style={{ color: '#15803D', fontWeight: '700', fontSize: 14 }}>Chat{unreadChat > 0 ? ` (${unreadChat})` : ''}</Text>
@@ -4412,21 +4412,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* ETA / Distance banners */}
               {eta ? (
                 <View style={{ backgroundColor: 'rgba(34,197,94,0.1)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}>
-                  <Text style={{ color: C.green, fontWeight: '700', fontSize: 14 }}>🕐 {eta}</Text>
+                  <Text style={{ color: C.green, fontWeight: '700', fontSize: 14 }}>ðŸ• {eta}</Text>
                 </View>
               ) : null}
               {distToPickup && (activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.25)' }}>
-                  <Text style={{ color: C.pink, fontWeight: '700', fontSize: 15 }}>📍 {distToPickup}</Text>
+                  <Text style={{ color: C.pink, fontWeight: '700', fontSize: 15 }}>ðŸ“ {distToPickup}</Text>
                 </View>
               )}
               {tripRemainingEta && activeRide.status === 'started' && (
                 <View style={{ backgroundColor: 'rgba(255,99,24,0.1)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,99,24,0.3)' }}>
-                  <Text style={{ color: '#F5C518', fontWeight: '700', fontSize: 14 }}>🛣️ {tripRemainingEta}</Text>
+                  <Text style={{ color: '#F5C518', fontWeight: '700', fontSize: 14 }}>ðŸ›£ï¸ {tripRemainingEta}</Text>
                 </View>
               )}
 
-              {/* ── Navigate section (secondary action) ── */}
+              {/* â”€â”€ Navigate section (secondary action) â”€â”€ */}
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <TouchableOpacity
                   style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0 }]}
@@ -4446,17 +4446,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </TouchableOpacity>
               )}
 
-              {/* ── Spacer + divider between navigate and CTA ── */}
+              {/* â”€â”€ Spacer + divider between navigate and CTA â”€â”€ */}
               <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 20, marginHorizontal: 4 }} />
 
-              {/* ── Primary CTA: Arrived at pickup ── */}
+              {/* â”€â”€ Primary CTA: Arrived at pickup â”€â”€ */}
               {activeRide.status === 'matched' && (
                 <Bouncy style={[s.tripBtn, { paddingVertical: 20, marginBottom: 28 }]} onPress={markArrived} disabled={loading}>
-                  <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
+                  <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : 'ðŸ“ Pickup pe pahunch gaya'}</Text>
                 </Bouncy>
               )}
 
-              {/* ── OTP entry — cancel ABOVE so keyboard never hides it ── */}
+              {/* â”€â”€ OTP entry â€” cancel ABOVE so keyboard never hides it â”€â”€ */}
               {activeRide.status === 'arrived' && (
                 <View>
                   <Bouncy
@@ -4464,37 +4464,37 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     onPress={() => setShowDriverCancelModal(true)}
                     disabled={loading}
                   >
-                    <Text style={[s.cancelTxt, { fontSize: 14, fontWeight: '700' }]}>✕ Cancel Trip</Text>
+                    <Text style={[s.cancelTxt, { fontSize: 14, fontWeight: '700' }]}>âœ• Cancel Trip</Text>
                   </Bouncy>
                   <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, padding: 22, elevation: 4, borderWidth: 2, borderColor: '#E2E8F0' }}>
-                    <Text style={{ fontSize: 15, color: '#0F172A', marginBottom: 18, textAlign: 'center', fontWeight: '700' }}>🔐 Passenger se 4-digit OTP poocho</Text>
+                    <Text style={{ fontSize: 15, color: '#0F172A', marginBottom: 18, textAlign: 'center', fontWeight: '700' }}>ðŸ” Passenger se 4-digit OTP poocho</Text>
                     <TextInput
                       style={{ borderWidth: 2.5, borderColor: otpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 16, paddingVertical: 20, paddingHorizontal: 18, fontSize: 36, textAlign: 'center', letterSpacing: 14, marginBottom: 20, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
                       keyboardType="number-pad"
                       maxLength={4}
                       value={otpInput}
                       onChangeText={setOtpInput}
-                      placeholder="○ ○ ○ ○"
+                      placeholder="â—‹ â—‹ â—‹ â—‹"
                       placeholderTextColor="#D4A520"
                       autoFocus={false}
                     />
                     <Bouncy style={[s.tripBtn, { paddingVertical: 20, opacity: otpInput.length < 4 ? 0.5 : 1 }]} onPress={startTrip} disabled={loading || otpInput.length < 4}>
-                      <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
+                      <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : 'ðŸš€ OTP Verify & Trip Shuru'}</Text>
                     </Bouncy>
                   </View>
                 </View>
               )}
 
-              {/* ── Complete trip + cancel (well spaced) ── */}
+              {/* â”€â”€ Complete trip + cancel (well spaced) â”€â”€ */}
               {activeRide.status === 'started' && (
                 <View>
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0 }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : 'âœ… Trip Complete Karo'}</Text>
                   </Bouncy>
                   {/* Extra large gap so cancel is NOT accidentally hit after tapping Complete */}
                   <View style={{ height: 24 }} />
                   <Bouncy style={[s.cancelBtn, { borderWidth: 1.5, borderColor: C.pink, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 16 }]} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
-                    <Text style={[s.cancelTxt, { fontSize: 14, fontWeight: '700' }]}>✕ Cancel Trip</Text>
+                    <Text style={[s.cancelTxt, { fontSize: 14, fontWeight: '700' }]}>âœ• Cancel Trip</Text>
                   </Bouncy>
                 </View>
               )}
@@ -4502,21 +4502,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Chat message alert */}
               {unreadChat > 0 && (
                 <TouchableOpacity style={{ backgroundColor: C.pink, borderRadius: 12, padding: 12, marginTop: 10, alignItems: 'center' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
-                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>💬 Customer ne {unreadChat} message bheja</Text>
+                  <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700' }}>ðŸ’¬ Customer ne {unreadChat} message bheja</Text>
                 </TouchableOpacity>
               )}
             </ScrollView>
           </KeyboardAvoidingView>
         )}
 
-        {/* ── ACTIVE HOURLY RIDE ── */}
+        {/* â”€â”€ ACTIVE HOURLY RIDE â”€â”€ */}
         {activeHourlyRide && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false}>
             <View style={{ backgroundColor: C.pink, borderRadius: 16, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>⏱️ HOURLY</Text></View>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>â±ï¸ HOURLY</Text></View>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>
-                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : '🛣️ Trip chal rahi hai'}
+                  {activeHourlyRide.status === 'matched' ? 'ðŸš— Pickup pe jao' : 'ðŸ›£ï¸ Trip chal rahi hai'}
                 </Text>
               </View>
               {activeHourlyRide.status === 'active' && (
@@ -4531,13 +4531,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 13, color: '#64748B' }}>
-                    {activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} · {activeHourlyRide.km_included} km · ₹{activeHourlyRide.base_fare}
+                    {activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} Â· {activeHourlyRide.km_included} km Â· â‚¹{activeHourlyRide.base_fare}
                   </Text>
                 </View>
               </View>
               <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#BBF7D0' }} onPress={() => { setChatToast(null); setShowHourlyChat(true); setHourlyChatMsgs([]); }}>
-                  <Ionicons name="chatbubble" size={20} color=C.green />
+                  <Ionicons name="chatbubble" size={20} color={C.green} />
                   <Text style={{ color: '#15803D', fontWeight: '700', fontSize: 14 }}>Chat</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#BFDBFE' }} onPress={callCustomer}>
@@ -4547,7 +4547,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
               {chatToast && (
                 <TouchableOpacity style={{ backgroundColor: '#1a1a2e', borderRadius: 12, padding: 12, marginTop: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,30,99,0.5)', elevation: 6 }} onPress={() => { setChatToast(null); setShowHourlyChat(true); setHourlyChatMsgs([]); }}>
-                  <Ionicons name="chatbubble" size={16} color=C.pink />
+                  <Ionicons name="chatbubble" size={16} color={C.pink} />
                   <Text style={{ color: '#fff', fontSize: 13, flex: 1, fontWeight: '600' }} numberOfLines={1}>{chatToast}</Text>
                   <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10 }}>Tap to reply</Text>
                 </TouchableOpacity>
@@ -4556,8 +4556,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
             {/* Route */}
             <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 13, color: C.green, fontWeight: '700', marginBottom: 6 }}>📍 {activeHourlyRide.pickup}</Text>
-              {activeHourlyRide.drop_location && <Text style={{ fontSize: 13, color: C.pink, fontWeight: '700', marginTop: 4 }}>🎯 {activeHourlyRide.drop_location}</Text>}
+              <Text style={{ fontSize: 13, color: C.green, fontWeight: '700', marginBottom: 6 }}>ðŸ“ {activeHourlyRide.pickup}</Text>
+              {activeHourlyRide.drop_location && <Text style={{ fontSize: 13, color: C.pink, fontWeight: '700', marginTop: 4 }}>ðŸŽ¯ {activeHourlyRide.drop_location}</Text>}
             </View>
 
             {/* OTP section (matched) */}
@@ -4573,12 +4573,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       } catch (_e) { Alert.alert('Error', 'Network error'); }
                     }}
                   >
-                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>📍 Pickup Pe Pahunch Gaya</Text>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>ðŸ“ Pickup Pe Pahunch Gaya</Text>
                     <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, marginTop: 3 }}>Customer ko notification milegi</Text>
                   </Bouncy>
                 ) : (
                   <View style={{ backgroundColor: '#F0FDF4', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginBottom: 12, borderWidth: 1.5, borderColor: '#86EFAC' }}>
-                    <Text style={{ color: '#15803D', fontWeight: '800', fontSize: 14 }}>✅ Customer ko Notify Ho Gaya — OTP Leke Trip Shuru Karo</Text>
+                    <Text style={{ color: '#15803D', fontWeight: '800', fontSize: 14 }}>âœ… Customer ko Notify Ho Gaya â€” OTP Leke Trip Shuru Karo</Text>
                   </View>
                 )}
                 <TouchableOpacity
@@ -4598,16 +4598,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   ])}
                   style={{ borderWidth: 1.5, borderColor: C.pink, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', marginBottom: 20 }}
                 >
-                  <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>✗ Pickup Nahi Pahunch Sakta — Cancel Karo</Text>
+                  <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>âœ— Pickup Nahi Pahunch Sakta â€” Cancel Karo</Text>
                 </TouchableOpacity>
                 <View style={{ backgroundColor: '#FFFFFF', borderRadius: 18, padding: 22, elevation: 4, borderWidth: 2, borderColor: C.green }}>
-                  <Text style={{ fontSize: 14, color: '#0F172A', marginBottom: 16, textAlign: 'center', fontWeight: '700' }}>🔐 Customer se OTP poocho</Text>
+                  <Text style={{ fontSize: 14, color: '#0F172A', marginBottom: 16, textAlign: 'center', fontWeight: '700' }}>ðŸ” Customer se OTP poocho</Text>
                   <TextInput
                     style={{ borderWidth: 2.5, borderColor: C.green, borderRadius: 14, paddingVertical: 18, paddingHorizontal: 16, fontSize: 34, textAlign: 'center', letterSpacing: 12, marginBottom: 18, fontWeight: 'bold', backgroundColor: '#F8FAFC', color: '#0F172A' }}
                     placeholder="0000" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput}
                   />
                   <Bouncy style={[s.tripBtn, { paddingVertical: 18 }]} onPress={startHourlyTrip} disabled={loading}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
+                    <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : 'ðŸš€ OTP Verify & Trip Shuru'}</Text>
                   </Bouncy>
                 </View>
               </View>
@@ -4618,7 +4618,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View>
                 <View style={{ marginBottom: 12 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 }}>
-                    <Text style={{ fontSize: 12, color: '#666' }}>📍 {liveKm.toFixed(1)} / {activeHourlyRide.km_included} km</Text>
+                    <Text style={{ fontSize: 12, color: '#666' }}>ðŸ“ {liveKm.toFixed(1)} / {activeHourlyRide.km_included} km</Text>
                     <Text style={{ fontSize: 12, fontWeight: '600', color: liveKm / (activeHourlyRide.km_included || 1) > 0.9 ? C.pink : liveKm / (activeHourlyRide.km_included || 1) > 0.8 ? '#ff9800' : '#2e7d32' }}>
                       {Math.max(0, (activeHourlyRide.km_included || 0) - liveKm).toFixed(1)} km bache
                     </Text>
@@ -4635,35 +4635,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     const remStr = remH > 0 ? `${remH}h ${remM > 0 ? remM + 'm' : ''}` : `${remTotalMin}m`;
                     if (activeHourlyRide.pending_customer_confirm) return (
                       <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 12, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-                        <Text style={{ fontWeight: 'bold', color: '#F59E0B' }}>⏳ Customer Confirmation Ka Intezaar...</Text>
+                        <Text style={{ fontWeight: 'bold', color: '#F59E0B' }}>â³ Customer Confirmation Ka Intezaar...</Text>
                       </View>
                     );
                     if (hourlyTimerSec < 20 * 60) return (
                       <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                        <Text style={{ color: '#94A3B8', fontWeight: '700' }}>🔒 Startup Lock: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
+                        <Text style={{ color: '#94A3B8', fontWeight: '700' }}>ðŸ”’ Startup Lock: {Math.ceil(20 - hourlyTimerSec / 60)} min aur</Text>
                       </View>
                     );
                     if (remSec > 0) return (
                       <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-                        <Text style={{ color: C.pink, fontWeight: '800', fontSize: 16 }}>⏰ {remStr} Baaki</Text>
+                        <Text style={{ color: C.pink, fontWeight: '800', fontSize: 16 }}>â° {remStr} Baaki</Text>
                       </View>
                     );
                     return (
                       <Bouncy style={[s.tripBtn, { backgroundColor: C.green, paddingVertical: 20, marginBottom: 0 }]} onPress={completeHourlyTrip} disabled={loading}>
-                        <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                        <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : 'âœ… Trip Complete Karo'}</Text>
                       </Bouncy>
                     );
                   })()}
                 </View>
                 {!!activeHourlyRide.extend_requested_hours && (
                   <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-                    <Text style={{ fontWeight: 'bold', color: C.pink, marginBottom: 6 }}>📅 Customer Extend Chahta Hai (+{activeHourlyRide.extend_requested_hours}h)</Text>
+                    <Text style={{ fontWeight: 'bold', color: C.pink, marginBottom: 6 }}>ðŸ“… Customer Extend Chahta Hai (+{activeHourlyRide.extend_requested_hours}h)</Text>
                     <View style={{ flexDirection: 'row', gap: 10 }}>
                       <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
-                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Accept</Text>
+                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>âœ… Accept</Text>
                       </Bouncy>
                       <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectExtend} disabled={hExtendLoading}>
-                        <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text>
+                        <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>âœ— Reject</Text>
                       </Bouncy>
                     </View>
                   </View>
@@ -4678,7 +4678,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     );
   }
 
-  // ═══ DRIVER SUB-SCREENS (profile menu) ═══
+  // â•â•â• DRIVER SUB-SCREENS (profile menu) â•â•â•
   if (driverSubScreen !== '') {
     const back = () => setDrSubScreen('');
     const SubHeader = ({ title }: { title: string }) => (
@@ -4691,35 +4691,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
     if (driverSubScreen === 'documents') return (
       <View style={s.screen}>
-        <SubHeader title="📋 Documents" />
+        <SubHeader title="ðŸ“‹ Documents" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
           {/* Verification status */}
           <View style={{ backgroundColor: driverInfo?.status === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 18, marginBottom: 16, alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: driverInfo?.status === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 32, marginBottom: 8 }}>{driverInfo?.status === 'approved' ? '✅' : '⏳'}</Text>
+            <Text style={{ fontSize: 32, marginBottom: 8 }}>{driverInfo?.status === 'approved' ? 'âœ…' : 'â³'}</Text>
             <Text style={{ fontSize: 16, fontWeight: '900', color: driverInfo?.status === 'approved' ? C.green : '#F59E0B' }}>
               {driverInfo?.status === 'approved' ? 'Verified Driver' : 'Verification Pending'}
             </Text>
             <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4, textAlign: 'center' }}>
               {driverInfo?.status === 'approved'
                 ? 'Aapke sabhi documents verify ho chuke hain'
-                : 'Aapke documents review me hain — 24-48 ghante lagenge'}
+                : 'Aapke documents review me hain â€” 24-48 ghante lagenge'}
             </Text>
           </View>
 
           {/* Driver face photo */}
           {driverInfo?.face_photo && (
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 10 }}>📸 Profile Photo</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 10 }}>ðŸ“¸ Profile Photo</Text>
               <Image source={{ uri: driverInfo.face_photo }} style={{ width: '100%', height: 180, borderRadius: 12 }} resizeMode="cover" />
             </View>
           )}
 
           {/* Document IDs */}
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>📄 Document Details</Text>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>ðŸ“„ Document Details</Text>
             {[
-              ['DL Number', driverInfo?.dl_number || '—'],
-              ['Aadhaar', driverInfo?.aadhaar_masked || '—'],
+              ['DL Number', driverInfo?.dl_number || 'â€”'],
+              ['Aadhaar', driverInfo?.aadhaar_masked || 'â€”'],
             ].map(([k, v], i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 1 ? 1 : 0, borderBottomColor: '#334155' }}>
                 <Text style={{ fontSize: 13, color: '#94A3B8' }}>{k}</Text>
@@ -4730,12 +4730,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* Vehicle details */}
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>🚗 Vehicle Info</Text>
+            <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>ðŸš— Vehicle Info</Text>
             {[
-              ['Type', (driverInfo?.vehicle_type || '—').replace('_', ' ').toUpperCase()],
-              ['Vehicle No', driverInfo?.vehicle_no || '—'],
-              ['Brand', driverInfo?.vehicle_brand || '—'],
-              ['Model', driverInfo?.vehicle_model || '—'],
+              ['Type', (driverInfo?.vehicle_type || 'â€”').replace('_', ' ').toUpperCase()],
+              ['Vehicle No', driverInfo?.vehicle_no || 'â€”'],
+              ['Brand', driverInfo?.vehicle_brand || 'â€”'],
+              ['Model', driverInfo?.vehicle_model || 'â€”'],
             ].map(([k, v], i) => (
               <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 3 ? 1 : 0, borderBottomColor: '#334155' }}>
                 <Text style={{ fontSize: 13, color: '#94A3B8' }}>{k}</Text>
@@ -4745,7 +4745,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
 
           <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(233,30,99,0.25)' }}>
-            <Text style={{ fontSize: 13, color: C.pink, fontWeight: '600', marginBottom: 4 }}>📌 Documents Update karne ke liye</Text>
+            <Text style={{ fontSize: 13, color: C.pink, fontWeight: '600', marginBottom: 4 }}>ðŸ“Œ Documents Update karne ke liye</Text>
             <Text style={{ fontSize: 12, color: '#94A3B8' }}>Support se contact karo ya app re-registration karo naye documents ke saath.</Text>
             <TouchableOpacity onPress={() => { back(); setDrSubScreen('support'); }}
               style={{ backgroundColor: C.pink, borderRadius: 10, padding: 10, alignItems: 'center', marginTop: 10 }}>
@@ -4762,26 +4762,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const showForm = !hasSaved || bankEditing;
       return (
       <View style={s.screen}>
-        <SubHeader title="🏦 Bank Details" />
+        <SubHeader title="ðŸ¦ Bank Details" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '700' }}>ℹ️ Payout Information</Text>
+            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '700' }}>â„¹ï¸ Payout Information</Text>
             <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>
-              Bank details verified hone ke baad aapka weekly payout seedha account me aayega. NEFT/IMPS ke through — 1-2 working days.
+              Bank details verified hone ke baad aapka weekly payout seedha account me aayega. NEFT/IMPS ke through â€” 1-2 working days.
             </Text>
           </View>
 
           {!showForm ? (
-            /* ── Confirmed view ── */
+            /* â”€â”€ Confirmed view â”€â”€ */
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 18, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                <Text style={{ fontSize: 22, marginRight: 10 }}>✅</Text>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>âœ…</Text>
                 <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>Bank Account Confirmed</Text>
               </View>
               {[
-                ['Account Holder', bankHolder || '—'],
-                ['Account Number', bankAccount ? '••••' + bankAccount.slice(-4) : '—'],
-                ['IFSC Code', bankIfsc || '—'],
+                ['Account Holder', bankHolder || 'â€”'],
+                ['Account Number', bankAccount ? 'â€¢â€¢â€¢â€¢' + bankAccount.slice(-4) : 'â€”'],
+                ['IFSC Code', bankIfsc || 'â€”'],
               ].map(([label, val], i) => (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#334155' }}>
                   <Text style={{ fontSize: 13, color: '#94A3B8' }}>{label}</Text>
@@ -4790,12 +4790,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               ))}
               <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(true); }}
                 style={{ backgroundColor: C.green, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 18 }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✏️ Edit Bank Details</Text>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>âœï¸ Edit Bank Details</Text>
               </TouchableOpacity>
               {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: C.green }}>{bankMsg}</Text> : null}
             </View>
           ) : (
-            /* ── Editable form ── */
+            /* â”€â”€ Editable form â”€â”€ */
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 18, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>Bank Account Details</Text>
 
@@ -4830,7 +4830,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               <TouchableOpacity onPress={saveBank} disabled={bankSaving}
                 style={{ backgroundColor: bankSaving ? '#334155' : C.green, borderRadius: 12, padding: 14, alignItems: 'center' }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : '💾 Save Bank Details'}</Text>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : 'ðŸ’¾ Save Bank Details'}</Text>
               </TouchableOpacity>
               {hasSaved && (
                 <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(false); }}
@@ -4838,7 +4838,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>Cancel</Text>
                 </TouchableOpacity>
               )}
-              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? C.green : C.pink }}>{bankMsg}</Text> : null}
+              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('âœ…') ? C.green : C.pink }}>{bankMsg}</Text> : null}
             </View>
           )}
         </ScrollView>
@@ -4849,18 +4849,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
     if (driverSubScreen === 'support') return (
       <View style={s.screen}>
-        <SubHeader title="📞 Support" />
+        <SubHeader title="ðŸ“ž Support" />
         <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 36, marginBottom: 8 }}>🎧</Text>
+            <Text style={{ fontSize: 36, marginBottom: 8 }}>ðŸŽ§</Text>
             <Text style={{ color: '#0F172A', fontSize: 17, fontWeight: '900' }}>Sppero Driver Support</Text>
             <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
           </View>
           {[
-            { icon: '📋', label: 'My Complaints', sub: 'File or track complaints', color: C.pink, action: async () => { setDrvCmpLoading(true); try { const r = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`); const d = await r.json(); if (Array.isArray(d.complaints)) setDrvComplaints(d.complaints); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
-            { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
-            { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
-            { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, action: () => Linking.openURL('mailto:driver.support@sppero.com') },
+            { icon: 'ðŸ“‹', label: 'My Complaints', sub: 'File or track complaints', color: C.pink, action: async () => { setDrvCmpLoading(true); try { const r = await fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`); const d = await r.json(); if (Array.isArray(d.complaints)) setDrvComplaints(d.complaints); } catch{} setDrvCmpLoading(false); setDrSubScreen('complaints'); } },
+            { icon: 'ðŸ’¬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
+            { icon: 'ðŸ“ž', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
+            { icon: 'ðŸ“§', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, action: () => Linking.openURL('mailto:driver.support@sppero.com') },
           ].map((item, i) => (
             <TouchableOpacity key={i} onPress={item.action}
               style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 18, marginBottom: 12, flexDirection: 'row', alignItems: 'center', elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
@@ -4871,18 +4871,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ fontSize: 15, fontWeight: '700', color: '#0F172A' }}>{item.label}</Text>
                 <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{item.sub}</Text>
               </View>
-              <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
+              <Text style={{ fontSize: 20, color: '#475569' }}>â€º</Text>
             </TouchableOpacity>
           ))}
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginTop: 8, marginBottom: 10 }}>Common Issues</Text>
           {[
             ['Payment nahi mila?', 'Trip complete ke baad 24 ghante wait karo. Agar nahi aaya toh support contact karo.'],
-            ['Account suspend hua?', 'Email pe reason bheja gaya hoga — support se baat karo appeal ke liye.'],
+            ['Account suspend hua?', 'Email pe reason bheja gaya hoga â€” support se baat karo appeal ke liye.'],
             ['Rating kaise badhayein?', 'Time pe pickup, clean vehicle aur polite behaviour se rating naturally badhti hai.'],
             ['Commission kab katega?', 'Har completed ride pe 15% commission automatically wallet se cut hota hai.'],
           ].map(([q, a], i) => (
             <View key={i} style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 13, fontWeight: '700', color: '#CBD5E1', marginBottom: 6 }}>❓ {q}</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#CBD5E1', marginBottom: 6 }}>â“ {q}</Text>
               <Text style={{ fontSize: 12, color: '#94A3B8', lineHeight: 18 }}>{a}</Text>
             </View>
           ))}
@@ -4891,22 +4891,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
     );
 
-    // ─── Driver: My Complaints ───
+    // â”€â”€â”€ Driver: My Complaints â”€â”€â”€
     if (driverSubScreen === 'complaints') {
       const statusMeta: any = {
-        open:               { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'OPEN',              icon: '🕐' },
-        under_review:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'UNDER REVIEW',      icon: '🔍' },
-        awaiting_response:  { color: '#a855f7', bg: 'rgba(168,85,247,0.12)', label: 'YOUR REPLY NEEDED', icon: '💬' },
-        evidence_requested: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'EVIDENCE NEEDED',   icon: '📎' },
-        resolved:           { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'RESOLVED',          icon: '✅' },
-        closed:             { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', label: 'CLOSED',           icon: '🔒' },
-        appealed:           { color: C.pink, bg: 'rgba(233,69,96,0.12)',  label: 'APPEALED',          icon: '⚖️' },
-        escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'ESCALATED',         icon: '🚨' },
+        open:               { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'OPEN',              icon: 'ðŸ•' },
+        under_review:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', label: 'UNDER REVIEW',      icon: 'ðŸ”' },
+        awaiting_response:  { color: '#a855f7', bg: 'rgba(168,85,247,0.12)', label: 'YOUR REPLY NEEDED', icon: 'ðŸ’¬' },
+        evidence_requested: { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'EVIDENCE NEEDED',   icon: 'ðŸ“Ž' },
+        resolved:           { color: '#22c55e', bg: 'rgba(34,197,94,0.12)',  label: 'RESOLVED',          icon: 'âœ…' },
+        closed:             { color: '#6b7280', bg: 'rgba(107,114,128,0.12)', label: 'CLOSED',           icon: 'ðŸ”’' },
+        appealed:           { color: C.pink, bg: 'rgba(233,69,96,0.12)',  label: 'APPEALED',          icon: 'âš–ï¸' },
+        escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.12)',  label: 'ESCALATED',         icon: 'ðŸš¨' },
       };
-      const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🔧', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
+      const typeEmoji: any = { customer_no_show:'ðŸš«', property_damage:'ðŸ”§', abusive_behavior:'ðŸ˜ ', false_accusation:'âš–ï¸', wrong_location:'ðŸ“', payment_issue:'ðŸ’¸', other:'ðŸ“' };
       return (
         <View style={s.screen}>
-          <SubHeader title="📋 Meri Complaints" />
+          <SubHeader title="ðŸ“‹ Meri Complaints" />
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
             {/* CTA */}
             <TouchableOpacity
@@ -4921,7 +4921,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Loading state */}
             {drvCmpLoading && (
               <View style={{ alignItems: 'center', paddingTop: 40, paddingBottom: 24 }}>
-                <ActivityIndicator size="large" color=C.pink />
+                <ActivityIndicator size="large" color={C.pink} />
                 <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 14 }}>Complaints load ho rahi hain...</Text>
               </View>
             )}
@@ -4930,15 +4930,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {!drvCmpLoading && drvComplaints.length === 0 && (
               <>
                 <View style={{ alignItems: 'center', paddingTop: 16, paddingBottom: 24 }}>
-                  <Text style={{ fontSize: 48 }}>📭</Text>
+                  <Text style={{ fontSize: 48 }}>ðŸ“­</Text>
                   <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A', marginTop: 14 }}>Koi complaint nahi abhi</Text>
                   <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6, textAlign: 'center', lineHeight: 18 }}>Koi issue tha? Hum 24-72 ghante mein{'\n'}resolve karte hain</Text>
                 </View>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 1, marginBottom: 10, marginLeft: 2 }}>COMMON ISSUES</Text>
                 {[
-                  { id: 'customer_no_show', icon: '🚫', label: 'Customer No Show', sla: '2-4h' },
-                  { id: 'abusive_behavior', icon: '😠', label: 'Abusive Customer', sla: '2-4h' },
-                  { id: 'payment_issue', icon: '💸', label: 'Payment Refused', sla: '24h' },
+                  { id: 'customer_no_show', icon: 'ðŸš«', label: 'Customer No Show', sla: '2-4h' },
+                  { id: 'abusive_behavior', icon: 'ðŸ˜ ', label: 'Abusive Customer', sla: '2-4h' },
+                  { id: 'payment_issue', icon: 'ðŸ’¸', label: 'Payment Refused', sla: '24h' },
                 ].map(q => (
                   <TouchableOpacity key={q.id}
                     onPress={() => { setDrvCmpType(q.id); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(lastRideId || ''); setDrvCmpStep(2); setDrSubScreen('complaint-new'); }}
@@ -4950,7 +4950,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>{q.label}</Text>
                       <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Usually resolved in {q.sla}</Text>
                     </View>
-                    <Text style={{ color: C.pink, fontSize: 16 }}>›</Text>
+                    <Text style={{ color: C.pink, fontSize: 16 }}>â€º</Text>
                   </TouchableOpacity>
                 ))}
               </>
@@ -4961,7 +4961,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <>
                 <Text style={{ fontSize: 11, fontWeight: '800', color: '#9ca3af', letterSpacing: 1, marginBottom: 10, marginLeft: 2 }}>COMPLAINTS ({drvComplaints.length})</Text>
                 {drvComplaints.map((c: any) => {
-                  const sm = statusMeta[c.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c.status.replace(/_/g,' ').toUpperCase(), icon: '📋' };
+                  const sm = statusMeta[c.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c.status.replace(/_/g,' ').toUpperCase(), icon: 'ðŸ“‹' };
                   const needsAction = ['awaiting_response', 'evidence_requested'].includes(c.status);
                   return (
                     <TouchableOpacity key={c.id} onPress={async () => {
@@ -4982,12 +4982,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <View style={{ padding: 14 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 8 }}>
                           <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: sm.bg, alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                            <Text style={{ fontSize: 16 }}>{typeEmoji[c.complaint_type] || '📋'}</Text>
+                            <Text style={{ fontSize: 16 }}>{typeEmoji[c.complaint_type] || 'ðŸ“‹'}</Text>
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', lineHeight: 18 }} numberOfLines={2}>{c.title}</Text>
                             <Text style={{ fontSize: 11, color: '#9ca3af', marginTop: 2 }}>
-                              {c.complaint_type?.replace(/_/g,' ')} · {new Date(c.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
+                              {c.complaint_type?.replace(/_/g,' ')} Â· {new Date(c.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short' })}
                             </Text>
                           </View>
                           <View style={{ backgroundColor: sm.bg, borderRadius: 8, paddingHorizontal: 7, paddingVertical: 3, marginLeft: 6 }}>
@@ -4996,7 +4996,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         </View>
                         {c.resolution && (
                           <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}>
-                            <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>✅ {c.resolution.replace(/_/g,' ')}</Text>
+                            <Text style={{ fontSize: 11, color: C.green, fontWeight: '700' }}>âœ… {c.resolution.replace(/_/g,' ')}</Text>
                           </View>
                         )}
                       </View>
@@ -5011,16 +5011,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       );
     }
 
-    // ─── Driver: New Complaint (2-step) ───
+    // â”€â”€â”€ Driver: New Complaint (2-step) â”€â”€â”€
     if (driverSubScreen === 'complaint-new') {
       const driverTypes = [
-        { id: 'customer_no_show', icon: '🚫', label: 'Customer No Show',    desc: 'Customer pickup pe nahi aaya ya bahut der se aaya', sla: '2-4h',  urgent: true  },
-        { id: 'abusive_behavior', icon: '😠', label: 'Abusive Behavior',    desc: 'Customer ne gali di, dhamki di, ya haath utha',       sla: '2-4h',  urgent: true  },
-        { id: 'payment_issue',    icon: '💸', label: 'Payment Refused',     desc: 'Customer ne payment karne se mana kiya',             sla: '24h',   urgent: false },
-        { id: 'property_damage',  icon: '🔧', label: 'Vehicle Damage',      desc: 'Customer ne gaadi ya samaan ko damage kiya',         sla: '72h',   urgent: false },
-        { id: 'false_accusation', icon: '⚖️', label: 'False Accusation',    desc: 'Customer ne mujhpe galat complaint ki hai',          sla: '48h',   urgent: false },
-        { id: 'wrong_location',   icon: '📍', label: 'Wrong Location',      desc: 'Customer ne galat pickup/drop location diya',        sla: '48h',   urgent: false },
-        { id: 'other',            icon: '📝', label: 'Other Issue',         desc: 'Koi aur problem jo upar nahi hai',                   sla: '72h',   urgent: false },
+        { id: 'customer_no_show', icon: 'ðŸš«', label: 'Customer No Show',    desc: 'Customer pickup pe nahi aaya ya bahut der se aaya', sla: '2-4h',  urgent: true  },
+        { id: 'abusive_behavior', icon: 'ðŸ˜ ', label: 'Abusive Behavior',    desc: 'Customer ne gali di, dhamki di, ya haath utha',       sla: '2-4h',  urgent: true  },
+        { id: 'payment_issue',    icon: 'ðŸ’¸', label: 'Payment Refused',     desc: 'Customer ne payment karne se mana kiya',             sla: '24h',   urgent: false },
+        { id: 'property_damage',  icon: 'ðŸ”§', label: 'Vehicle Damage',      desc: 'Customer ne gaadi ya samaan ko damage kiya',         sla: '72h',   urgent: false },
+        { id: 'false_accusation', icon: 'âš–ï¸', label: 'False Accusation',    desc: 'Customer ne mujhpe galat complaint ki hai',          sla: '48h',   urgent: false },
+        { id: 'wrong_location',   icon: 'ðŸ“', label: 'Wrong Location',      desc: 'Customer ne galat pickup/drop location diya',        sla: '48h',   urgent: false },
+        { id: 'other',            icon: 'ðŸ“', label: 'Other Issue',         desc: 'Koi aur problem jo upar nahi hai',                   sla: '72h',   urgent: false },
       ];
       const selectedType = driverTypes.find(t => t.id === drvCmpType);
       const autoTitleMap: any = {
@@ -5037,10 +5037,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
               <TouchableOpacity onPress={() => drvCmpStep === 1 ? setDrSubScreen('complaints') : setDrvCmpStep(1)}
                 style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
-                <Text style={{ color: '#fff', fontSize: 18 }}>‹</Text>
+                <Text style={{ color: '#fff', fontSize: 18 }}>â€¹</Text>
               </TouchableOpacity>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 17, flex: 1 }}>
-                {drvCmpStep === 1 ? '⚠️ Issue Type Chunno' : '📝 Details Bharein'}
+                {drvCmpStep === 1 ? 'âš ï¸ Issue Type Chunno' : 'ðŸ“ Details Bharein'}
               </Text>
               <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12 }}>Step {drvCmpStep}/2</Text>
             </View>
@@ -5079,11 +5079,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         )}
                       </View>
                       <Text style={{ fontSize: 11, color: drvCmpType === t.id ? 'rgba(255,255,255,0.55)' : '#64748B', marginTop: 2, lineHeight: 15 }}>{t.desc}</Text>
-                      <Text style={{ fontSize: 10, color: drvCmpType === t.id ? C.pink : '#475569', marginTop: 3, fontWeight: '700' }}>⏱ SLA: {t.sla}</Text>
+                      <Text style={{ fontSize: 10, color: drvCmpType === t.id ? C.pink : '#475569', marginTop: 3, fontWeight: '700' }}>â± SLA: {t.sla}</Text>
                     </View>
                     {drvCmpType === t.id && (
                       <View style={{ width: 24, height: 24, borderRadius: 12, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
-                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>✓</Text>
+                        <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>âœ“</Text>
                       </View>
                     )}
                   </TouchableOpacity>
@@ -5091,7 +5091,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TouchableOpacity
                   onPress={() => { if (!drvCmpType) return Alert.alert('Issue Type', 'Pehle ek category chunen'); setDrvCmpStep(2); }}
                   style={{ backgroundColor: C.pink, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 8, opacity: drvCmpType ? 1 : 0.5 }}>
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Aage Badhein →</Text>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Aage Badhein â†’</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -5103,7 +5103,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ fontSize: 24 }}>{selectedType.icon}</Text>
                   <View style={{ flex: 1 }}>
                     <Text style={{ color: '#0F172A', fontWeight: '800', fontSize: 14 }}>{selectedType.label}</Text>
-                    <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }}>SLA: {selectedType.sla} · {selectedType.urgent ? 'Priority case' : 'Standard review'}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }}>SLA: {selectedType.sla} Â· {selectedType.urgent ? 'Priority case' : 'Standard review'}</Text>
                   </View>
                   <TouchableOpacity onPress={() => setDrvCmpStep(1)}>
                     <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700' }}>Badlo</Text>
@@ -5112,12 +5112,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
                 {/* Ride link (required) */}
                 <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#CBD5E1', marginBottom: 4 }}>🚗 Ride ID (Zaroori)</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#CBD5E1', marginBottom: 4 }}>ðŸš— Ride ID (Zaroori)</Text>
                   <Text style={{ fontSize: 10, color: '#64748B', marginBottom: 8 }}>Complaint kisi ride ke baare mein honi chahiye</Text>
                   {lastRideId && drvCmpRideId !== lastRideId && (
                     <TouchableOpacity onPress={() => setDrvCmpRideId(lastRideId)}
                       style={{ backgroundColor: 'rgba(233,69,96,0.1)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,69,96,0.25)' }}>
-                      <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>⚡ Last ride use karo</Text>
+                      <Text style={{ fontSize: 12, color: C.pink, fontWeight: '700' }}>âš¡ Last ride use karo</Text>
                       <Text style={{ fontSize: 11, color: '#64748B' }}>#{lastRideId.slice(-8)}</Text>
                     </TouchableOpacity>
                   )}
@@ -5131,18 +5131,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     placeholderTextColor="#475569"
                   />
                   {drvCmpRideId ? (
-                    <Text style={{ fontSize: 10, color: C.green, marginTop: 4, fontWeight: '600' }}>✓ Ride #{drvCmpRideId.slice(-8)} linked</Text>
+                    <Text style={{ fontSize: 10, color: C.green, marginTop: 4, fontWeight: '600' }}>âœ“ Ride #{drvCmpRideId.slice(-8)} linked</Text>
                   ) : (
-                    <Text style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>⚠️ Ride ID zaroori hai</Text>
+                    <Text style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>âš ï¸ Ride ID zaroori hai</Text>
                   )}
                 </View>
 
                 {/* Description */}
-                <Text style={{ fontSize: 12, fontWeight: '800', color: '#CBD5E1', marginBottom: 6 }}>📋 Kya Hua? (Zaroori)</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: '#CBD5E1', marginBottom: 6 }}>ðŸ“‹ Kya Hua? (Zaroori)</Text>
                 <TextInput
                   value={drvCmpDesc}
                   onChangeText={setDrvCmpDesc}
-                  placeholder={`Puri baat batao — kya hua, kab hua, customer ne kya kiya...\nKam se kam 20 characters`}
+                  placeholder={`Puri baat batao â€” kya hua, kab hua, customer ne kya kiya...\nKam se kam 20 characters`}
                   multiline
                   style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: drvCmpDesc.length >= 20 ? C.green : '#334155', height: 120, textAlignVertical: 'top', fontSize: 13, marginBottom: 16, color: '#0F172A', lineHeight: 18 }}
                   maxLength={2000}
@@ -5150,14 +5150,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 />
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: -12, marginBottom: 14, paddingHorizontal: 2 }}>
                   <Text style={{ fontSize: 10, color: drvCmpDesc.length >= 20 ? C.green : '#64748B', fontWeight: '600' }}>
-                    {drvCmpDesc.length >= 20 ? '✓ Enough detail' : `${20 - drvCmpDesc.length} more chars needed`}
+                    {drvCmpDesc.length >= 20 ? 'âœ“ Enough detail' : `${20 - drvCmpDesc.length} more chars needed`}
                   </Text>
                   <Text style={{ fontSize: 10, color: '#475569' }}>{drvCmpDesc.length}/2000</Text>
                 </View>
 
                 {/* SLA info */}
                 <View style={{ backgroundColor: 'rgba(233,69,96,0.07)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(233,69,96,0.18)', flexDirection: 'row', gap: 10, alignItems: 'flex-start' }}>
-                  <Text style={{ fontSize: 16 }}>ℹ️</Text>
+                  <Text style={{ fontSize: 16 }}>â„¹ï¸</Text>
                   <Text style={{ fontSize: 11, color: '#94A3B8', flex: 1, lineHeight: 16 }}>
                     <Text style={{ fontWeight: '700', color: C.pink }}>{selectedType.label}</Text>
                     {' '}complaints usually resolve in <Text style={{ fontWeight: '700', color: '#0F172A' }}>{selectedType.sla}</Text>.
@@ -5167,7 +5167,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
                 <TouchableOpacity
                   onPress={async () => {
-                    if (!drvCmpRideId.trim()) return Alert.alert('Ride ID', 'Ride ID zaroori hai — kis ride ke baare mein complaint hai?');
+                    if (!drvCmpRideId.trim()) return Alert.alert('Ride ID', 'Ride ID zaroori hai â€” kis ride ke baare mein complaint hai?');
                     if (drvCmpDesc.trim().length < 20) return Alert.alert('Description', 'Thoda aur detail chahiye (20+ characters)');
                     setDrvCmpLoading(true);
                     let submitOk = false;
@@ -5184,7 +5184,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         submitOk = true;
                         setDrvCmpLoading(false);
                         Alert.alert(
-                          '✅ Complaint Submit Ho Gayi',
+                          'âœ… Complaint Submit Ho Gayi',
                           `ID: #${String(data.complaint.id).slice(-8).toUpperCase()}\n\nAapki complaint receive hui. Team ${selectedType?.sla || '48h'} mein review karegi.`,
                           [{ text: 'Theek Hai', onPress: () => setDrSubScreen('complaints') }]
                         );
@@ -5192,15 +5192,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         fetch(`${API}/api/complaints?phone=${encodeURIComponent(phone)}`)
                           .then(r => r.json()).then(ld => setDrvComplaints(ld.complaints || [])).catch(() => {});
                       } else {
-                        Alert.alert('Error', data.error || 'Submit failed — retry karo');
+                        Alert.alert('Error', data.error || 'Submit failed â€” retry karo');
                       }
-                    } catch { Alert.alert('Error', 'Server se connect nahi ho pa raha — internet check karo'); }
+                    } catch { Alert.alert('Error', 'Server se connect nahi ho pa raha â€” internet check karo'); }
                     if (!submitOk) setDrvCmpLoading(false);
                   }}
                   style={{ backgroundColor: drvCmpLoading ? '#9ca3af' : C.pink, borderRadius: 16, padding: 18, alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 8 }}
                   disabled={drvCmpLoading}>
                   <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>
-                    {drvCmpLoading ? '⏳ Submit Ho Raha Hai...' : '📤 Complaint Submit Karo'}
+                    {drvCmpLoading ? 'â³ Submit Ho Raha Hai...' : 'ðŸ“¤ Complaint Submit Karo'}
                   </Text>
                 </TouchableOpacity>
               </>
@@ -5210,23 +5210,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       );
     }
 
-    // ─── Driver: Complaint Detail ───
+    // â”€â”€â”€ Driver: Complaint Detail â”€â”€â”€
     if (driverSubScreen === 'complaint-detail' && drvCmpDetail) {
       const c = drvCmpDetail.complaint;
       const msgs = drvCmpDetail.messages || [];
       const timeline = drvCmpDetail.timeline || [];
       const statusMeta: any = {
-        open:               { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'Open — Under Triage',      icon: '🕐' },
-        under_review:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',   label: 'Being Reviewed',           icon: '🔍' },
-        awaiting_response:  { color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   label: 'Your Reply Needed',        icon: '💬' },
-        evidence_requested: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    label: 'Evidence Requested',       icon: '📎' },
-        resolved:           { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',    label: 'Resolved',                 icon: '✅' },
-        closed:             { color: '#6b7280', bg: 'rgba(107,114,128,0.1)',  label: 'Closed',                   icon: '🔒' },
-        appealed:           { color: C.pink, bg: 'rgba(233,69,96,0.1)',    label: 'Under Appeal',             icon: '⚖️' },
-        escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    label: 'Escalated to Senior Team', icon: '🚨' },
+        open:               { color: '#f59e0b', bg: 'rgba(245,158,11,0.12)',  label: 'Open â€” Under Triage',      icon: 'ðŸ•' },
+        under_review:       { color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',   label: 'Being Reviewed',           icon: 'ðŸ”' },
+        awaiting_response:  { color: '#a855f7', bg: 'rgba(168,85,247,0.1)',   label: 'Your Reply Needed',        icon: 'ðŸ’¬' },
+        evidence_requested: { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    label: 'Evidence Requested',       icon: 'ðŸ“Ž' },
+        resolved:           { color: '#22c55e', bg: 'rgba(34,197,94,0.1)',    label: 'Resolved',                 icon: 'âœ…' },
+        closed:             { color: '#6b7280', bg: 'rgba(107,114,128,0.1)',  label: 'Closed',                   icon: 'ðŸ”’' },
+        appealed:           { color: C.pink, bg: 'rgba(233,69,96,0.1)',    label: 'Under Appeal',             icon: 'âš–ï¸' },
+        escalated:          { color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    label: 'Escalated to Senior Team', icon: 'ðŸš¨' },
       };
-      const sm = statusMeta[c?.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c?.status, icon: '📋' };
-      const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🔧', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
+      const sm = statusMeta[c?.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c?.status, icon: 'ðŸ“‹' };
+      const typeEmoji: any = { customer_no_show:'ðŸš«', property_damage:'ðŸ”§', abusive_behavior:'ðŸ˜ ', false_accusation:'âš–ï¸', wrong_location:'ðŸ“', payment_issue:'ðŸ’¸', other:'ðŸ“' };
       const isClosed = ['resolved','closed'].includes(c?.status);
       const [drvEvidenceUploading, setDrvEvidenceUploading] = React.useState(false);
       const uploadDrvEvidence = async () => {
@@ -5245,7 +5245,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           if (data.url) {
             const r2 = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
             setDrvCmpDetail(await r2.json());
-            Alert.alert('✅ Uploaded', 'Evidence submit ho gaya!');
+            Alert.alert('âœ… Uploaded', 'Evidence submit ho gaya!');
           } else Alert.alert('Error', data.error || 'Upload fail hua');
         } catch { Alert.alert('Error', 'Upload fail hua'); }
         setDrvEvidenceUploading(false);
@@ -5255,7 +5255,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <View style={{ backgroundColor: '#FFFFFF', paddingTop: Platform.OS === 'android' ? 44 : 56, paddingBottom: 16, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 12, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
             <TouchableOpacity onPress={() => setDrSubScreen('complaints')}
               style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ color: '#0F172A', fontSize: 18 }}>‹</Text>
+              <Text style={{ color: '#0F172A', fontSize: 18 }}>â€¹</Text>
             </TouchableOpacity>
             <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 17, flex: 1 }}>Complaint Detail</Text>
             <Text style={{ color: '#475569', fontSize: 10 }}>#{c?.id?.slice(-8)}</Text>
@@ -5275,13 +5275,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
             {c.status === 'evidence_requested' && (
               <View style={{ backgroundColor: '#FFF7ED', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: '#FB923C', flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-                <Text style={{ fontSize: 24 }}>📎</Text>
+                <Text style={{ fontSize: 24 }}>ðŸ“Ž</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: '#EA580C', marginBottom: 4 }}>Admin ne Proof Manga Hai!</Text>
                   <Text style={{ fontSize: 12, color: '#9A3412', lineHeight: 18 }}>Screenshot ya photo upload karo jo aapki baat prove kare</Text>
                   <TouchableOpacity onPress={uploadDrvEvidence} disabled={drvEvidenceUploading}
                     style={{ backgroundColor: '#EA580C', borderRadius: 10, paddingVertical: 10, paddingHorizontal: 16, marginTop: 10, alignItems: 'center', opacity: drvEvidenceUploading ? 0.6 : 1 }}>
-                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{drvEvidenceUploading ? '⏳ Uploading...' : '📸 Photo Upload Karo'}</Text>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>{drvEvidenceUploading ? 'â³ Uploading...' : 'ðŸ“¸ Photo Upload Karo'}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -5291,7 +5291,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(233,69,96,0.1)', alignItems: 'center', justifyContent: 'center' }}>
-                  <Text style={{ fontSize: 18 }}>{typeEmoji[c.complaint_type] || '📋'}</Text>
+                  <Text style={{ fontSize: 18 }}>{typeEmoji[c.complaint_type] || 'ðŸ“‹'}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '900', color: '#0F172A' }}>{c.title}</Text>
@@ -5302,7 +5302,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ fontSize: 13, color: '#64748B', lineHeight: 20 }}>{c.description}</Text>
               {c.ride_id && (
                 <View style={{ marginTop: 10, backgroundColor: '#FFFFFF', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>🚗 Linked ride: <Text style={{ fontWeight: '700', color: '#0F172A' }}>#{c.ride_id.slice(-8)}</Text></Text>
+                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>ðŸš— Linked ride: <Text style={{ fontWeight: '700', color: '#0F172A' }}>#{c.ride_id.slice(-8)}</Text></Text>
                 </View>
               )}
             </View>
@@ -5310,14 +5310,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Resolution */}
             {c.resolution && (
               <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 14, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(34,197,94,0.25)' }}>
-                <Text style={{ fontSize: 14, fontWeight: '900', color: C.green, marginBottom: 6 }}>✅ Resolution</Text>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: C.green, marginBottom: 6 }}>âœ… Resolution</Text>
                 <Text style={{ fontSize: 13, color: C.green, fontWeight: '700' }}>{c.resolution?.replace(/_/g,' ')}</Text>
                 {c.resolution_note && <Text style={{ fontSize: 13, color: '#64748B', marginTop: 8, lineHeight: 18 }}>{c.resolution_note}</Text>}
                 {(parseFloat(c.refund_amount||0) > 0) && (
                   <View style={{ marginTop: 10, backgroundColor: 'rgba(22,163,74,0.1)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(22,163,74,0.3)' }}>
-                    <Text style={{ fontSize: 16 }}>💰</Text>
+                    <Text style={{ fontSize: 16 }}>ðŸ’°</Text>
                     <View>
-                      <Text style={{ fontSize: 13, fontWeight: '900', color: C.green }}>₹{parseFloat(c.refund_amount).toFixed(0)} Refund Processed</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: C.green }}>â‚¹{parseFloat(c.refund_amount).toFixed(0)} Refund Processed</Text>
                       <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Customer ke wallet mein credited</Text>
                     </View>
                   </View>
@@ -5327,10 +5327,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
             {/* Messages thread */}
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 12 }}>💬 Messages</Text>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 12 }}>ðŸ’¬ Messages</Text>
               {msgs.length === 0 && (
                 <View style={{ alignItems: 'center', paddingVertical: 16 }}>
-                  <Text style={{ fontSize: 28 }}>💬</Text>
+                  <Text style={{ fontSize: 28 }}>ðŸ’¬</Text>
                   <Text style={{ color: '#64748B', fontSize: 12, marginTop: 6 }}>Team abhi review kar rahi hai</Text>
                 </View>
               )}
@@ -5345,7 +5345,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       borderBottomLeftRadius: isAdmin ? 4 : 14, borderBottomRightRadius: isAdmin ? 14 : 4,
                     }}>
                       <Text style={{ fontSize: 10, fontWeight: '800', color: isAdmin ? C.pink : '#64748B', marginBottom: 4 }}>
-                        {isAdmin ? '👤 Sppero Support' : '🚗 You'}
+                        {isAdmin ? 'ðŸ‘¤ Sppero Support' : 'ðŸš— You'}
                       </Text>
                       <Text style={{ fontSize: 13, color: '#0F172A', lineHeight: 18 }}>{m.message}</Text>
                       <Text style={{ fontSize: 9, color: '#64748B', marginTop: 4, textAlign: isAdmin ? 'left' : 'right' }}>
@@ -5380,21 +5380,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       setDrvCmpMsg('');
                       const r2 = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                       setDrvCmpDetail(await r2.json());
-                    } catch { Alert.alert('Error', 'Message nahi bheja — retry karo'); }
+                    } catch { Alert.alert('Error', 'Message nahi bheja â€” retry karo'); }
                   }}
                   style={{ backgroundColor: C.pink, borderRadius: 12, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8, elevation: 2, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 6 }}>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>📤 Bhejo</Text>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>ðŸ“¤ Bhejo</Text>
                 </TouchableOpacity>
               </View>
             )}
 
             {!isClosed && (
               <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: 1.5, borderColor: c.status === 'evidence_requested' ? '#FB923C' : '#E2E8F0' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8, letterSpacing: 0.5 }}>📎 EVIDENCE UPLOAD</Text>
-                <Text style={{ fontSize: 11, color: '#94A3B8', marginBottom: 10, lineHeight: 16 }}>Screenshot ya photo upload karo — max 5</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 8, letterSpacing: 0.5 }}>ðŸ“Ž EVIDENCE UPLOAD</Text>
+                <Text style={{ fontSize: 11, color: '#94A3B8', marginBottom: 10, lineHeight: 16 }}>Screenshot ya photo upload karo â€” max 5</Text>
                 <TouchableOpacity onPress={uploadDrvEvidence} disabled={drvEvidenceUploading}
                   style={{ backgroundColor: c.status === 'evidence_requested' ? '#EA580C' : C.pink, borderRadius: 12, paddingVertical: 12, alignItems: 'center', opacity: drvEvidenceUploading ? 0.6 : 1 }}>
-                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{drvEvidenceUploading ? '⏳ Uploading...' : '📸 Photo/Screenshot Upload'}</Text>
+                  <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{drvEvidenceUploading ? 'â³ Uploading...' : 'ðŸ“¸ Photo/Screenshot Upload'}</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -5402,7 +5402,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Timeline */}
             {timeline.length > 0 && (
               <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 14 }}>📅 Timeline</Text>
+                <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 14 }}>ðŸ“… Timeline</Text>
                 {timeline.map((t: any, i: number) => (
                   <View key={i} style={{ flexDirection: 'row', marginBottom: i < timeline.length - 1 ? 12 : 0 }}>
                     <View style={{ width: 28, alignItems: 'center' }}>
@@ -5428,10 +5428,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (driverSubScreen === 'settings') {
       return (
         <View style={s.screen}>
-          <SubHeader title="⚙️ Settings" />
+          <SubHeader title="âš™ï¸ Settings" />
           <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>🔔 Notifications</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>ðŸ”” Notifications</Text>
               {[
                 { label: 'Ride Requests', sub: 'Nayi ride ki notification', key: 'notif_rides', def: true },
                 { label: 'Wallet Updates', sub: 'Payment credit/debit alerts', key: 'notif_wallet', def: true },
@@ -5442,16 +5442,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>{item.label}</Text>
                     <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{item.sub}</Text>
                   </View>
-                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Notifications settings OS settings se manage karo:\nSettings → Apps → Sppero Buddy → Notifications')} trackColor={{ false: '#334155', true: C.green }} thumbColor="#fff" />
+                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Notifications settings OS settings se manage karo:\nSettings â†’ Apps â†’ Sppero Buddy â†’ Notifications')} trackColor={{ false: '#334155', true: C.green }} thumbColor="#fff" />
                 </View>
               ))}
             </View>
 
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>📱 App Info</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>ðŸ“± App Info</Text>
               {[
                 ['App Version', '1.0.0'],
-                ['Driver ID', phone ? `DRV-${phone.slice(-4)}` : '—'],
+                ['Driver ID', phone ? `DRV-${phone.slice(-4)}` : 'â€”'],
                 ['Platform', 'Android'],
               ].map(([k, v], i) => (
                 <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#334155' }}>
@@ -5464,12 +5464,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <TouchableOpacity
               onPress={() => Alert.alert('Cache Clear', 'App cache clear ho gaya!')}
               style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 18, marginRight: 12 }}>🗑️</Text>
+              <Text style={{ fontSize: 18, marginRight: 12 }}>ðŸ—‘ï¸</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>Clear Cache</Text>
                 <Text style={{ fontSize: 11, color: '#64748B' }}>App data clear karo</Text>
               </View>
-              <Text style={{ fontSize: 18, color: '#475569' }}>›</Text>
+              <Text style={{ fontSize: 18, color: '#475569' }}>â€º</Text>
             </TouchableOpacity>
           </ScrollView>
           <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
@@ -5480,7 +5480,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return null;
   }
 
-  // ═══ EARNINGS TAB ═══
+  // â•â•â• EARNINGS TAB â•â•â•
   if (activeTab === 'earnings') {
     const fmtDate = (d: string) => { try { return new Date(d).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return d; } };
     return (
@@ -5488,19 +5488,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       {/* Dark header */}
       <View style={{ backgroundColor: '#FFFFFF', paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18, borderBottomWidth: 1, borderBottomColor: '#E2E8F0' }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-          <Text style={{ color: '#0F172A', fontSize: 20, fontWeight: '800', flex: 1 }}>💰 Wallet & Earnings</Text>
+          <Text style={{ color: '#0F172A', fontSize: 20, fontWeight: '800', flex: 1 }}>ðŸ’° Wallet & Earnings</Text>
           <TouchableOpacity onPress={() => loadDriverWallet(phone)} style={{ padding: 8, backgroundColor: '#F8FAFC', borderRadius: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 16 }}>⟳</Text>
+            <Text style={{ fontSize: 16 }}>âŸ³</Text>
           </TouchableOpacity>
         </View>
         {/* 3-stat grid */}
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ color: C.green, fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.balance || 0).toFixed(0)}</Text>
+            <Text style={{ color: C.green, fontSize: 22, fontWeight: '900' }}>â‚¹{parseFloat(driverWallet.balance || 0).toFixed(0)}</Text>
             <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Wallet Balance</Text>
           </View>
           <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ color: '#FFD700', fontSize: 22, fontWeight: '900' }}>₹{parseFloat(driverWallet.total_earned || 0).toFixed(0)}</Text>
+            <Text style={{ color: '#FFD700', fontSize: 22, fontWeight: '900' }}>â‚¹{parseFloat(driverWallet.total_earned || 0).toFixed(0)}</Text>
             <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Life Earned</Text>
           </View>
           <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
@@ -5512,8 +5512,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       {(rideReq || hourlyRideReq) && (
         <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('live')}>
-          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{hourlyRideReq ? '⏱️ Hourly Ride!' : '🔔 Nayi Ride!'} ₹{(rideReq || hourlyRideReq)?.fare || hourlyRideReq?.base_fare}</Text>
-          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
+          <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>{hourlyRideReq ? 'â±ï¸ Hourly Ride!' : 'ðŸ”” Nayi Ride!'} â‚¹{(rideReq || hourlyRideReq)?.fare || hourlyRideReq?.base_fare}</Text>
+          <Text style={{ color: '#fff', fontSize: 13 }}>Dekho â†’</Text>
         </TouchableOpacity>
       )}
 
@@ -5523,10 +5523,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         backgroundColor: 'rgba(239,68,68,0.08)', marginHorizontal: 14, marginBottom: 6,
         borderRadius: 14, padding: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.25)',
       }}>
-        <Text style={{ fontSize: 18 }}>⛽</Text>
+        <Text style={{ fontSize: 18 }}>â›½</Text>
         <View style={{ flex: 1 }}>
           <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>Fuel Log</Text>
-          <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>Net kamai = Gross − Fuel</Text>
+          <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>Net kamai = Gross âˆ’ Fuel</Text>
         </View>
         <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
       </TouchableOpacity>
@@ -5553,11 +5553,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Row k="Total Rides (All Time)" v={driverRideHistory.length.toString()} />
             <Row k="Hourly Rides" v={driverHourlyHistory.length.toString()} />
             <Row k="Aaj Ke Rides" v={rides.toString()} />
-            <Row k="Avg Per Ride" v={'₹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
-            <Row k="Platform Fee (15%)" v={'₹' + (earnings * 0.15).toFixed(0)} />
-            <Row k="Aaj Ki Net Kamai" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
+            <Row k="Avg Per Ride" v={'â‚¹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
+            <Row k="Platform Fee (15%)" v={'â‚¹' + (earnings * 0.15).toFixed(0)} />
+            <Row k="Aaj Ki Net Kamai" v={'â‚¹' + (earnings * 0.85).toFixed(0)} bold last />
           </View>
-          {/* ── 7-Day Earnings Chart ── */}
+          {/* â”€â”€ 7-Day Earnings Chart â”€â”€ */}
           {earningsAnalytics?.days7 && (() => {
             const days = earningsAnalytics.days7 || [];
             const maxEarned = Math.max(...days.map((d: any) => d.earned), 1);
@@ -5571,12 +5571,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             return (
               <View style={{ backgroundColor: '#fff', borderRadius: 18, padding: 16, marginBottom: 14, elevation: 3, shadowColor: C.green, shadowOpacity: 0.1, shadowRadius: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.15)' }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                  <Text style={{ fontSize: 16, marginRight: 8 }}>📈</Text>
+                  <Text style={{ fontSize: 16, marginRight: 8 }}>ðŸ“ˆ</Text>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A', flex: 1 }}>7-Day Earnings</Text>
                   {weekChange !== null && (
                     <View style={{ backgroundColor: weekChange >= 0 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 4 }}>
                       <Text style={{ fontSize: 12, fontWeight: '800', color: weekChange >= 0 ? C.green : '#EF4444' }}>
-                        {weekChange >= 0 ? '↑' : '↓'} {Math.abs(weekChange)}% vs last week
+                        {weekChange >= 0 ? 'â†‘' : 'â†“'} {Math.abs(weekChange)}% vs last week
                       </Text>
                     </View>
                   )}
@@ -5590,7 +5590,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     return (
                       <View key={i} style={{ flex: 1, alignItems: 'center', gap: 4 }}>
                         {d.earned > 0 && (
-                          <Text style={{ fontSize: 8, color: '#64748B', fontWeight: '700' }}>₹{d.earned >= 1000 ? (d.earned / 1000).toFixed(1) + 'k' : d.earned}</Text>
+                          <Text style={{ fontSize: 8, color: '#64748B', fontWeight: '700' }}>â‚¹{d.earned >= 1000 ? (d.earned / 1000).toFixed(1) + 'k' : d.earned}</Text>
                         )}
                         <View style={{
                           width: '100%', height: barH, borderRadius: 5,
@@ -5606,12 +5606,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <View style={{ flexDirection: 'row', gap: 8, marginBottom: 12 }}>
                   <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, alignItems: 'center' }}>
                     <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>IS HAFTE</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: C.green, marginTop: 4 }}>₹{thisW.earned}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: C.green, marginTop: 4 }}>â‚¹{thisW.earned}</Text>
                     <Text style={{ fontSize: 10, color: '#64748B' }}>{thisW.rides} rides</Text>
                   </View>
                   <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 10, alignItems: 'center' }}>
                     <Text style={{ fontSize: 10, color: '#94A3B8', fontWeight: '700' }}>PICHLA HAFTE</Text>
-                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#64748B', marginTop: 4 }}>₹{lastW.earned}</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '900', color: '#64748B', marginTop: 4 }}>â‚¹{lastW.earned}</Text>
                     <Text style={{ fontSize: 10, color: '#64748B' }}>{lastW.rides} rides</Text>
                   </View>
                 </View>
@@ -5619,10 +5619,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Best earning hours */}
                 {topHours.length > 0 && (
                   <View style={{ backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={{ fontSize: 14 }}>⏰</Text>
+                    <Text style={{ fontSize: 14 }}>â°</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 11, fontWeight: '800', color: '#0F172A' }}>Best Earning Hours</Text>
-                      <Text style={{ fontSize: 11, color: C.green, marginTop: 2 }}>{topHours.join(' · ')}</Text>
+                      <Text style={{ fontSize: 11, color: C.green, marginTop: 2 }}>{topHours.join(' Â· ')}</Text>
                     </View>
                   </View>
                 )}
@@ -5631,10 +5631,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           })()}
 
           <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' }}>
-            <Text style={{ fontSize: 13, color: C.green, fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
-            <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
+            <Text style={{ fontSize: 13, color: C.green, fontWeight: '700', marginBottom: 4 }}>ðŸ’¡ Commission Structure</Text>
+            <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori â€” proportional payment</Text>
           </View>
-          {/* Pending Commission Card — redesigned */}
+          {/* Pending Commission Card â€” redesigned */}
           {commissionData.pending_commission > 0 && (
             <View style={{ borderRadius: 22, marginBottom: 16, overflow: 'hidden', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.22, shadowRadius: 14 }}>
               {/* Gradient header */}
@@ -5642,15 +5642,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' }} />
-                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>SPPERO · COMMISSION DUE</Text>
+                    <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900', letterSpacing: 1 }}>SPPERO Â· COMMISSION DUE</Text>
                   </View>
                 </View>
                 <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>Cash rides ki platform fee</Text>
                 <Text style={{ color: '#fff', fontSize: 44, fontWeight: '900', letterSpacing: -1 }}>
-                  ₹{commissionData.pending_commission.toFixed(0)}
+                  â‚¹{commissionData.pending_commission.toFixed(0)}
                 </Text>
                 <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11, marginTop: 4 }}>
-                  {commissionData.pending_commission >= 300 ? '⚠️ ₹300 ya zyada — nayi rides temporarily block' : '✅ Normal range — jaldi clear kar do'}
+                  {commissionData.pending_commission >= 300 ? 'âš ï¸ â‚¹300 ya zyada â€” nayi rides temporarily block' : 'âœ… Normal range â€” jaldi clear kar do'}
                 </Text>
               </View>
 
@@ -5659,9 +5659,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Info row */}
                 <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
                   {[
-                    { icon: '⚡', text: 'Auto-deduct\nwallet rides se' },
-                    { icon: '📱', text: 'UPI · GPay\nPhonePe · Paytm' },
-                    { icon: '✅', text: 'Pay karo\nturant unblock' },
+                    { icon: 'âš¡', text: 'Auto-deduct\nwallet rides se' },
+                    { icon: 'ðŸ“±', text: 'UPI Â· GPay\nPhonePe Â· Paytm' },
+                    { icon: 'âœ…', text: 'Pay karo\nturant unblock' },
                   ].map((item, i) => (
                     <View key={i} style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, padding: 12, alignItems: 'center', gap: 6, borderWidth: 1, borderColor: '#E2E8F0' }}>
                       <Text style={{ fontSize: 20 }}>{item.icon}</Text>
@@ -5678,7 +5678,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     try {
                       const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                       const d = await r.json();
-                      if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                      if (!d.success) { setCommResult('âŒ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
                       if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
                       RazorpayCheckout.open({
                         key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
@@ -5689,11 +5689,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                           body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                         });
                         const vd = await vr.json();
-                        if (vd.success) { setCommResult('✅ Commission clear! Nayi rides available hain.'); loadCommissionHistory(phone); }
-                        else setCommResult('❌ Verification failed: ' + (vd.error || ''));
+                        if (vd.success) { setCommResult('âœ… Commission clear! Nayi rides available hain.'); loadCommissionHistory(phone); }
+                        else setCommResult('âŒ Verification failed: ' + (vd.error || ''));
                         setCommPayLoading(false);
                       }).catch((e: any) => {
-                        setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : '');
+                        setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? 'âŒ Payment fail: ' + (e?.description || '') : '');
                         setCommPayLoading(false);
                       });
                     } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
@@ -5704,15 +5704,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     elevation: commPayLoading ? 0 : 6, shadowColor: C.pink, shadowOpacity: 0.4, shadowRadius: 10,
                   }}
                 >
-                  <Text style={{ fontSize: 20 }}>{commPayLoading ? '⏳' : '📱'}</Text>
+                  <Text style={{ fontSize: 20 }}>{commPayLoading ? 'â³' : 'ðŸ“±'}</Text>
                   <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>
-                    {commPayLoading ? 'Payment kholna...' : `UPI / Card Se Pay — ₹${commissionData.pending_commission.toFixed(0)}`}
+                    {commPayLoading ? 'Payment kholna...' : `UPI / Card Se Pay â€” â‚¹${commissionData.pending_commission.toFixed(0)}`}
                   </Text>
                 </TouchableOpacity>
 
                 {commResult ? (
-                  <View style={{ marginTop: 10, backgroundColor: commResult.includes('✅') ? '#F0FDF4' : '#FFF5F5', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: commResult.includes('✅') ? '#BBF7D0' : '#FCA5A5' }}>
-                    <Text style={{ color: commResult.includes('✅') ? '#15803D' : '#DC2626', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
+                  <View style={{ marginTop: 10, backgroundColor: commResult.includes('âœ…') ? '#F0FDF4' : '#FFF5F5', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: commResult.includes('âœ…') ? '#BBF7D0' : '#FCA5A5' }}>
+                    <Text style={{ color: commResult.includes('âœ…') ? '#15803D' : '#DC2626', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
                   </View>
                 ) : null}
               </View>
@@ -5721,12 +5721,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* Payout */}
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>💸 Payout Request</Text>
-            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Available: ₹{parseFloat(driverWallet.balance || 0).toFixed(0)} · Min ₹100</Text>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>ðŸ’¸ Payout Request</Text>
+            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 10 }}>Available: â‚¹{parseFloat(driverWallet.balance || 0).toFixed(0)} Â· Min â‚¹100</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TextInput
                 style={{ flex: 1, borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, fontSize: 15, color: '#0F172A', backgroundColor: '#FFFFFF' }}
-                placeholder="Enter amount (₹)"
+                placeholder="Enter amount (â‚¹)"
                 keyboardType="numeric"
                 value={payoutInput}
                 onChangeText={setPayoutInput}
@@ -5737,28 +5737,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Request</Text>
               </TouchableOpacity>
             </View>
-            {result ? <Text style={{ color: result.includes('✅') ? C.green : C.pink, marginTop: 8, fontWeight: '600' }}>{result}</Text> : null}
+            {result ? <Text style={{ color: result.includes('âœ…') ? C.green : C.pink, marginTop: 8, fontWeight: '600' }}>{result}</Text> : null}
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             {[100, 200, 500, 1000].map(a => (
               <TouchableOpacity key={a} onPress={() => setPayoutInput(a.toString())}
                 style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, paddingVertical: 9, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: '#CBD5E1', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
+                <Text style={{ color: '#CBD5E1', fontWeight: '700', fontSize: 13 }}>â‚¹{a}</Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {/* ── How Hourly Works ── */}
+          {/* â”€â”€ How Hourly Works â”€â”€ */}
           <View style={{ backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, marginTop: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>ℹ️ Hourly / Daily Booking — Rules</Text>
+            <Text style={{ color: '#fff', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>â„¹ï¸ Hourly / Daily Booking â€” Rules</Text>
             {[
-              ['⏱️ Package', '2h/4h/6h/Full Day / 1 Day / 2 Day / 3 Day available'],
-              ['💰 Commission', '12% hourly (vs 15% standard rides)'],
-              ['🛡️ Min Guarantee', 'Early end? Minimum 70% guaranteed'],
-              ['📍 KM Included', 'Package mein KM fix hai — extra per km extra charge'],
-              ['🔐 OTP Start', 'Customer OTP se trip shuru hoti hai'],
-              ['✅ Complete', 'Actual KM enter karo — extra charge auto-calculate'],
-              ['💳 Payment', 'Customer wallet se escrow hold, release on complete'],
+              ['â±ï¸ Package', '2h/4h/6h/Full Day / 1 Day / 2 Day / 3 Day available'],
+              ['ðŸ’° Commission', '12% hourly (vs 15% standard rides)'],
+              ['ðŸ›¡ï¸ Min Guarantee', 'Early end? Minimum 70% guaranteed'],
+              ['ðŸ“ KM Included', 'Package mein KM fix hai â€” extra per km extra charge'],
+              ['ðŸ” OTP Start', 'Customer OTP se trip shuru hoti hai'],
+              ['âœ… Complete', 'Actual KM enter karo â€” extra charge auto-calculate'],
+              ['ðŸ’³ Payment', 'Customer wallet se escrow hold, release on complete'],
             ].map(([icon, text], i) => (
               <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
                 <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700', width: 90 }}>{icon}</Text>
@@ -5771,7 +5771,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {walletEarningsTab === 'rides' && (<>
           {driverRideHistory.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
-              <Text style={{ fontSize: 36 }}>🛺</Text>
+              <Text style={{ fontSize: 36 }}>ðŸ›º</Text>
               <Text style={{ color: '#475569', marginTop: 10 }}>Koi completed ride nahi mili</Text>
             </View>
           ) : driverRideHistory.map((r: any, i: number) => (
@@ -5779,11 +5779,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{r.passenger_name || 'Passenger'}</Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{fmtDate(r.created_at)} · {r.payment_method}</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{fmtDate(r.created_at)} Â· {r.payment_method}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>₹{parseFloat(r.fare || 0).toFixed(0)}</Text>
-                  <Text style={{ color: '#475569', fontSize: 10 }}>Net: ₹{(parseFloat(r.fare || 0) * 0.85).toFixed(0)}</Text>
+                  <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>â‚¹{parseFloat(r.fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#475569', fontSize: 10 }}>Net: â‚¹{(parseFloat(r.fare || 0) * 0.85).toFixed(0)}</Text>
                 </View>
               </View>
             </View>
@@ -5793,19 +5793,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {walletEarningsTab === 'hourly' && (<>
           {driverHourlyHistory.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
-              <Text style={{ fontSize: 36 }}>⏱️</Text>
+              <Text style={{ fontSize: 36 }}>â±ï¸</Text>
               <Text style={{ color: '#475569', marginTop: 10 }}>Koi hourly ride nahi mili</Text>
             </View>
           ) : driverHourlyHistory.map((h: any, i: number) => (
             <View key={h.id || i} style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{h.vehicle_type} · {h.package_hours}h Package</Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{h.customer_phone} · {fmtDate(h.created_at)}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{h.vehicle_type} Â· {h.package_hours}h Package</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{h.customer_phone} Â· {fmtDate(h.created_at)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
-                  <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>₹{parseFloat(h.driver_earning || h.base_fare || 0).toFixed(0)}</Text>
-                  <Text style={{ color: '#475569', fontSize: 10 }}>Base: ₹{parseFloat(h.base_fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>â‚¹{parseFloat(h.driver_earning || h.base_fare || 0).toFixed(0)}</Text>
+                  <Text style={{ color: '#475569', fontSize: 10 }}>Base: â‚¹{parseFloat(h.base_fare || 0).toFixed(0)}</Text>
                 </View>
               </View>
             </View>
@@ -5818,15 +5818,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#0F172A', fontSize: 14, fontWeight: '800', marginBottom: 12 }}>Commission Overview</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: C.pink, fontSize: 18, fontWeight: '900' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
+                <Text style={{ color: C.pink, fontSize: 18, fontWeight: '900' }}>â‚¹{commissionData.pending_commission.toFixed(0)}</Text>
                 <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Pending</Text>
               </View>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: C.green, fontSize: 18, fontWeight: '900' }}>₹{commissionData.settled_commission.toFixed(0)}</Text>
+                <Text style={{ color: C.green, fontSize: 18, fontWeight: '900' }}>â‚¹{commissionData.settled_commission.toFixed(0)}</Text>
                 <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Paid / Settled</Text>
               </View>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: '900' }}>₹{commissionData.total_commission.toFixed(0)}</Text>
+                <Text style={{ color: '#FFD700', fontSize: 18, fontWeight: '900' }}>â‚¹{commissionData.total_commission.toFixed(0)}</Text>
                 <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Total</Text>
               </View>
             </View>
@@ -5841,7 +5841,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 try {
                   const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                   const d = await r.json();
-                  if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                  if (!d.success) { setCommResult('âŒ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
                   if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
                   RazorpayCheckout.open({
                     key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
@@ -5852,26 +5852,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                     });
                     const vd = await vr.json();
-                    if (vd.success) { setCommResult('✅ Commission paid!'); loadCommissionHistory(phone); }
-                    else setCommResult('❌ Verification failed: ' + (vd.error || ''));
+                    if (vd.success) { setCommResult('âœ… Commission paid!'); loadCommissionHistory(phone); }
+                    else setCommResult('âŒ Verification failed: ' + (vd.error || ''));
                     setCommPayLoading(false);
                   }).catch((e: any) => {
-                    setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : 'Payment cancel hua');
+                    setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? 'âŒ Payment fail: ' + (e?.description || '') : 'Payment cancel hua');
                     setCommPayLoading(false);
                   });
                 } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
               }}
               style={{ backgroundColor: commPayLoading ? '#334155' : C.pink, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 4 }}>
-              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{commPayLoading ? 'Opening...' : `ðŸ’³ Pay â‚¹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
             </TouchableOpacity>
           )}
-          {commResult ? <Text style={{ color: commResult.includes('✅') ? C.green : C.pink, marginBottom: 10, fontSize: 12, fontWeight: '600', textAlign: 'center' }}>{commResult}</Text> : null}
+          {commResult ? <Text style={{ color: commResult.includes('âœ…') ? C.green : C.pink, marginBottom: 10, fontSize: 12, fontWeight: '600', textAlign: 'center' }}>{commResult}</Text> : null}
 
           {/* Per-ride commission history */}
           <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginTop: 8, marginBottom: 8 }}>Per-Ride Commission</Text>
           {commissionData.records.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 30 }}>
-              <Text style={{ fontSize: 32 }}>📋</Text>
+              <Text style={{ fontSize: 32 }}>ðŸ“‹</Text>
               <Text style={{ color: '#475569', marginTop: 8 }}>Koi commission record nahi</Text>
             </View>
           ) : commissionData.records.map((rec: any, i: number) => {
@@ -5886,14 +5886,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         <Text style={{ fontSize: 10, fontWeight: '700', color: statusColor }}>{statusLabel}</Text>
                       </View>
                       <Text style={{ fontSize: 11, color: '#64748B' }}>
-                        {rec.payment_method === 'cash' ? '💵 Cash' : rec.payment_method === 'wallet' ? '👛 Wallet' : '💳 Online'}
+                        {rec.payment_method === 'cash' ? 'ðŸ’µ Cash' : rec.payment_method === 'wallet' ? 'ðŸ‘› Wallet' : 'ðŸ’³ Online'}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Ride #{rec.ride_id?.slice(-6)} · {fmtDate(rec.created_at)}</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Ride #{rec.ride_id?.slice(-6)} Â· {fmtDate(rec.created_at)}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>₹{parseFloat(rec.commission).toFixed(0)}</Text>
-                    <Text style={{ fontSize: 10, color: '#64748B' }}>Fare ₹{parseFloat(rec.fare).toFixed(0)}</Text>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>â‚¹{parseFloat(rec.commission).toFixed(0)}</Text>
+                    <Text style={{ fontSize: 10, color: '#64748B' }}>Fare â‚¹{parseFloat(rec.fare).toFixed(0)}</Text>
                   </View>
                 </View>
               </View>
@@ -5907,11 +5907,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View key={p.id || i} style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 12, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                   <View>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.green }}>₹{parseFloat(p.amount).toFixed(0)} Paid</Text>
+                    <Text style={{ fontSize: 12, fontWeight: '700', color: C.green }}>â‚¹{parseFloat(p.amount).toFixed(0)} Paid</Text>
                     <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>{fmtDate(p.created_at)}</Text>
                   </View>
                   <View style={{ backgroundColor: p.status === 'paid' ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'center' }}>
-                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.status === 'paid' ? C.green : '#F59E0B' }}>{p.status === 'paid' ? '✅ Paid' : '⏳ Pending'}</Text>
+                    <Text style={{ fontSize: 10, fontWeight: '700', color: p.status === 'paid' ? C.green : '#F59E0B' }}>{p.status === 'paid' ? 'âœ… Paid' : 'â³ Pending'}</Text>
                   </View>
                 </View>
               </View>
@@ -5932,7 +5932,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   );
   }
 
-  // ═══ BONUS TAB ═══
+  // â•â•â• BONUS TAB â•â•â•
   if (activeTab === 'bonus') {
 
     const dash = bonusDash;
@@ -5967,22 +5967,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     <View style={s.screen}>
       <View style={{ backgroundColor: C.pink, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', flex: 1 }}>🎁 Bonus Wallet</Text>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', flex: 1 }}>ðŸŽ Bonus Wallet</Text>
           <TouchableOpacity onPress={() => { loadBonusDash(phone); setBonusMsg(''); }} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
-            <Text style={{ fontSize: 16 }}>⟳</Text>
+            <Text style={{ fontSize: 16 }}>âŸ³</Text>
           </TouchableOpacity>
         </View>
         {/* Balance Hero */}
         <View style={{ alignItems: 'center', paddingVertical: 12 }}>
           <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, marginBottom: 4 }}>Bonus Balance</Text>
-          <Text style={{ color: '#FFD700', fontSize: 40, fontWeight: '900' }}>₹{balance.toFixed(0)}</Text>
+          <Text style={{ color: '#FFD700', fontSize: 40, fontWeight: '900' }}>â‚¹{balance.toFixed(0)}</Text>
           <View style={{ flexDirection: 'row', gap: 24, marginTop: 10 }}>
             <View style={{ alignItems: 'center' }}>
-              <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>₹{totalEarned.toFixed(0)}</Text>
+              <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>â‚¹{totalEarned.toFixed(0)}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>Total Earned</Text>
             </View>
             <View style={{ alignItems: 'center' }}>
-              <Text style={{ color: C.pink, fontSize: 16, fontWeight: '800' }}>₹{totalRedeemed.toFixed(0)}</Text>
+              <Text style={{ color: C.pink, fontSize: 16, fontWeight: '800' }}>â‚¹{totalRedeemed.toFixed(0)}</Text>
               <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>Redeemed</Text>
             </View>
           </View>
@@ -5990,11 +5990,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {/* Redeem section */}
         {balance >= 50 && (
           <View style={{ backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 14, padding: 14, marginTop: 8 }}>
-            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginBottom: 10 }}>💸 Redeem → Main Wallet</Text>
+            <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, marginBottom: 10 }}>ðŸ’¸ Redeem â†’ Main Wallet</Text>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               <TextInput
                 style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.12)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, color: '#fff', fontWeight: '700' }}
-                placeholder={`Min ₹50`} placeholderTextColor="rgba(255,255,255,0.4)"
+                placeholder={`Min â‚¹50`} placeholderTextColor="rgba(255,255,255,0.4)"
                 keyboardType="numeric" value={bonusRedeemAmt}
                 onChangeText={setBonusRedeemAmt}
               />
@@ -6006,14 +6006,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         )}
         {balance < 50 && balance > 0 && (
-          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, textAlign: 'center', marginTop: 8 }}>₹{(50 - balance).toFixed(0)} aur chahiye redeem ke liye (min ₹50)</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, textAlign: 'center', marginTop: 8 }}>â‚¹{(50 - balance).toFixed(0)} aur chahiye redeem ke liye (min â‚¹50)</Text>
         )}
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         {bonusMsg ? (
-          <View style={{ backgroundColor: bonusMsg.startsWith('✅') ? 'rgba(76,175,80,0.15)' : 'rgba(233,69,96,0.12)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-            <Text style={{ color: bonusMsg.startsWith('✅') ? '#2e7d32' : '#c62828', fontWeight: '700', fontSize: 13 }}>{bonusMsg}</Text>
+          <View style={{ backgroundColor: bonusMsg.startsWith('âœ…') ? 'rgba(76,175,80,0.15)' : 'rgba(233,69,96,0.12)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
+            <Text style={{ color: bonusMsg.startsWith('âœ…') ? '#2e7d32' : '#c62828', fontWeight: '700', fontSize: 13 }}>{bonusMsg}</Text>
           </View>
         ) : null}
 
@@ -6023,14 +6023,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         ) : (
           <>
-          {/* ── Peak Hour Banner ── */}
+          {/* â”€â”€ Peak Hour Banner â”€â”€ */}
           {peakRule && (
             <View style={{ backgroundColor: isPeak ? 'rgba(255,143,0,0.1)' : '#F8FAFC', borderRadius: 16, padding: 14, marginBottom: 12, elevation: 2, borderWidth: isPeak ? 2 : 1, borderColor: isPeak ? '#FF8F00' : '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 28, marginRight: 12 }}>{isPeak ? '⚡' : '🕐'}</Text>
+                <Text style={{ fontSize: 28, marginRight: 12 }}>{isPeak ? 'âš¡' : 'ðŸ•'}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>{peakRule.label}</Text>
-                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>+₹{peakRule.config.per_ride}/ride · 7-9 AM aur 5-8 PM</Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>+â‚¹{peakRule.config.per_ride}/ride Â· 7-9 AM aur 5-8 PM</Text>
                 </View>
                 {isPeak && (
                   <View style={{ backgroundColor: '#FF8F00', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5 }}>
@@ -6041,20 +6041,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {isPeak && (
                 <View style={{ backgroundColor: '#FF8F0015', borderRadius: 10, padding: 10, marginTop: 10, flexDirection: 'row', justifyContent: 'space-between' }}>
                   <Text style={{ fontSize: 12, color: '#E65100' }}>Aaj peak bonus earned:</Text>
-                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#E65100' }}>₹{(dash?.peak_today || 0).toFixed(0)}</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '900', color: '#E65100' }}>â‚¹{(dash?.peak_today || 0).toFixed(0)}</Text>
                 </View>
               )}
             </View>
           )}
 
-          {/* ── Daily Ride Challenge ── */}
+          {/* â”€â”€ Daily Ride Challenge â”€â”€ */}
           {dailyRule && (
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                <Text style={{ fontSize: 22, marginRight: 10 }}>🎯</Text>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>ðŸŽ¯</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>{dailyRule.label}</Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Aaj ki rides: {ridesCount} completed · Raat 12 baje reset</Text>
+                  <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>Aaj ki rides: {ridesCount} completed Â· Raat 12 baje reset</Text>
                 </View>
               </View>
               {(dailyRule.config.tiers || []).map((tier: any, idx: number) => {
@@ -6066,10 +6066,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <View key={idx} style={{ marginBottom: idx < dailyRule.config.tiers.length - 1 ? 14 : 0 }}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={{ fontSize: 16 }}>{isClaimed ? '✅' : isUnlocked ? '🔓' : '🔒'}</Text>
+                        <Text style={{ fontSize: 16 }}>{isClaimed ? 'âœ…' : isUnlocked ? 'ðŸ”“' : 'ðŸ”’'}</Text>
                         <Text style={{ fontSize: 13, fontWeight: '700', color: isClaimed ? C.green : '#0F172A' }}>{tier.rides} rides today</Text>
                       </View>
-                      <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>₹{tier.amount}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>â‚¹{tier.amount}</Text>
                     </View>
                     <View style={{ height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
                       <View style={{ height: 8, backgroundColor: isClaimed ? C.green : isUnlocked ? '#FF8F00' : C.pink, borderRadius: 4, width: pct + '%' }} />
@@ -6079,10 +6079,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       {isUnlocked && !isClaimed ? (
                         <TouchableOpacity onPress={() => claimDailyBonus(dailyRule.id, idx)} disabled={bonusClaiming}
                           style={{ backgroundColor: bonusClaiming ? '#ccc' : C.green, borderRadius: 8, paddingHorizontal: 14, paddingVertical: 7 }}>
-                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Claim ₹{tier.amount} 🎉</Text>
+                          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Claim â‚¹{tier.amount} ðŸŽ‰</Text>
                         </TouchableOpacity>
                       ) : isClaimed ? (
-                        <Text style={{ fontSize: 12, color: C.green, fontWeight: '700' }}>✅ Claimed!</Text>
+                        <Text style={{ fontSize: 12, color: C.green, fontWeight: '700' }}>âœ… Claimed!</Text>
                       ) : (
                         <Text style={{ fontSize: 11, color: '#aaa' }}>{tier.rides - ridesCount} aur rides chahiye</Text>
                       )}
@@ -6093,14 +6093,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
 
-          {/* ── Weekly Warrior ── */}
+          {/* â”€â”€ Weekly Warrior â”€â”€ */}
           {streakRule && (
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
-                <Text style={{ fontSize: 22, marginRight: 10 }}>🏆</Text>
+                <Text style={{ fontSize: 22, marginRight: 10 }}>ðŸ†</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>Weekly Warrior</Text>
-                  <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{streakRule.config.target_days} days × {ridesPerDayTarget}+ rides/day → ₹{streakRule.config.amount}</Text>
+                  <Text style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{streakRule.config.target_days} days Ã— {ridesPerDayTarget}+ rides/day â†’ â‚¹{streakRule.config.amount}</Text>
                 </View>
                 <View style={{ backgroundColor: streakAchieved && !streakClaimed ? 'rgba(255,143,0,0.15)' : '#F1F5F9', borderRadius: 10, paddingHorizontal: 10, paddingVertical: 4 }}>
                   <Text style={{ fontSize: 13, fontWeight: '900', color: streakAchieved && !streakClaimed ? '#FF8F00' : '#6B7280' }}>{qualifyingDays}/{streakTarget}</Text>
@@ -6119,7 +6119,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         backgroundColor: qualified ? C.green : isToday ? 'rgba(255,143,0,0.2)' : isPast ? 'rgba(233,30,99,0.12)' : '#F1F5F9',
                         borderWidth: isToday ? 2 : 0, borderColor: '#FF8F00' }}>
                         <Text style={{ fontSize: 12, fontWeight: '800', color: qualified ? '#fff' : isPast ? C.pink : '#bbb' }}>
-                          {qualified ? '✓' : cnt > 0 ? String(cnt) : weekDayLabels[i][0]}
+                          {qualified ? 'âœ“' : cnt > 0 ? String(cnt) : weekDayLabels[i][0]}
                         </Text>
                       </View>
                       <Text style={{ fontSize: 9, color: isToday ? '#FF8F00' : '#aaa', marginTop: 3, fontWeight: isToday ? '800' : '400' }}>{weekDayLabels[i]}</Text>
@@ -6130,11 +6130,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {streakAchieved && !streakClaimed ? (
                 <TouchableOpacity onPress={claimStreakBonus} disabled={bonusClaiming}
                   style={{ backgroundColor: bonusClaiming ? '#ccc' : C.pink, borderRadius: 12, padding: 14, alignItems: 'center' }}>
-                  <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 15 }}>🏆 Claim Weekly Warrior ₹{streakRule.config.amount}</Text>
+                  <Text style={{ color: '#FFD700', fontWeight: '900', fontSize: 15 }}>ðŸ† Claim Weekly Warrior â‚¹{streakRule.config.amount}</Text>
                 </TouchableOpacity>
               ) : streakClaimed ? (
                 <View style={{ backgroundColor: 'rgba(76,175,80,0.15)', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: C.green, fontWeight: '800', fontSize: 13 }}>✅ Is hafte ka bonus claim ho gaya!</Text>
+                  <Text style={{ color: C.green, fontWeight: '800', fontSize: 13 }}>âœ… Is hafte ka bonus claim ho gaya!</Text>
                 </View>
               ) : (
                 <View style={{ backgroundColor: '#F1F5F9', borderRadius: 12, padding: 12 }}>
@@ -6144,14 +6144,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
 
-          {/* ── How Bonus Works ── */}
+          {/* â”€â”€ How Bonus Works â”€â”€ */}
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 14 }}>
-            <Text style={{ color: '#0F172A', fontWeight: '800', fontSize: 13, marginBottom: 10 }}>ℹ️ Bonus Kaise Kaam Karta Hai</Text>
+            <Text style={{ color: '#0F172A', fontWeight: '800', fontSize: 13, marginBottom: 10 }}>â„¹ï¸ Bonus Kaise Kaam Karta Hai</Text>
             {[
-              ['🎯', 'Daily Rides', 'Aaj ke targets complete karo aur bonus claim karo (raat 12 baje reset)'],
-              ['⚡', 'Peak Hour', 'Rush hours mein ride complete karo — automatically credit hoga'],
-              ['🏆', 'Weekly Warrior', 'Hafte ke 5 din 4+ rides karo — Sunday ko claim karo'],
-              ['💸', 'Redeem', 'Minimum ₹50 bonus collect hone par main wallet mein transfer karo'],
+              ['ðŸŽ¯', 'Daily Rides', 'Aaj ke targets complete karo aur bonus claim karo (raat 12 baje reset)'],
+              ['âš¡', 'Peak Hour', 'Rush hours mein ride complete karo â€” automatically credit hoga'],
+              ['ðŸ†', 'Weekly Warrior', 'Hafte ke 5 din 4+ rides karo â€” Sunday ko claim karo'],
+              ['ðŸ’¸', 'Redeem', 'Minimum â‚¹50 bonus collect hone par main wallet mein transfer karo'],
             ].map(([icon, title, desc], i) => (
               <View key={i} style={{ flexDirection: 'row', marginBottom: i < 3 ? 10 : 0 }}>
                 <Text style={{ fontSize: 16, marginRight: 10, width: 22 }}>{icon}</Text>
@@ -6163,10 +6163,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             ))}
           </View>
 
-          {/* ── Recent History ── */}
+          {/* â”€â”€ Recent History â”€â”€ */}
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 8, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
-              <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', flex: 1 }}>📋 Bonus History</Text>
+              <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', flex: 1 }}>ðŸ“‹ Bonus History</Text>
               {!bonusHistoryLoaded && (
                 <TouchableOpacity onPress={() => loadBonusHistory(phone)}>
                   <Text style={{ fontSize: 12, color: '#2196F3', fontWeight: '700' }}>Load History</Text>
@@ -6174,11 +6174,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )}
             </View>
             {bonusHistory.length === 0 ? (
-              <Text style={{ color: '#aaa', fontSize: 13, textAlign: 'center', paddingVertical: 16 }}>Koi bonus history nahi — abhi pehli ride karo!</Text>
+              <Text style={{ color: '#aaa', fontSize: 13, textAlign: 'center', paddingVertical: 16 }}>Koi bonus history nahi â€” abhi pehli ride karo!</Text>
             ) : (
               bonusHistory.slice(0, 15).map((item: any, i: number) => {
                 const isEarn = item.amount > 0;
-                const typeLabel: Record<string,string> = { daily_rides: '🎯 Daily Rides', peak_hour: '⚡ Peak Hour', weekly_streak: '🏆 Weekly Warrior', redeem: '💸 Redeemed' };
+                const typeLabel: Record<string,string> = { daily_rides: 'ðŸŽ¯ Daily Rides', peak_hour: 'âš¡ Peak Hour', weekly_streak: 'ðŸ† Weekly Warrior', redeem: 'ðŸ’¸ Redeemed' };
                 return (
                   <View key={item.id || i} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: i < bonusHistory.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}>
                     <View style={{ flex: 1 }}>
@@ -6187,7 +6187,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <Text style={{ fontSize: 10, color: '#bbb', marginTop: 1 }}>{new Date(item.created_at).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}</Text>
                     </View>
                     <Text style={{ fontSize: 15, fontWeight: '900', color: isEarn ? C.green : C.pink }}>
-                      {isEarn ? '+' : ''}₹{Math.abs(item.amount).toFixed(0)}
+                      {isEarn ? '+' : ''}â‚¹{Math.abs(item.amount).toFixed(0)}
                     </Text>
                   </View>
                 );
@@ -6202,21 +6202,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     );
   }
 
-  // ═══ PROFILE TAB ═══
+  // â•â•â• PROFILE TAB â•â•â•
   return (
     <View style={s.screen}>
-      <View style={[s.topBar, { paddingBottom: 16 }]}><Text style={s.greeting}>👤 Profile</Text></View>
-      {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('live')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
+      <View style={[s.topBar, { paddingBottom: 16 }]}><Text style={s.greeting}>ðŸ‘¤ Profile</Text></View>
+      {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('live')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>ðŸ”” Nayi Ride! â‚¹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho â†’</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         <View style={s.profileHero}>
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || 'D')[0].toUpperCase()}</Text></View>
           <Text style={s.profileName}>{driverInfo?.name || phone}</Text>
           <Text style={s.profilePhone}>+91 {phone}</Text>
-          <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} · {driverInfo?.vehicle_no || ''}</Text>
-          <View style={s.badge}><Text style={{ color: '#F59E0B', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
+          <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} Â· {driverInfo?.vehicle_no || ''}</Text>
+          <View style={s.badge}><Text style={{ color: '#F59E0B', fontWeight: 'bold' }}>â­ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
 
-        {/* ── Driver Level Card ── */}
+        {/* â”€â”€ Driver Level Card â”€â”€ */}
         {driverLevel && (() => {
           const lvlColors: Record<string, { bg: string; border: string; text: string }> = {
             platinum: { bg: 'linear', border: '#9C27B0', text: '#7B1FA2' },
@@ -6250,7 +6250,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <View style={{ marginBottom: 14 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
                     <Text style={{ fontSize: 11, color: isPlatinum ? 'rgba(255,255,255,0.6)' : '#64748B', fontWeight: '600' }}>
-                      {driverLevel.levelName} → {driverLevel.nextLevelName}
+                      {driverLevel.levelName} â†’ {driverLevel.nextLevelName}
                     </Text>
                     <Text style={{ fontSize: 11, fontWeight: '800', color: isPlatinum ? '#FFD700' : cfg.text }}>
                       {driverLevel.progress}%
@@ -6260,7 +6260,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <View style={{ height: '100%', width: `${driverLevel.progress}%`, borderRadius: 4, backgroundColor: isPlatinum ? '#FFD700' : driverLevel.levelColor || '#9C27B0' }} />
                   </View>
                   <Text style={{ fontSize: 11, color: isPlatinum ? 'rgba(255,255,255,0.5)' : '#94A3B8', marginTop: 5 }}>
-                    {driverLevel.nextTarget - driverLevel.completed_rides} aur rides — {driverLevel.nextLevelEmoji} {driverLevel.nextLevelName} unlock hoga
+                    {driverLevel.nextTarget - driverLevel.completed_rides} aur rides â€” {driverLevel.nextLevelEmoji} {driverLevel.nextLevelName} unlock hoga
                   </Text>
                 </View>
               )}
@@ -6268,7 +6268,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Stats row */}
               <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
                 {[
-                  { label: 'Rating', value: `⭐ ${driverLevel.avg_rating}` },
+                  { label: 'Rating', value: `â­ ${driverLevel.avg_rating}` },
                   { label: 'Cancel Rate', value: `${driverLevel.cancel_rate}%` },
                   { label: 'Is Mahine', value: `${driverLevel.rides_this_month} rides` },
                 ].map((item, i) => (
@@ -6284,7 +6284,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ fontSize: 11, fontWeight: '800', color: isPlatinum ? 'rgba(255,255,255,0.7)' : '#64748B', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.8 }}>Aapke Benefits</Text>
                 {(driverLevel.benefits || []).map((b: string, i: number) => (
                   <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 7, marginBottom: i < (driverLevel.benefits || []).length - 1 ? 6 : 0 }}>
-                    <Text style={{ fontSize: 14, color: isPlatinum ? '#FFD700' : driverLevel.levelColor }}>✓</Text>
+                    <Text style={{ fontSize: 14, color: isPlatinum ? '#FFD700' : driverLevel.levelColor }}>âœ“</Text>
                     <Text style={{ fontSize: 12, color: isPlatinum ? 'rgba(255,255,255,0.85)' : cfg.text, fontWeight: '500' }}>{b}</Text>
                   </View>
                 ))}
@@ -6293,16 +6293,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           );
         })()}
 
-        {/* ── Favourite Buddy Count Card ── */}
+        {/* â”€â”€ Favourite Buddy Count Card â”€â”€ */}
         {(() => {
           const n = favouriteCount ?? 0;
           const loading = favouriteCount === null;
           const msg =
-            n === 0 ? 'Abhi tak kisi ne favourite nahi banaya — achhi rides do!' :
-            n === 1 ? 'Ek customer ne aapko apna favourite driver banaya! 🙌' :
-            n <= 5  ? `${n} loyal customers hain aapke — great job! 🔥` :
-            n <= 20 ? `${n} customers aapke diwane hain! ⭐ Top Driver!` :
-                      `${n} customers! Aap ek legend hain! 🏆`;
+            n === 0 ? 'Abhi tak kisi ne favourite nahi banaya â€” achhi rides do!' :
+            n === 1 ? 'Ek customer ne aapko apna favourite driver banaya! ðŸ™Œ' :
+            n <= 5  ? `${n} loyal customers hain aapke â€” great job! ðŸ”¥` :
+            n <= 20 ? `${n} customers aapke diwane hain! â­ Top Driver!` :
+                      `${n} customers! Aap ek legend hain! ðŸ†`;
           const cardBg   = n >= 20 ? 'rgba(233,30,99,0.08)' : n >= 6 ? 'rgba(245,158,11,0.1)' : n >= 1 ? 'rgba(16,185,129,0.1)' : '#F8FAFC';
           const numColor = n >= 20 ? C.pink : n >= 6 ? '#F59E0B' : n >= 1 ? C.green : '#94A3B8';
           const txtColor = '#0F172A';
@@ -6310,7 +6310,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           return (
             <View style={{ backgroundColor: cardBg, borderRadius: 16, padding: 18, marginBottom: 12, elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ fontSize: 20, marginRight: 8 }}>⭐</Text>
+                <Text style={{ fontSize: 20, marginRight: 8 }}>â­</Text>
                 <Text style={{ fontWeight: '900', fontSize: 15, color: txtColor, letterSpacing: 0.3 }}>Favourite Sppero Buddy</Text>
               </View>
               {loading ? (
@@ -6323,9 +6323,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
                   {n > 0 && (
                     <View style={{ marginTop: 10, backgroundColor: n >= 20 ? 'rgba(255,215,0,0.1)' : 'rgba(255,255,255,0.05)', borderRadius: 10, padding: 10, flexDirection: 'row', alignItems: 'center' }}>
-                      <Text style={{ fontSize: 14, marginRight: 8 }}>💡</Text>
+                      <Text style={{ fontSize: 14, marginRight: 8 }}>ðŸ’¡</Text>
                       <Text style={{ fontSize: 12, color: subColor, flex: 1 }}>
-                        Jab ye customers directly aapko request bhejengen, aapko ⭐ badge ke saath notification aayega!
+                        Jab ye customers directly aapko request bhejengen, aapko â­ badge ke saath notification aayega!
                       </Text>
                     </View>
                   )}
@@ -6337,7 +6337,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
         {/* UPI ID Section */}
         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>📱 Mera UPI ID</Text>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>ðŸ“± Mera UPI ID</Text>
           <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Customer aapka QR scan karke seedha pay karega</Text>
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <TextInput
@@ -6356,17 +6356,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
           {driverUpiId ? (
             <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10, gap: 6, backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 8, padding: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-              <Text style={{ fontSize: 14 }}>✅</Text>
+              <Text style={{ fontSize: 14 }}>âœ…</Text>
               <Text style={{ fontSize: 12, color: C.green, fontWeight: '600', flex: 1 }}>{driverUpiId}</Text>
             </View>
           ) : null}
-          {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? C.green : C.pink, marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
+          {result && result.includes('UPI') ? <Text style={{ color: result.includes('âœ…') ? C.green : C.pink, marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
         </View>
 
         {/* Referral Section */}
         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>🎁 Refer & Earn</Text>
-          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Dosto ko refer karo — dono ko ₹50 wallet bonus milega</Text>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>ðŸŽ Refer & Earn</Text>
+          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Dosto ko refer karo â€” dono ko â‚¹50 wallet bonus milega</Text>
           {referralInfo ? (
             <View>
               <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
@@ -6379,39 +6379,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ fontSize: 10, color: '#64748B' }}>Referrals</Text>
                 </View>
                 <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: C.green }}>₹{referralInfo.total_earned}</Text>
+                  <Text style={{ fontSize: 20, fontWeight: '800', color: C.green }}>â‚¹{referralInfo.total_earned}</Text>
                   <Text style={{ fontSize: 10, color: '#64748B' }}>Earned</Text>
                 </View>
               </View>
               <TouchableOpacity
                 style={{ backgroundColor: C.pink, borderRadius: 10, padding: 12, alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 8 }}
-                onPress={() => Share.share({ message: `Sppero Buddy pe join karo! Mera referral code use karo: ${referralInfo.code}\nDono ko ₹50 wallet bonus milega! 🎁`, title: 'Sppero Buddy Referral' })}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>📤 Code Share Karo</Text>
+                onPress={() => Share.share({ message: `Sppero Buddy pe join karo! Mera referral code use karo: ${referralInfo.code}\nDono ko â‚¹50 wallet bonus milega! ðŸŽ`, title: 'Sppero Buddy Referral' })}>
+                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>ðŸ“¤ Code Share Karo</Text>
               </TouchableOpacity>
             </View>
           ) : (
             <TouchableOpacity
               style={{ backgroundColor: '#334155', borderRadius: 10, padding: 12, alignItems: 'center' }}
               onPress={loadReferralInfo}>
-              <Text style={{ color: '#94A3B8', fontSize: 13 }}>🔑 Code Generate Karo</Text>
+              <Text style={{ color: '#94A3B8', fontSize: 13 }}>ðŸ”‘ Code Generate Karo</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {([
-          ['📋', 'Documents', 'License, RC verification', 'documents'],
-          ['🏦', 'Bank Details', 'Payout account', 'bank'],
-          ['📞', 'Support', '24x7 help', 'support'],
-          ['⚙️', 'Settings', 'Preferences', 'settings'],
+          ['ðŸ“‹', 'Documents', 'License, RC verification', 'documents'],
+          ['ðŸ¦', 'Bank Details', 'Payout account', 'bank'],
+          ['ðŸ“ž', 'Support', '24x7 help', 'support'],
+          ['âš™ï¸', 'Settings', 'Preferences', 'settings'],
         ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
           <Bouncy key={key} style={s.menuItem} onPress={() => { setDrSubScreen(key as any); setBankMsg(''); }}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#0F172A', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{sub}</Text></View>
-            <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
+            <Text style={{ fontSize: 20, color: '#475569' }}>â€º</Text>
           </Bouncy>
         ))}
         <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setLoginPhone(''); setLoginOtpSent(false); setRegStep(0); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
-          <Text style={{ color: C.pink, fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
+          <Text style={{ color: C.pink, fontWeight: 'bold', fontSize: 15 }}>ðŸšª Logout</Text>
         </Bouncy>
       </ScrollView>
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
@@ -6576,3 +6576,4 @@ const cs = StyleSheet.create({
   input:     { flex:1, backgroundColor:'#F8FAFC', borderRadius:24, paddingHorizontal:16, paddingVertical:10, fontSize:14, marginRight:8, color:'#0F172A', borderWidth:1, borderColor:'#E2E8F0' },
   send:      { width:44, height:44, borderRadius:22, backgroundColor:C.pink, alignItems:'center', justifyContent:'center' },
 });
+
