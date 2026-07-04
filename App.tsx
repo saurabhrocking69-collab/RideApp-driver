@@ -209,10 +209,12 @@ const Bouncy = ({ children, onPress, style, disabled }: any) => {
 const PulseView = ({ children, style }: any) => {
   const anim = useRef(new Animated.Value(1)).current;
   useEffect(() => {
-    Animated.loop(Animated.sequence([
+    const loop = Animated.loop(Animated.sequence([
       Animated.timing(anim, { toValue: 1.18, duration: 650, useNativeDriver: true }),
       Animated.timing(anim, { toValue: 1,    duration: 650, useNativeDriver: true }),
-    ])).start();
+    ]));
+    loop.start();
+    return () => loop.stop();
   }, []);
   return <Animated.View style={[style, { transform: [{ scale: anim }] }]}>{children}</Animated.View>;
 };
@@ -613,10 +615,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
               navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); promptBatteryOptimization(); fetchDriverLevel(savedPhone);
-              // Restore active ride into store so home screen shows it immediately
+              // Restore active ride into store so home screen shows it immediately.
+              // If a ride is active, also restore isOnline=true and restart polling so
+              // the header shows "Online" and ride events keep flowing.
               try {
                 const ar = await fetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
-                if (ar.ride) useDriverStore.setState({ activeRide: ar.ride });
+                if (ar.ride) {
+                  useDriverStore.setState({ activeRide: ar.ride });
+                  setIsOnline(true);
+                  startPolling(savedPhone);
+                }
               } catch (_e) {}
             }
             } else { if (savedInfo) setDriverInfo(JSON.parse(savedInfo)); navTo = 'home'; }
@@ -3225,12 +3233,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       {/* Full map background */}
       <View style={s.mapFit}>
         <DriverLiveMap
-          pickupCoords={activeRide ? { lat: activeRide.pickup_lat, lng: activeRide.pickup_lng } : null}
-          dropCoords={activeRide ? { lat: activeRide.drop_lat, lng: activeRide.drop_lng } : null}
+          pickupCoords={(() => {
+            if (!activeRide) return null;
+            const lat = parseFloat(activeRide.pickup_lat), lng = parseFloat(activeRide.pickup_lng);
+            return isNaN(lat) || isNaN(lng) ? null : { lat, lng };
+          })()}
+          dropCoords={(() => {
+            if (!activeRide) return null;
+            const lat = parseFloat(activeRide.drop_lat), lng = parseFloat(activeRide.drop_lng);
+            return isNaN(lat) || isNaN(lng) ? null : { lat, lng };
+          })()}
           driverLat={driverGps?.lat}
           driverLng={driverGps?.lng}
-          customerLat={activeRide ? parseFloat(activeRide.pickup_lat) : null}
-          customerLng={activeRide ? parseFloat(activeRide.pickup_lng) : null}
+          customerLat={activeRide ? parseFloat(activeRide.pickup_lat) || null : null}
+          customerLng={activeRide ? parseFloat(activeRide.pickup_lng) || null : null}
           vehicleType={driverInfo?.vehicle_type || 'auto'}
           rideStatus={activeRide?.status || null}
           showTraffic={!!activeRide && activeRide.status === 'started'}

@@ -155,14 +155,20 @@ export interface DriverLiveMapProps {
   height?: number;
 }
 
+// ── Safe coordinate parser — prevent NaN strings from crashing native MapView ──
+function safeNum(v: any, fallback: number): number {
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  return isFinite(n) ? n : fallback;
+}
+
 // ── Main component ────────────────────────────────────────────────────────────
 export const DriverLiveMap = memo(function DriverLiveMap({
-  pickupCoords,
-  dropCoords,
-  driverLat,
-  driverLng,
-  customerLat,
-  customerLng,
+  pickupCoords: rawPickup,
+  dropCoords: rawDrop,
+  driverLat: rawDriverLat,
+  driverLng: rawDriverLng,
+  customerLat: rawCustomerLat,
+  customerLng: rawCustomerLng,
   vehicleType = 'auto',
   rideStatus = null,
   showTraffic = false,
@@ -170,14 +176,24 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   driverAccuracy,
   height = 260,
 }: DriverLiveMapProps) {
+  // Sanitize all incoming coordinates — string values from DB crash native MapView
+  const pickupCoords = rawPickup && isFinite(safeNum(rawPickup.lat, NaN)) && isFinite(safeNum(rawPickup.lng, NaN))
+    ? { lat: safeNum(rawPickup.lat, 26.8467), lng: safeNum(rawPickup.lng, 80.9462) } : null;
+  const dropCoords = rawDrop && isFinite(safeNum(rawDrop.lat, NaN)) && isFinite(safeNum(rawDrop.lng, NaN))
+    ? { lat: safeNum(rawDrop.lat, 26.8467), lng: safeNum(rawDrop.lng, 80.9462) } : null;
+  const driverLat = rawDriverLat != null && isFinite(safeNum(rawDriverLat, NaN)) ? safeNum(rawDriverLat, 0) : null;
+  const driverLng = rawDriverLng != null && isFinite(safeNum(rawDriverLng, NaN)) ? safeNum(rawDriverLng, 0) : null;
+  const customerLat = rawCustomerLat != null && isFinite(safeNum(rawCustomerLat, NaN)) ? safeNum(rawCustomerLat, 0) : null;
+  const customerLng = rawCustomerLng != null && isFinite(safeNum(rawCustomerLng, NaN)) ? safeNum(rawCustomerLng, 0) : null;
+
   const mapRef = useRef<MapView>(null);
   const prevPos = useRef<{ lat: number; lng: number } | null>(null);
   const [heading, setHeading] = useState(0);
 
   const driverRegion = useRef(
     new AnimatedRegion({
-      latitude:  driverLat || pickupCoords?.lat || 26.8467,
-      longitude: driverLng || pickupCoords?.lng || 80.9462,
+      latitude:  driverLat ?? pickupCoords?.lat ?? 26.8467,
+      longitude: driverLng ?? pickupCoords?.lng ?? 80.9462,
       latitudeDelta: 0.01, longitudeDelta: 0.01,
     })
   ).current;
