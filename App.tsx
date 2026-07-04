@@ -321,7 +321,7 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
   );
 };
 
-type Screen = 'splash' | 'login' | 'home';
+type Screen = 'splash' | 'login' | 'permissions' | 'home';
 
 // ─── Background Location Task ────────────────────────────────────────────────
 // MUST be defined at module level, before any component mounts.
@@ -576,6 +576,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [drvCmpRideId, setDrvCmpRideId]     = useState('');
   const [lastRideId, setLastRideId]         = useState<string>('');
 
+  // ── Permission Onboarding State ───────────────
+  const [permStatus, setPermStatus] = useState({ location: false, battery: false, overlay: false });
+  const [permSheet, setPermSheet]   = useState<string | null>(null);
+  const [permDone, setPermDone]     = useState(false);
+
   useEffect(() => {
     if (driverSubScreen !== 'complaints' || !phone) return;
     setDrvCmpLoading(true);
@@ -614,7 +619,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
-              navTo = 'home'; loadUpiId(savedPhone); registerFCM(savedPhone); promptBatteryOptimization(); fetchDriverLevel(savedPhone);
+              const pd = await AsyncStorage.getItem('_permsDone').catch(() => null);
+              navTo = pd ? 'home' : 'permissions'; loadUpiId(savedPhone); registerFCM(savedPhone); fetchDriverLevel(savedPhone);
               // Restore active ride into store so home screen shows it immediately.
               // If a ride is active, also restore isOnline=true and restart polling so
               // the header shows "Online" and ride events keep flowing.
@@ -647,6 +653,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } catch (_e) {}
     })();
   }, []);
+
+  // ── Permission onboarding check ───────────────
+  const checkPermissions = async () => {
+    try {
+      const { status: fg } = await Location.getForegroundPermissionsAsync();
+      const { status: bg } = await Location.getBackgroundPermissionsAsync();
+      const locOk     = fg === 'granted' && bg === 'granted';
+      const battOk    = !!(await AsyncStorage.getItem('_permBattAck').catch(() => null));
+      const overlayOk = !!(await AsyncStorage.getItem('_permOverlayAck').catch(() => null));
+      setPermStatus({ location: locOk, battery: battOk, overlay: overlayOk });
+      if (locOk && battOk && overlayOk) {
+        await AsyncStorage.setItem('_permsDone', '1').catch(() => {});
+        setPermDone(true);
+      }
+    } catch (_e) {}
+  };
+
+  useEffect(() => {
+    if (screen !== 'permissions') return;
+    checkPermissions();
+    const sub = AppState.addEventListener('change', (s) => { if (s === 'active') checkPermissions(); });
+    return () => sub.remove();
+  }, [screen]);
+
+  useEffect(() => {
+    if (!permDone) return;
+    const t = setTimeout(() => setScreen('home'), 1600);
+    return () => clearTimeout(t);
+  }, [permDone]);
 
   // ── Login banner glow + caption cycling ─────
   useEffect(() => {
@@ -831,7 +866,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Android Back Button ───────────────────────
   useEffect(() => {
     const backAction = () => {
-      if (screen === 'splash') return true; // Block back on splash
+      if (screen === 'splash' || screen === 'permissions') return true;
       if (screen === 'login' && regStep === 0) return false; // App exit
       if (screen === 'login' && regStep > 0) {
         if (regStep === 99) { setRegStep(0); return true; }
@@ -1430,12 +1465,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (!data.success) { setResult('❌ ' + data.message); setLoading(false); return; }
       if (data.driver.status === 'approved') {
-        setPhone(data.driver.phone); setDriverInfo(data.driver); setScreen('home'); setResult('');
+        const pd2 = await AsyncStorage.getItem('_permsDone').catch(() => null);
+        setPhone(data.driver.phone); setDriverInfo(data.driver); setResult('');
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
-        promptBatteryOptimization();
         loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone);
+        setScreen(pd2 ? 'home' : 'permissions');
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
@@ -1534,51 +1570,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           trigger: null,
         }).then(id => { onlineNotifIdRef.current = id; }).catch(() => {});
 
-        // Guide user to grant background location — only on Android, once per install
-        if (Platform.OS === 'android') {
-          AsyncStorage.getItem('bgLocPromptShown').then(shown => {
-            if (shown) return;
-            AsyncStorage.setItem('bgLocPromptShown', '1').catch(() => {});
-            Alert.alert(
-              '📍 Background Location Allow Karo',
-              'App minimize karne ke baad bhi aapki location update hoti rahe, iske liye:\n\n' +
-              '1. "Settings Kholein" tap karo\n' +
-              '2. Location → "Allow all the time" select karo\n\n' +
-              'Isse customer aapko map pe live track kar sakenge.',
-              [
-                { text: 'Settings Kholein', onPress: () => Linking.openSettings() },
-                { text: 'Baad Mein', style: 'cancel' },
-              ]
-            );
-          }).catch(() => {});
-        }
       }
 
       // Refresh FCM token every time driver goes online — prevents stale token failures
       registerFCM(phone).catch(() => {});
-
-      // Battery optimization prompt — once per install on Android.
-      // Required on ALL phones (Xiaomi/Samsung/Nothing) so background ride alerts work.
-      // Linking.openSettings() opens the app's info page → battery section is there.
-      if (Platform.OS === 'android') {
-        AsyncStorage.getItem('_battOpShown').then(shown => {
-          if (shown) return;
-          AsyncStorage.setItem('_battOpShown', '1').catch(() => {});
-          Alert.alert(
-            '🔔 Ride Alert Setup — 1 Min',
-            'App minimize karne ke baad bhi ride alert aaye, iske liye battery restriction hatao:\n\n' +
-            '📱 Sabhi phones:\n  Settings → Battery → Battery Optimization → Sppero Buddy → "Don\'t Optimize"\n\n' +
-            '🔴 Xiaomi/Redmi: Auto-start bhi ON karo\n' +
-            '🔵 Samsung: "Unrestricted" choose karo\n' +
-            '⚫ Nothing/CMF: App Battery Management → "No Restriction"\n\n' +
-            'Yeh sirf ek baar karna hai.',
-            [
-              { text: 'Baad Mein', style: 'cancel' },
-              { text: '⚙️ Settings Kholo', onPress: () => Linking.openSettings() },
-            ]
-          );
-        }).catch(() => {});
-      }
 
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
       setResult('🟢 Online hain — rides aayengi!');
@@ -2123,6 +2118,164 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
     </Animated.View>
   );
+
+  // ═══ PERMISSIONS SETUP SCREEN ═══
+  if (screen === 'permissions') {
+    const rows: { key: string; icon: string; name: string; desc: string; done: boolean }[] = [
+      { key: 'location', icon: '📍', name: 'Background Location',   desc: 'Receive ride requests even when app is minimized', done: permStatus.location },
+      { key: 'battery',  icon: '🔋', name: 'Battery — Unrestricted', desc: 'Ride alerts reach you even when screen is off',      done: permStatus.battery  },
+      { key: 'overlay',  icon: '🔔', name: 'Display Over Apps',      desc: 'Ride popup appears on your locked screen',            done: permStatus.overlay  },
+    ];
+    const sheets: Record<string, { icon: string; title: string; lines: string[]; btn: string; onPress: () => void }> = {
+      location: {
+        icon: '📍', title: 'Allow Location — Always',
+        lines: [
+          'On the next page: tap "Location" → select "Allow all the time"',
+          'Without this, ride requests won\'t reach you when the app is minimized',
+        ],
+        btn: 'Open Location Settings',
+        onPress: async () => {
+          const { status: fg } = await Location.requestForegroundPermissionsAsync().catch(() => ({ status: 'denied' as const }));
+          if (fg === 'granted') await Location.requestBackgroundPermissionsAsync().catch(() => {});
+          setPermSheet(null);
+          setTimeout(checkPermissions, 600);
+        },
+      },
+      battery: {
+        icon: '🔋', title: 'Unrestricted Battery',
+        lines: [
+          'Tap "Battery" on the next page → choose "Unrestricted" or "Don\'t Optimize"',
+          '🔴 Xiaomi / Redmi: also turn ON Auto-start',
+          '🔵 Samsung: choose "Unrestricted"',
+          '⚫ Nothing / CMF: choose "No Restriction"',
+        ],
+        btn: 'Open Battery Settings',
+        onPress: async () => {
+          try {
+            await Linking.sendIntent('android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', [
+              { key: 'android.intent.extra.PACKAGE_NAME', value: 'com.saurabhspero.rideappdriver' },
+            ]);
+          } catch (_e) { Linking.openSettings(); }
+          await AsyncStorage.setItem('_permBattAck', '1').catch(() => {});
+          setPermSheet(null);
+          setPermStatus(p => ({ ...p, battery: true }));
+        },
+      },
+      overlay: {
+        icon: '🔔', title: 'Display Over Other Apps',
+        lines: [
+          'Find "Display over other apps" and turn it ON',
+          'This lets ride cards pop up on your screen even when it\'s locked',
+        ],
+        btn: 'Open App Settings',
+        onPress: async () => {
+          Linking.openSettings();
+          await AsyncStorage.setItem('_permOverlayAck', '1').catch(() => {});
+          setPermSheet(null);
+          setPermStatus(p => ({ ...p, overlay: true }));
+        },
+      },
+    };
+    const sh = permSheet ? sheets[permSheet] : null;
+
+    return (
+      <View style={{ flex: 1, backgroundColor: '#080E18' }}>
+        <StatusBar barStyle="light-content" backgroundColor="#080E18" />
+
+        {/* Ambient glow blobs */}
+        <View style={{ position: 'absolute', top: -50, right: -50, width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(0,200,83,0.07)' }} pointerEvents="none" />
+        <View style={{ position: 'absolute', bottom: -80, left: -80, width: 260, height: 260, borderRadius: 130, backgroundColor: 'rgba(255,45,120,0.05)' }} pointerEvents="none" />
+
+        <View style={{ flex: 1, paddingTop: 72, paddingHorizontal: 24 }}>
+          {/* Header */}
+          <View style={{ alignItems: 'center', marginBottom: 32 }}>
+            <View style={{ width: 68, height: 68, borderRadius: 20, backgroundColor: '#0F1923', borderWidth: 2, borderColor: C.online, alignItems: 'center', justifyContent: 'center', marginBottom: 16, elevation: 14, shadowColor: C.online, shadowOpacity: 0.45, shadowRadius: 14 }}>
+              <Text style={{ fontSize: 32 }}>🚗</Text>
+            </View>
+            <Text style={{ fontSize: 22, fontWeight: '900', color: '#FFFFFF', letterSpacing: -0.4, marginBottom: 6 }}>App Setup</Text>
+            <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 20 }}>Grant these 3 permissions to start{'\n'}receiving ride requests</Text>
+          </View>
+
+          {permDone ? (
+            /* ── All done — success state ── */
+            <View style={{ alignItems: 'center', flex: 1, justifyContent: 'center', marginTop: -60 }}>
+              <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(0,200,83,0.12)', borderWidth: 2, borderColor: C.online, alignItems: 'center', justifyContent: 'center', marginBottom: 20, elevation: 10, shadowColor: C.online, shadowOpacity: 0.35, shadowRadius: 10 }}>
+                <Text style={{ fontSize: 42 }}>✅</Text>
+              </View>
+              <Text style={{ fontSize: 24, fontWeight: '900', color: '#FFFFFF', marginBottom: 8 }}>All Set!</Text>
+              <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center' }}>You're ready to receive{'\n'}ride requests</Text>
+            </View>
+          ) : (
+            <>
+              {/* ── Permission rows ── */}
+              <View style={{ backgroundColor: '#0F1923', borderRadius: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                {rows.map((row, idx) => (
+                  <TouchableOpacity
+                    key={row.key}
+                    activeOpacity={row.done ? 1 : 0.65}
+                    onPress={() => { if (!row.done) setPermSheet(row.key); }}
+                    style={{ flexDirection: 'row', alignItems: 'center', padding: 18, borderBottomWidth: idx < rows.length - 1 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.06)' }}
+                  >
+                    <View style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: row.done ? 'rgba(0,200,83,0.1)' : 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: row.done ? 'rgba(0,200,83,0.28)' : 'rgba(255,255,255,0.08)', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                      <Text style={{ fontSize: 21 }}>{row.icon}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: row.done ? '#64748B' : '#E2E8F0', marginBottom: 2 }}>{row.name}</Text>
+                      <Text style={{ fontSize: 12, color: '#475569', lineHeight: 16 }}>{row.desc}</Text>
+                    </View>
+                    {row.done ? (
+                      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(0,200,83,0.15)', borderWidth: 1.5, borderColor: C.online, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 14, color: C.online, fontWeight: '900' }}>✓</Text>
+                      </View>
+                    ) : (
+                      <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.04)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                        <Ionicons name="chevron-forward" size={14} color="#475569" />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Progress dots */}
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginTop: 20 }}>
+                {rows.map(r => (
+                  <View key={r.key} style={{ height: 6, borderRadius: 3, backgroundColor: r.done ? C.online : 'rgba(255,255,255,0.12)', width: r.done ? 22 : 6 }} />
+                ))}
+              </View>
+              <Text style={{ textAlign: 'center', color: '#334155', fontSize: 11, marginTop: 14, lineHeight: 16 }}>
+                Tap each row → follow the steps → come back here
+              </Text>
+            </>
+          )}
+        </View>
+
+        {/* ── Bottom sheet modal ── */}
+        <Modal visible={!!sh} transparent animationType="slide" onRequestClose={() => setPermSheet(null)}>
+          <TouchableOpacity activeOpacity={1} onPress={() => setPermSheet(null)} style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'flex-end' }}>
+            {sh && (
+              <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: '#F8FAFC', borderTopLeftRadius: 26, borderTopRightRadius: 26, padding: 28, paddingBottom: 44 }}>
+                <View style={{ width: 40, height: 4, backgroundColor: '#CBD5E1', borderRadius: 2, alignSelf: 'center', marginBottom: 22 }} />
+                <Text style={{ fontSize: 28 }}>{sh.icon}</Text>
+                <Text style={{ fontSize: 19, fontWeight: '900', color: '#0F172A', marginTop: 10, marginBottom: 16, lineHeight: 26 }}>{sh.title}</Text>
+                {sh.lines.map((line: string, i: number) => (
+                  <View key={i} style={{ flexDirection: 'row', gap: 10, marginBottom: 9, alignItems: 'flex-start' }}>
+                    <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: '#94A3B8', marginTop: 8, flexShrink: 0 }} />
+                    <Text style={{ fontSize: 13, color: '#475569', lineHeight: 20, flex: 1 }}>{line}</Text>
+                  </View>
+                ))}
+                <TouchableOpacity onPress={sh.onPress} style={{ backgroundColor: '#FF2D78', borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 18, elevation: 6, shadowColor: '#FF2D78', shadowOpacity: 0.35, shadowRadius: 8 }}>
+                  <Text style={{ color: '#fff', fontSize: 15, fontWeight: '800' }}>{sh.btn} →</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => setPermSheet(null)} style={{ marginTop: 14, padding: 8, alignItems: 'center' }}>
+                  <Text style={{ color: '#94A3B8', fontSize: 13 }}>Later</Text>
+                </TouchableOpacity>
+              </TouchableOpacity>
+            )}
+          </TouchableOpacity>
+        </Modal>
+      </View>
+    );
+  }
 
   // ═══ REGISTRATION STEP 1 — Phone + OTP ═══
   if (screen === 'login' && regStep === 1) return (
