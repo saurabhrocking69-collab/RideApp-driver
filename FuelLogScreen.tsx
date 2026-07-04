@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Animated, ScrollView, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
+import { Animated, Modal, Platform, StatusBar, ScrollView, Text, TextInput, TouchableOpacity, View, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { C, T, R, SP, SHADOW } from './theme';
@@ -93,15 +93,24 @@ export function FuelLogScreen({ onClose, todayEarnings, weeklyEarnings }: FuelLo
     return { label: MONTHS[d.getMonth()].slice(0, 3) + ' ' + d.getDate(), value: cost };
   });
 
+  const PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 12 : 52;
+
   return (
-    <Animated.View style={{
-      position: 'absolute', inset: 0,
-      transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [800, 0] }) }],
-      backgroundColor: C.bg, zIndex: 999,
-    }}>
+    <Modal
+      visible
+      transparent={false}
+      statusBarTranslucent
+      animationType="none"
+      onRequestClose={closeWithAnim}
+    >
+      <Animated.View style={{
+        flex: 1,
+        transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [900, 0] }) }],
+        backgroundColor: C.bg,
+      }}>
       {/* Header */}
       <View style={{
-        backgroundColor: C.bgDark, paddingTop: 52, paddingBottom: SP.md,
+        backgroundColor: C.bgDark, paddingTop: PT, paddingBottom: SP.md,
         paddingHorizontal: SP.md, overflow: 'hidden',
       }}>
         <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,45,120,0.08)', top: -80, right: -50 }} />
@@ -242,6 +251,7 @@ export function FuelLogScreen({ onClose, todayEarnings, weeklyEarnings }: FuelLo
           </View>
         )}
       </ScrollView>
-    </Animated.View>
+      </Animated.View>
+    </Modal>
   );
 }
