@@ -1141,7 +1141,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       try {
         const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
         const d = await r.json();
-        setHourlyChatMsgs(d.messages || []);
+        if (Array.isArray(d.messages)) setHourlyChatMsgs(d.messages);
       } catch (_e) {}
     };
     load();
@@ -1150,15 +1150,24 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   }, [showHourlyChat, activeHourlyRide?.id]);
 
   const sendHourlyChat = async (text?: string) => {
-    const msg = text ?? hourlyChatInput;
-    if (!msg.trim() || !activeHourlyRide?.id) return;
+    const msg = (text ?? hourlyChatInput).trim();
+    if (!msg || !activeHourlyRide?.id) return;
     if (!text) setHourlyChatInput('');
     try {
-      await fetch(`${API}/api/hourly/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, sender: 'driver', message: msg }) });
+      const res = await fetch(`${API}/api/hourly/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, sender: 'driver', message: msg }) });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        Alert.alert('', err.error || 'Message not sent — try again.');
+        if (!text) setHourlyChatInput(msg);
+        return;
+      }
       const r = await fetch(`${API}/api/hourly/chat/${activeHourlyRide.id}`);
       const d = await r.json();
-      setHourlyChatMsgs(d.messages || []);
-    } catch (_e) {}
+      if (Array.isArray(d.messages)) setHourlyChatMsgs(d.messages);
+    } catch (_e) {
+      Alert.alert('', 'Network error — check connection and try again.');
+      if (!text) setHourlyChatInput(msg);
+    }
   };
 
   // ── Hourly ride polling ───────────────────────
