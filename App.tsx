@@ -5715,10 +5715,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         });
                         const vd = await vr.json();
                         if (vd.success) { setCommResult('✅ Commission clear! Nayi rides available hain.'); loadCommissionHistory(phone); }
-                        else setCommResult('❌ Verification failed: ' + (vd.error || ''));
+                        else setCommResult('❌ Payment verify nahi hua — support se contact karo');
                         setCommPayLoading(false);
                       }).catch((e: any) => {
-                        setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : '');
+                        const desc = String(e?.description || e?.error?.description || '').toLowerCase();
+                        const cancelled = e?.code === 0 || e?.code === 'PAYMENT_CANCELLED' || desc.includes('cancel');
+                        setCommResult(cancelled ? '🚫 Payment cancel kiya — dobara try kar sakte ho' : '❌ Payment fail ho gayi — dobara try karo');
                         setCommPayLoading(false);
                       });
                     } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
@@ -5736,8 +5738,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </TouchableOpacity>
 
                 {commResult ? (
-                  <View style={{ marginTop: 10, backgroundColor: commResult.includes('✅') ? '#F0FDF4' : '#FFF5F5', borderRadius: 12, padding: 10, borderWidth: 1, borderColor: commResult.includes('✅') ? '#BBF7D0' : '#FCA5A5' }}>
-                    <Text style={{ color: commResult.includes('✅') ? '#15803D' : '#DC2626', fontSize: 12, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
+                  <View style={{
+                    marginTop: 10, borderRadius: 12, padding: 12, borderWidth: 1,
+                    backgroundColor: commResult.includes('✅') ? '#F0FDF4' : commResult.includes('🚫') ? '#FFFBEB' : '#FFF5F5',
+                    borderColor:     commResult.includes('✅') ? '#BBF7D0' : commResult.includes('🚫') ? '#FDE68A' : '#FCA5A5',
+                  }}>
+                    <Text style={{ color: commResult.includes('✅') ? '#15803D' : commResult.includes('🚫') ? '#92400E' : '#DC2626', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
+                    {commResult.includes('🚫') && (
+                      <Text style={{ color: '#92400E', fontSize: 11, textAlign: 'center', marginTop: 4, opacity: 0.8 }}>UPI / Card se neeche wala button dabao</Text>
+                    )}
                   </View>
                 ) : null}
               </View>
@@ -5877,11 +5886,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                     });
                     const vd = await vr.json();
-                    if (vd.success) { setCommResult('✅ Commission paid!'); loadCommissionHistory(phone); }
-                    else setCommResult('❌ Verification failed: ' + (vd.error || ''));
+                    if (vd.success) { setCommResult('✅ Commission paid! Rides available hain.'); loadCommissionHistory(phone); }
+                    else setCommResult('❌ Payment verify nahi hua — support se contact karo');
                     setCommPayLoading(false);
                   }).catch((e: any) => {
-                    setCommResult(e?.code !== 'PAYMENT_CANCELLED' ? '❌ Payment fail: ' + (e?.description || '') : 'Payment cancel hua');
+                    const desc = String(e?.description || e?.error?.description || '').toLowerCase();
+                    const cancelled = e?.code === 0 || e?.code === 'PAYMENT_CANCELLED' || desc.includes('cancel');
+                    setCommResult(cancelled ? '🚫 Payment cancel kiya — dobara try kar sakte ho' : '❌ Payment fail ho gayi — dobara try karo');
                     setCommPayLoading(false);
                   });
                 } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
@@ -5890,7 +5901,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
             </TouchableOpacity>
           )}
-          {commResult ? <Text style={{ color: commResult.includes('✅') ? C.green : C.pink, marginBottom: 10, fontSize: 12, fontWeight: '600', textAlign: 'center' }}>{commResult}</Text> : null}
+          {commResult ? (
+            <View style={{ marginBottom: 10, borderRadius: 10, padding: 10, backgroundColor: commResult.includes('✅') ? '#F0FDF4' : commResult.includes('🚫') ? '#FFFBEB' : '#FFF5F5', borderWidth: 1, borderColor: commResult.includes('✅') ? '#BBF7D0' : commResult.includes('🚫') ? '#FDE68A' : '#FCA5A5' }}>
+              <Text style={{ color: commResult.includes('✅') ? '#15803D' : commResult.includes('🚫') ? '#92400E' : '#DC2626', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
+              {commResult.includes('🚫') && <Text style={{ color: '#92400E', fontSize: 11, textAlign: 'center', marginTop: 3, opacity: 0.8 }}>Neeche button dabao dobara pay karne ke liye</Text>}
+            </View>
+          ) : null}
 
           {/* Per-ride commission history */}
           <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginTop: 8, marginBottom: 8 }}>Per-Ride Commission</Text>
