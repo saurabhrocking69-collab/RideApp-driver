@@ -3575,7 +3575,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
               <View style={{ backgroundColor: 'rgba(0,0,0,0.2)', paddingVertical: 7, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFD700' }} />
-                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '700' }}>Referral bonus turant wallet mein credited hoga</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 11, fontWeight: '700' }}>Dost ki 3 rides complete hone pe dono ko bonus milega</Text>
               </View>
             </TouchableOpacity>
           )}
@@ -6407,7 +6407,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {/* Referral Section */}
         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
           <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>🎁 Refer & Earn</Text>
-          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Dosto ko refer karo — dono ko ₹50 wallet bonus milega</Text>
+          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>Dosto ko refer karo — dost ki 3 rides complete hone pe dono ko ₹50 bonus milega</Text>
           {referralInfo ? (
             <View>
               <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
