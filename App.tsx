@@ -576,6 +576,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [drvCmpRideId, setDrvCmpRideId]     = useState('');
   const [lastRideId, setLastRideId]         = useState<string>('');
 
+  // ── Cancel Popup (customer or driver cancels) ─
+  const [cancelPopup, setCancelPopup] = useState<{ msg: string; sub: string } | null>(null);
+
   // ── Permission Onboarding State ───────────────
   const [permStatus, setPermStatus] = useState({ location: false, battery: false, overlay: false });
   const [permSheet, setPermSheet]   = useState<string | null>(null);
@@ -767,6 +770,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         Vibration.vibrate([0, 800, 200, 800, 200, 800]); // ~3 seconds
         useDriverStore.getState().triggerPoll?.();
       }
+      if (data?.type === 'ride_cancelled') {
+        setCancelPopup({ msg: 'Customer ne Ride Cancel Kar Di', sub: 'Aapke liye agli ride dhundh rahe hain...' });
+        useDriverStore.getState().triggerPoll?.();
+      }
     });
 
     // Tap: notification tapped (background/killed) → open home + poll
@@ -774,6 +781,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = response?.notification?.request?.content?.data as any;
       if (data?.type === 'new_ride') {
         setScreen('home'); setActiveTab('live');
+        useDriverStore.getState().triggerPoll?.();
+      }
+      if (data?.type === 'ride_cancelled') {
+        setScreen('home'); setActiveTab('home');
+        setCancelPopup({ msg: 'Customer ne Ride Cancel Kar Di', sub: 'Aapke liye agli ride dhundh rahe hain...' });
         useDriverStore.getState().triggerPoll?.();
       }
       if (data?.type === 'compensation_credited' || data?.type === 'earning_credited') {
@@ -3193,6 +3205,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </ScreenIn>
   );
 
+  // ═══ CUSTOMER CANCELLED — POPUP ═══
+  // Rendered as Modal so it overlays any active screen (live tab, nav, etc.)
+  // cancelPopup state is set by FCM ride_cancelled handler
+
   // ═══ DRIVER CANCEL MODAL ═══
   if (showDriverCancelModal) return (
     <View style={s.screen}>
@@ -3225,6 +3241,25 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </View>
   );
 
+
+  // ═══ CUSTOMER CANCEL POPUP ═══
+  if (cancelPopup) return (
+    <View style={{ flex: 1, backgroundColor: 'rgba(8,14,24,0.88)', justifyContent: 'center', alignItems: 'center', padding: 28 }}>
+      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 26, padding: 32, alignItems: 'center', width: '100%', elevation: 20, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 20 }}>
+        <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, borderColor: '#EF4444', alignItems: 'center', justifyContent: 'center', marginBottom: 18 }}>
+          <Text style={{ fontSize: 34 }}>🚫</Text>
+        </View>
+        <Text style={{ fontSize: 20, fontWeight: '900', color: '#0F172A', marginBottom: 8, textAlign: 'center' }}>{cancelPopup.msg}</Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', marginBottom: 28, lineHeight: 20 }}>{cancelPopup.sub}</Text>
+        <TouchableOpacity
+          onPress={() => setCancelPopup(null)}
+          style={{ backgroundColor: '#FF2D78', borderRadius: 14, paddingVertical: 15, paddingHorizontal: 52, elevation: 6, shadowColor: '#FF2D78', shadowOpacity: 0.35, shadowRadius: 8 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.3 }}>Okay</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
 
   // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
