@@ -445,7 +445,7 @@ function App() {
   const driverGpsRef                = useRef<any>(null);
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
-  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'complaints' | 'complaint-new' | 'complaint-detail'>('');
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'complaints' | 'complaint-new' | 'complaint-detail' | 'orders'>('');
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -583,6 +583,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [permStatus, setPermStatus] = useState({ location: false, battery: false, overlay: false });
   const [permSheet, setPermSheet]   = useState<string | null>(null);
   const [permDone, setPermDone]     = useState(false);
+  const [ordersData, setOrdersData]       = useState<any>(null);
+  const [ordersLoading, setOrdersLoading] = useState(false);
+  const [ordersPeriod, setOrdersPeriod]   = useState<'day'|'week'|'month'>('day');
+  const [ordersDate, setOrdersDate]       = useState(() => new Date());
+  const [ordersFilter, setOrdersFilter]   = useState<'all'|'completed'|'cancelled'>('all');
 
   useEffect(() => {
     if (driverSubScreen !== 'complaints' || !phone) return;
@@ -593,6 +598,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       .catch(() => {})
       .finally(() => setDrvCmpLoading(false));
   }, [driverSubScreen, phone]);
+
+  useEffect(() => {
+    if (driverSubScreen === 'orders' && phone) loadOrders(ordersPeriod, ordersDate);
+  }, [driverSubScreen]);
 
   // ── Splash + Auto login ────────────────────────
   useEffect(() => {
@@ -958,6 +967,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
   const loadBonusHistory = async (ph: string) => {
     try { const r = await fetch(`${API}/api/bonus/history?phone=${ph}`); const d = await r.json(); setBonusHistory(d.history || []); setBonusHistoryLoaded(true); } catch (_e) {}
+  };
+  const loadOrders = async (period: 'day'|'week'|'month', date: Date) => {
+    if (!phone) return;
+    setOrdersLoading(true);
+    try {
+      let from: string, to: string;
+      const y = date.getFullYear(), mo = date.getMonth(), d = date.getDate();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      if (period === 'day') {
+        from = to = `${y}-${pad(mo+1)}-${pad(d)}`;
+      } else if (period === 'week') {
+        const dow = date.getDay();
+        const mon = new Date(date); mon.setDate(d - (dow === 0 ? 6 : dow - 1));
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+        from = `${mon.getFullYear()}-${pad(mon.getMonth()+1)}-${pad(mon.getDate())}`;
+        to   = `${sun.getFullYear()}-${pad(sun.getMonth()+1)}-${pad(sun.getDate())}`;
+      } else {
+        from = `${y}-${pad(mo+1)}-01`;
+        const last = new Date(y, mo+1, 0).getDate();
+        to = `${y}-${pad(mo+1)}-${pad(last)}`;
+      }
+      const r = await fetch(`${API}/api/driver/order-history?phone=${phone}&from=${from}&to=${to}`);
+      const data = await r.json();
+      setOrdersData(data);
+    } catch {}
+    setOrdersLoading(false);
   };
   const loadReferralInfo = async () => {
     if (!phone) return;
@@ -5107,6 +5142,187 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
     );
 
+    // ─── Driver: All Orders ───
+    if (driverSubScreen === 'orders') {
+      const PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 44;
+      const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const fmtPeriodLabel = (period: 'day'|'week'|'month', date: Date): string => {
+        if (period === 'day') return `${DAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]}`;
+        if (period === 'week') {
+          const dow = date.getDay();
+          const mon = new Date(date); mon.setDate(date.getDate() - (dow === 0 ? 6 : dow - 1));
+          const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+          return `${DAYS[mon.getDay()]} ${mon.getDate()} ${MONTHS[mon.getMonth()]} – ${DAYS[sun.getDay()]} ${sun.getDate()} ${MONTHS[sun.getMonth()]}`;
+        }
+        return `${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+      };
+      const navDate = (dir: 1|-1) => {
+        const d = new Date(ordersDate);
+        if (ordersPeriod === 'day') d.setDate(d.getDate() + dir);
+        else if (ordersPeriod === 'week') d.setDate(d.getDate() + dir * 7);
+        else d.setMonth(d.getMonth() + dir);
+        setOrdersDate(d);
+        loadOrders(ordersPeriod, d);
+      };
+      const switchPeriod = (p: 'day'|'week'|'month') => {
+        setOrdersPeriod(p);
+        loadOrders(p, ordersDate);
+      };
+      const vehIcon: Record<string,string> = { auto:'🛺', bike:'🏍️', car:'🚗', eriksha:'🛺', luxury:'🚙', green_bike:'🏍️', electric_auto:'⚡' };
+      const visibleRides = (ordersData?.rides || []).filter((r: any) =>
+        ordersFilter === 'all' || r.status === ordersFilter
+      );
+      const isToday = (d: Date) => {
+        const t = new Date(); return d.getFullYear()===t.getFullYear()&&d.getMonth()===t.getMonth()&&d.getDate()===t.getDate();
+      };
+      return (
+        <View style={[s.screen, { backgroundColor: '#F1F5F9' }]}>
+          {/* Header */}
+          <View style={{ backgroundColor: '#fff', paddingTop: PT + 10, paddingBottom: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: '#E2E8F0', elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+              <TouchableOpacity onPress={back} style={{ padding: 4, marginRight: 10 }}>
+                <Ionicons name="arrow-back" size={22} color="#0F172A" />
+              </TouchableOpacity>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', flex: 1 }}>All Orders</Text>
+            </View>
+
+            {/* Period tabs */}
+            <View style={{ flexDirection: 'row', backgroundColor: '#F1F5F9', borderRadius: 12, padding: 3, marginBottom: 12 }}>
+              {(['day','week','month'] as const).map(p => (
+                <TouchableOpacity key={p} onPress={() => switchPeriod(p)}
+                  style={{ flex: 1, paddingVertical: 8, borderRadius: 10, alignItems: 'center',
+                    backgroundColor: ordersPeriod === p ? '#0F172A' : 'transparent' }}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: ordersPeriod === p ? '#fff' : '#64748B', textTransform: 'capitalize' }}>{p.charAt(0).toUpperCase()+p.slice(1)}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Date navigation */}
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => navDate(-1)} style={{ padding: 8, borderRadius: 8, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Ionicons name="chevron-back" size={18} color="#475569" />
+              </TouchableOpacity>
+              <Text style={{ flex: 1, textAlign: 'center', fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
+                {fmtPeriodLabel(ordersPeriod, ordersDate)}
+                {ordersPeriod === 'day' && isToday(ordersDate) ? '  (Today)' : ''}
+              </Text>
+              <TouchableOpacity onPress={() => navDate(1)} style={{ padding: 8, borderRadius: 8, backgroundColor: '#F8FAFC', borderWidth: 1, borderColor: '#E2E8F0' }}>
+                <Ionicons name="chevron-forward" size={18} color="#475569" />
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {ordersLoading ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator size="large" color={C.green} />
+              <Text style={{ color: '#64748B', marginTop: 12, fontSize: 13 }}>Loading orders...</Text>
+            </View>
+          ) : (
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+              {/* Summary row */}
+              {ordersData && (
+                <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                  <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', elevation: 1 }}>
+                    <Text style={{ color: C.green, fontSize: 22, fontWeight: '900' }}>{ordersData.summary?.completed ?? 0}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11, marginTop: 3 }}>Completed</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', elevation: 1 }}>
+                    <Text style={{ color: C.pink, fontSize: 22, fontWeight: '900' }}>{ordersData.summary?.cancelled ?? 0}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11, marginTop: 3 }}>Cancelled</Text>
+                  </View>
+                  <View style={{ flex: 1, backgroundColor: '#fff', borderRadius: 14, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0', elevation: 1 }}>
+                    <Text style={{ color: '#0F172A', fontSize: 22, fontWeight: '900' }}>₹{ordersData.summary?.earnings ?? 0}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11, marginTop: 3 }}>Earned</Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Status filter tabs */}
+              <View style={{ flexDirection: 'row', gap: 6, marginBottom: 14 }}>
+                {(['all','completed','cancelled'] as const).map(f => (
+                  <TouchableOpacity key={f} onPress={() => setOrdersFilter(f)}
+                    style={{ paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1.5,
+                      backgroundColor: ordersFilter === f ? (f==='completed'?C.green:f==='cancelled'?C.pink:'#0F172A') : '#fff',
+                      borderColor: ordersFilter === f ? (f==='completed'?C.green:f==='cancelled'?C.pink:'#0F172A') : '#E2E8F0' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '700',
+                      color: ordersFilter === f ? '#fff' : '#475569' }}>
+                      {f === 'all' ? 'All' : f === 'completed' ? '✓ Completed' : '✗ Cancelled'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {/* Ride cards */}
+              {visibleRides.length === 0 ? (
+                <View style={{ alignItems: 'center', paddingTop: 60 }}>
+                  <Text style={{ fontSize: 48 }}>📭</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '800', color: '#0F172A', marginTop: 16 }}>No orders found</Text>
+                  <Text style={{ fontSize: 13, color: '#94A3B8', marginTop: 6, textAlign: 'center' }}>
+                    {ordersFilter === 'all' ? 'No rides for this period' : `No ${ordersFilter} rides`}
+                  </Text>
+                </View>
+              ) : visibleRides.map((r: any, i: number) => {
+                const time = new Date(r.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+                const cancelLabel = r.cancelled_by === 'customer' ? 'Customer Cancelled' : r.cancelled_by === 'driver' ? 'You Cancelled' : 'Cancelled';
+                const isCompleted = r.status === 'completed';
+                const dotColor = isCompleted ? C.green : C.pink;
+                const shortPickup = (r.pickup || '').split(',')[0] || r.pickup || '—';
+                return (
+                  <View key={r.id || i} style={{ backgroundColor: '#fff', borderRadius: 16, padding: 14, marginBottom: 10, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0', borderLeftWidth: 4, borderLeftColor: isCompleted ? C.green : C.pink }}>
+                    {/* Top row: vehicle + time + fare */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                      <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: isCompleted ? 'rgba(5,150,105,0.1)' : 'rgba(255,45,120,0.1)', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                        <Text style={{ fontSize: 18 }}>{vehIcon[r.ride_type] || '🚗'}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>
+                          {(r.ride_type || 'Ride').replace('_', ' ').toUpperCase()}
+                          <Text style={{ fontSize: 11, fontWeight: '400', color: '#94A3B8' }}>  ·  {time}</Text>
+                        </Text>
+                        <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }}>{r.passenger_name || 'Customer'} · {r.payment_method || 'cash'}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 16, fontWeight: '900', color: isCompleted ? C.green : '#94A3B8' }}>
+                          ₹{parseFloat(r.fare || 0).toFixed(0)}
+                        </Text>
+                        <View style={{ backgroundColor: isCompleted ? 'rgba(5,150,105,0.1)' : 'rgba(255,45,120,0.1)', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 3 }}>
+                          <Text style={{ fontSize: 9, fontWeight: '800', color: dotColor, letterSpacing: 0.5 }}>
+                            {isCompleted ? 'COMPLETED' : 'CANCELLED'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+
+                    {/* Timeline */}
+                    <View style={{ paddingLeft: 6 }}>
+                      {/* Accepted */}
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 4 }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#3B82F6', marginTop: 3, marginRight: 10 }} />
+                        <Text style={{ fontSize: 12, color: '#475569', flex: 1 }} numberOfLines={1}>
+                          Accepted · {shortPickup}
+                        </Text>
+                      </View>
+                      {/* Vertical connector */}
+                      <View style={{ width: 1.5, height: 12, backgroundColor: '#E2E8F0', marginLeft: 4.25, marginBottom: 4 }} />
+                      {/* End state */}
+                      <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                        <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: dotColor, marginTop: 3, marginRight: 10 }} />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: dotColor, flex: 1 }}>
+                          {isCompleted ? 'Completed · ' + ((r.drop_location||'').split(',')[0] || r.drop_location || '—') : cancelLabel}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        </View>
+      );
+    }
+
     // ─── Driver: My Complaints ───
     if (driverSubScreen === 'complaints') {
       const statusMeta: any = {
@@ -6631,12 +6847,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
 
         {([
+          ['📦', 'All Orders', 'Rides history, completed & cancelled', 'orders'],
           ['📋', 'Documents', 'License, RC verification', 'documents'],
           ['🏦', 'Bank Details', 'Payout account', 'bank'],
           ['📞', 'Support', '24x7 help', 'support'],
           ['⚙️', 'Settings', 'Preferences', 'settings'],
         ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
-          <Bouncy key={key} style={s.menuItem} onPress={() => { setDrSubScreen(key as any); setBankMsg(''); }}>
+          <Bouncy key={key} style={s.menuItem} onPress={() => { if (key === 'orders') { setOrdersData(null); setOrdersLoading(false); setOrdersPeriod('day'); setOrdersDate(new Date()); setOrdersFilter('all'); } setDrSubScreen(key as any); setBankMsg(''); }}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#0F172A', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{sub}</Text></View>
             <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
