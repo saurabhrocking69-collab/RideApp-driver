@@ -783,6 +783,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setCancelPopup({ msg: 'Customer ne Ride Cancel Kar Di', sub: 'Aapke liye agli ride dhundh rahe hain...' });
         useDriverStore.getState().triggerPoll?.();
       }
+      if (data?.type === 'hourly_extend') {
+        Vibration.vibrate([0, 400, 200, 400]);
+      }
     });
 
     // Tap: notification tapped (background/killed) → open home + poll
@@ -799,6 +802,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
       if (data?.type === 'compensation_credited' || data?.type === 'earning_credited') {
         setScreen('home'); setActiveTab('earnings');
+      }
+      if (data?.type === 'hourly_extend') {
+        setScreen('home'); setActiveTab('live');
       }
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
@@ -1651,6 +1657,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         s.on('hourlyChatMessage', (msg: any) => {
           setHourlyChatMsgs((prev: any[]) => [...prev, msg]);
         });
+        s.on('hourlyExtendRequest', (data: any) => {
+          setActiveHourlyRide((p: any) => p ? { ...p, extend_requested_hours: data.extra_hours, extend_escrow: data.extra_fare } : p);
+          Vibration.vibrate([0, 400, 200, 400]);
+        });
         s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); });
         s.on('paymentConfirmed', async (data: any) => {
           if (data.status !== 'completed') return;
@@ -2064,12 +2074,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
-        setResult('✅ Extension accept ho gaya!');
-        setTimeout(() => setResult(''), 3000);
+        Alert.alert('✅ Extension Accept!', `Trip extend ho gaya — naye package: ${data.new_hours >= 24 ? (data.new_hours/24)+'d' : data.new_hours+'h'}, ${data.new_km} km`);
       } else {
-        setResult('❌ ' + (data.message || data.error || 'Accept nahi hua'));
+        Alert.alert('❌ Accept Nahi Hua', data.message || data.error || 'Dobara try karo');
       }
-    } catch (_e) { setResult('❌ Network error — dobara try karo'); }
+    } catch (_e) { Alert.alert('Network Error', 'Internet check karo aur dobara try karo'); }
     setHExtendLoading(false);
   };
 
@@ -2077,9 +2086,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide || hExtendLoading) return;
     setHExtendLoading(true);
     try {
-      await fetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
-      setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
-    } catch (_e) { setResult('❌ Network error'); }
+      const res = await fetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const data = await res.json();
+      if (data.success) {
+        setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
+      } else {
+        Alert.alert('❌ Reject Nahi Hua', data.message || data.error || 'Dobara try karo');
+      }
+    } catch (_e) { Alert.alert('Network Error', 'Internet check karo aur dobara try karo'); }
     setHExtendLoading(false);
   };
 
@@ -4906,19 +4920,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     );
                   })()}
                 </View>
-                {!!activeHourlyRide.extend_requested_hours && (
-                  <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
-                    <Text style={{ fontWeight: 'bold', color: C.pink, marginBottom: 6 }}>📅 Customer Extend Chahta Hai (+{activeHourlyRide.extend_requested_hours}h)</Text>
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                      <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
-                        <Text style={{ color: '#fff', fontWeight: 'bold' }}>✅ Accept</Text>
-                      </Bouncy>
-                      <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectExtend} disabled={hExtendLoading}>
-                        <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text>
-                      </Bouncy>
+                {!!activeHourlyRide.extend_requested_hours && (() => {
+                  const dec = parseFloat(activeHourlyRide.extend_requested_hours);
+                  const hrs = Math.floor(dec);
+                  const mins = Math.round((dec - hrs) * 60);
+                  const extLabel = hrs > 0 && mins > 0 ? `${hrs}h ${mins}m` : hrs > 0 ? `${hrs}h` : `${mins} min`;
+                  const escrow = parseFloat(activeHourlyRide.extend_escrow || 0);
+                  return (
+                    <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
+                      <Text style={{ fontWeight: 'bold', color: C.pink, marginBottom: 2 }}>📅 Customer +{extLabel} Extend Chahta Hai</Text>
+                      {escrow > 0 && <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 10 }}>₹{escrow.toFixed(0)} escrow mein — agree karne par milenge</Text>}
+                      <View style={{ flexDirection: 'row', gap: 10, marginTop: escrow > 0 ? 0 : 10 }}>
+                        <Bouncy style={{ flex: 1, backgroundColor: hExtendLoading ? '#334155' : C.green, borderRadius: 10, padding: 12, alignItems: 'center' }} onPress={acceptExtend} disabled={hExtendLoading}>
+                          <Text style={{ color: '#fff', fontWeight: 'bold' }}>{hExtendLoading ? '⏳ ...' : '✅ Accept'}</Text>
+                        </Bouncy>
+                        <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectExtend} disabled={hExtendLoading}>
+                          <Text style={{ color: '#94A3B8', fontWeight: 'bold' }}>✗ Reject</Text>
+                        </Bouncy>
+                      </View>
                     </View>
-                  </View>
-                )}
+                  );
+                })()}
               </View>
             )}
           </ScrollView>
