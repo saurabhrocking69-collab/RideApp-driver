@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, Image, Alert,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules
+  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules, Dimensions
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -322,6 +322,7 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
 };
 
 type Screen = 'splash' | 'login' | 'permissions' | 'home';
+const SCREEN_H = Dimensions.get('window').height;
 
 // ─── Background Location Task ────────────────────────────────────────────────
 // MUST be defined at module level, before any component mounts.
@@ -462,6 +463,7 @@ function App() {
   const [paymentMethod, setPaymentMethod] = useState('');
   const [driverGps, setDriverGps]   = useState<any>(null);
   const [navMuted, setNavMuted]     = useState(false);
+  const [inNavMode, setInNavMode]   = useState(false);
   const [showFuelLog, setShowFuelLog] = useState(false);
   const [chatMsgs, setChatMsgs]         = useState<any[]>([]);
   const [chatInput, setChatInput]       = useState('');
@@ -1152,6 +1154,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     active: navActive,
     phase: navPhase,
   });
+
+  // ── Auto-exit in-app nav mode when ride ends ──
+  useEffect(() => { if (!activeRide) setInNavMode(false); }, [activeRide]);
 
   // ── Live location posting to backend during active ride (every 4s) ──
   useEffect(() => {
@@ -3473,6 +3478,95 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     </KeyboardAvoidingView>
   );
 
+  // ── In-app navigation full-screen overlay ──────────────────────────────
+  const NAV_PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 44;
+  const _navPickup = activeRide ? (() => { const la = parseFloat(activeRide.pickup_lat), lo = parseFloat(activeRide.pickup_lng); return isNaN(la)||isNaN(lo) ? null : {lat:la,lng:lo}; })() : null;
+  const _navDrop   = activeRide ? (() => { const la = parseFloat(activeRide.drop_lat),   lo = parseFloat(activeRide.drop_lng);   return isNaN(la)||isNaN(lo) ? null : {lat:la,lng:lo}; })() : null;
+  const NavOverlay = inNavMode ? (
+    <View style={{ position:'absolute', top:0, left:0, right:0, bottom:0, zIndex:9999 }}>
+      <DriverLiveMap
+        pickupCoords={_navPickup}
+        dropCoords={_navDrop}
+        driverLat={driverGps?.lat}
+        driverLng={driverGps?.lng}
+        customerLat={_navPickup?.lat ?? null}
+        customerLng={_navPickup?.lng ?? null}
+        vehicleType={driverInfo?.vehicle_type || 'auto'}
+        rideStatus={activeRide?.status || null}
+        showTraffic={activeRide?.status === 'started'}
+        followDriver={true}
+        height={SCREEN_H}
+      />
+      {/* Back pill */}
+      <TouchableOpacity
+        onPress={() => setInNavMode(false)}
+        activeOpacity={0.82}
+        style={{
+          position:'absolute', top:NAV_PT, left:14, zIndex:10001,
+          flexDirection:'row', alignItems:'center', gap:6,
+          backgroundColor:'rgba(8,14,24,0.82)', borderRadius:22,
+          paddingHorizontal:14, paddingVertical:9,
+          borderWidth:1, borderColor:'rgba(255,255,255,0.14)',
+          elevation:6,
+        }}>
+        <Ionicons name="arrow-back" size={16} color="#fff" />
+        <Text style={{ color:'#fff', fontWeight:'700', fontSize:13 }}>Sppero</Text>
+      </TouchableOpacity>
+      {/* Voice nav bar */}
+      {navActive && (
+        <View style={{ position:'absolute', top:NAV_PT+52, left:0, right:0, zIndex:10000 }}>
+          <VoiceNavBar
+            instruction={navInstruction}
+            nextDistM={navDist}
+            phase={navPhase}
+            muted={navMuted}
+            onMute={() => setNavMuted(p => !p)}
+            visible={true}
+          />
+        </View>
+      )}
+      {/* Bottom action strip */}
+      <View style={{
+        position:'absolute', bottom:0, left:0, right:0,
+        backgroundColor:'rgba(8,14,24,0.90)',
+        paddingTop:14, paddingBottom:32, paddingHorizontal:16,
+        borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.08)',
+      }}>
+        {(distToPickup || tripRemainingEta) ? (
+          <View style={{ flexDirection:'row', justifyContent:'center', gap:10, marginBottom:14 }}>
+            {activeRide?.status !== 'started' && distToPickup ? (
+              <View style={{ backgroundColor:'rgba(233,30,99,0.15)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(233,30,99,0.35)' }}>
+                <Text style={{ color:C.pink, fontWeight:'800', fontSize:15 }}>📍 {distToPickup}</Text>
+              </View>
+            ) : tripRemainingEta ? (
+              <View style={{ backgroundColor:'rgba(245,197,24,0.12)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(245,197,24,0.35)' }}>
+                <Text style={{ color:'#F5C518', fontWeight:'800', fontSize:15 }}>🛣️ {tripRemainingEta}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+        {activeRide?.status === 'matched' && (
+          <Bouncy style={s.tripBtn} onPress={() => { setInNavMode(false); markArrived(); }} disabled={loading}>
+            <Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
+          </Bouncy>
+        )}
+        {activeRide?.status === 'started' && (
+          <Bouncy style={[s.tripBtn, { backgroundColor:C.green, shadowColor:C.green }]} onPress={() => { setInNavMode(false); completeTrip(); }} disabled={loading}>
+            <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+          </Bouncy>
+        )}
+        {activeRide?.status === 'arrived' && (
+          <View style={{ alignItems:'center' }}>
+            <Text style={{ color:'rgba(255,255,255,0.7)', fontSize:13, fontWeight:'600' }}>🔐 OTP ke liye app mein jaao</Text>
+            <TouchableOpacity onPress={() => setInNavMode(false)} style={{ marginTop:10, borderWidth:1.5, borderColor:C.pink, borderRadius:12, paddingHorizontal:20, paddingVertical:10 }}>
+              <Text style={{ color:C.pink, fontWeight:'700' }}>App pe Wapas Jao</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+    </View>
+  ) : null;
+
   // ═══ HOME TAB — Uber style ═══
   if (activeTab === 'home') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -3936,13 +4030,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )}
 
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
-                <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}>
+                <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => setInNavMode(true)}>
                   <Ionicons name="navigate" size={15} color="#fff" />
                   <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
                 </TouchableOpacity>
               )}
               {activeRide.status === 'started' && (
-                <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}>
+                <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => setInNavMode(true)}>
                   <Ionicons name="navigate" size={15} color="#8ae961" />
                   <Text style={{ color: '#8ae961', fontWeight: '600' }}>Drop Navigate Karo</Text>
                 </TouchableOpacity>
@@ -4160,7 +4254,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
                   <TextInput style={{ borderWidth: 2, borderColor: C.green, borderRadius: 12, padding: 14, fontSize: 28, textAlign: 'center', letterSpacing: 10, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#FFFFFF', color: '#0F172A' }} placeholder="0000" placeholderTextColor="#475569" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
                   <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
-                  <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}>
+                  <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => setInNavMode(true)}>
                     <Ionicons name="navigate" size={15} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
                   </TouchableOpacity>
@@ -4402,6 +4496,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </ScrollView>
       </View>
       <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} /></View>
+      {NavOverlay}
     </KeyboardAvoidingView>
   );
 
@@ -4695,7 +4790,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {(activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <TouchableOpacity
                   style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0 }]}
-                  onPress={() => navigateTo(activeRide.pickup, activeRide.pickup_lat, activeRide.pickup_lng)}
+                  onPress={() => setInNavMode(true)}
                 >
                   <Ionicons name="navigate" size={20} color="#fff" />
                   <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Pickup Navigate Karo</Text>
@@ -4704,7 +4799,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {activeRide.status === 'started' && (
                 <TouchableOpacity
                   style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0, backgroundColor: 'rgba(14,165,233,0.9)' }]}
-                  onPress={() => navigateTo(activeRide.drop_location, activeRide.drop_lat, activeRide.drop_lng)}
+                  onPress={() => setInNavMode(true)}
                 >
                   <Ionicons name="navigate" size={20} color="#8ae961" />
                   <Text style={{ color: '#8ae961', fontWeight: '700', fontSize: 16 }}>Drop Navigate Karo</Text>
@@ -4848,7 +4943,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 )}
                 <TouchableOpacity
                   style={[s.navBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 0 }]}
-                  onPress={() => Linking.openURL(`google.navigation:q=${encodeURIComponent(activeHourlyRide.pickup)}`).catch(() => Linking.openURL(`https://maps.google.com/?daddr=${encodeURIComponent(activeHourlyRide.pickup)}`))}
+                  onPress={() => setInNavMode(true)}
                 >
                   <Ionicons name="navigate" size={20} color="#fff" />
                   <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Pickup Navigate Karo</Text>
@@ -4947,6 +5042,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         )}
 
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        {NavOverlay}
       </View>
     );
   }
