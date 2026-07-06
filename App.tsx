@@ -6668,7 +6668,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>₹{tier.amount}</Text>
                     </View>
                     <View style={{ height: 8, backgroundColor: '#E2E8F0', borderRadius: 4, overflow: 'hidden' }}>
-                      <View style={{ height: 8, backgroundColor: isClaimed ? C.green : isUnlocked ? '#FF8F00' : C.pink, borderRadius: 4, width: pct + '%' }} />
+                      <View style={{ height: 8, backgroundColor: isClaimed ? C.green : isUnlocked ? '#FF8F00' : C.pink, borderRadius: 4, width: `${pct}%` }} />
                     </View>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 6, alignItems: 'center' }}>
                       <Text style={{ fontSize: 10, color: '#999' }}>{ridesCount}/{tier.rides} rides</Text>
