@@ -3495,24 +3495,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         rideStatus={activeRide?.status || null}
         showTraffic={activeRide?.status === 'started'}
         followDriver={true}
+        navMode={true}
         height={SCREEN_H}
       />
-      {/* Back pill */}
+
+      {/* Back pill — top-left */}
       <TouchableOpacity
         onPress={() => setInNavMode(false)}
         activeOpacity={0.82}
         style={{
           position:'absolute', top:NAV_PT, left:14, zIndex:10001,
           flexDirection:'row', alignItems:'center', gap:6,
-          backgroundColor:'rgba(8,14,24,0.82)', borderRadius:22,
+          backgroundColor:'rgba(8,14,24,0.85)', borderRadius:22,
           paddingHorizontal:14, paddingVertical:9,
           borderWidth:1, borderColor:'rgba(255,255,255,0.14)',
-          elevation:6,
+          elevation:8,
         }}>
         <Ionicons name="arrow-back" size={16} color="#fff" />
         <Text style={{ color:'#fff', fontWeight:'700', fontSize:13 }}>Sppero</Text>
       </TouchableOpacity>
-      {/* Voice nav bar */}
+
+      {/* Voice nav bar — slides in just below the back pill */}
       {navActive && (
         <View style={{ position:'absolute', top:NAV_PT+52, left:0, right:0, zIndex:10000 }}>
           <VoiceNavBar
@@ -3525,26 +3528,53 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           />
         </View>
       )}
+
       {/* Bottom action strip */}
       <View style={{
         position:'absolute', bottom:0, left:0, right:0,
-        backgroundColor:'rgba(8,14,24,0.90)',
+        backgroundColor:'rgba(8,14,24,0.94)',
         paddingTop:14, paddingBottom:32, paddingHorizontal:16,
-        borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.08)',
+        borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.09)',
+        gap:10,
       }}>
+        {/* ETA / distance info row */}
         {(distToPickup || tripRemainingEta) ? (
-          <View style={{ flexDirection:'row', justifyContent:'center', gap:10, marginBottom:14 }}>
+          <View style={{ flexDirection:'row', justifyContent:'center', gap:10 }}>
             {activeRide?.status !== 'started' && distToPickup ? (
-              <View style={{ backgroundColor:'rgba(233,30,99,0.15)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(233,30,99,0.35)' }}>
-                <Text style={{ color:C.pink, fontWeight:'800', fontSize:15 }}>📍 {distToPickup}</Text>
+              <View style={{ backgroundColor:'rgba(26,115,232,0.14)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(26,115,232,0.35)' }}>
+                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>📍 {distToPickup}</Text>
               </View>
             ) : tripRemainingEta ? (
-              <View style={{ backgroundColor:'rgba(245,197,24,0.12)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(245,197,24,0.35)' }}>
-                <Text style={{ color:'#F5C518', fontWeight:'800', fontSize:15 }}>🛣️ {tripRemainingEta}</Text>
+              <View style={{ backgroundColor:'rgba(26,115,232,0.14)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(26,115,232,0.35)' }}>
+                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>🛣️ {tripRemainingEta}</Text>
               </View>
             ) : null}
           </View>
         ) : null}
+
+        {/* Google Maps deep-link — always visible for matched/started */}
+        {(activeRide?.status === 'matched' || activeRide?.status === 'started') && (
+          <TouchableOpacity
+            activeOpacity={0.82}
+            onPress={() => {
+              const destLat = activeRide.status === 'started' ? activeRide.drop_lat  : activeRide.pickup_lat;
+              const destLng = activeRide.status === 'started' ? activeRide.drop_lng  : activeRide.pickup_lng;
+              if (!destLat || !destLng) return;
+              Linking.openURL(`google.navigation:q=${destLat},${destLng}&mode=driving`)
+                .catch(() => Linking.openURL(`https://maps.google.com/?daddr=${destLat},${destLng}`));
+            }}
+            style={{
+              flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8,
+              backgroundColor:'rgba(26,115,232,0.12)',
+              borderRadius:14, paddingVertical:12,
+              borderWidth:1.5, borderColor:'rgba(26,115,232,0.35)',
+            }}>
+            <Text style={{ fontSize:18 }}>🗺️</Text>
+            <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>Maps mein kholein</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Primary action button */}
         {activeRide?.status === 'matched' && (
           <Bouncy style={s.tripBtn} onPress={() => { setInNavMode(false); markArrived(); }} disabled={loading}>
             <Text style={s.tripBtnTxt}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
