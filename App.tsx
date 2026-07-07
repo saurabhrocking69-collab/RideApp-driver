@@ -1672,7 +1672,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           setActiveHourlyRide((p: any) => p ? { ...p, extend_requested_hours: data.extra_hours, extend_escrow: data.extra_fare } : p);
           Vibration.vibrate([0, 400, 200, 400]);
         });
-        s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); });
+        // Broadcast system: newRideRequest sent to ALL drivers in radius simultaneously
+        s.on('newRideRequest', () => { useDriverStore.getState().triggerPoll?.(); });
+        s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); }); // backward compat
+
+        // Another driver accepted first — clear the pending ride immediately
+        s.on('rideTaken', () => {
+          useDriverStore.setState({ pendingRide: null });
+          setRideReq(null);
+          setResult('❌ Ride kisi aur driver ne le li');
+          setTimeout(() => setResult(''), 3000);
+        });
         s.on('paymentConfirmed', async (data: any) => {
           if (data.status !== 'completed') return;
           try {
