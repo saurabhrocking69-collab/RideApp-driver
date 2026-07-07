@@ -3140,98 +3140,111 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ PAYMENT WAITING SCREEN ═══
   if (paymentWaiting) return (
-    <ScreenIn style={s.screen}>
-      {/* Hero */}
-      <View style={[s.hero, { paddingTop: 50, paddingBottom: 26, overflow: 'hidden' }]}>
-        <View style={{ position: 'absolute', width: 220, height: 220, borderRadius: 110, backgroundColor: 'rgba(255,255,255,0.08)', top: -80, right: -50 }} />
-        <Text style={s.heroTitle}>Trip Complete! 🏁</Text>
-        <Text style={{ color: C.green, fontSize: 50, fontWeight: '900', marginTop: 6, letterSpacing: -1 }}>₹{paymentFare}</Text>
-        <View style={{ backgroundColor: 'rgba(16,185,129,0.18)', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 6, marginTop: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.35)' }}>
-          <Text style={{ color: C.green, fontSize: 13, fontWeight: '700' }}>Net kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} · 15% fee ke baad</Text>
+    <ScreenIn style={{ flex: 1, backgroundColor: C.bgDark }}>
+
+      {/* ── Hero: fare + net earning ── */}
+      <View style={{
+        paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 20 : 56,
+        paddingBottom: 30, paddingHorizontal: 24, alignItems: 'center', overflow: 'hidden',
+      }}>
+        <View style={{ position: 'absolute', width: 340, height: 340, borderRadius: 170, backgroundColor: 'rgba(0,200,83,0.06)', top: -80, right: -100 }} />
+        <View style={{ position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(255,45,120,0.04)', bottom: -40, left: -50 }} />
+
+        <View style={{ backgroundColor: 'rgba(0,200,83,0.15)', borderRadius: R.full, paddingHorizontal: 18, paddingVertical: 6, borderWidth: 1, borderColor: 'rgba(0,200,83,0.35)', marginBottom: 18 }}>
+          <Text style={{ color: C.online, fontSize: 11, fontWeight: '900', letterSpacing: 2 }}>🏁  TRIP COMPLETE</Text>
+        </View>
+
+        <CountUp value={paymentFare} prefix="₹" style={{ ...T.earnings, color: '#FFFFFF', letterSpacing: -2.5, lineHeight: 56 }} />
+
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.full, paddingHorizontal: 18, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(0,200,83,0.3)' }}>
+          <Text style={{ fontSize: 13, color: C.online, fontWeight: '900' }}>Net Kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)}</Text>
+          <Text style={{ fontSize: 11, color: 'rgba(0,200,83,0.55)' }}>· 15% fee ke baad</Text>
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 36 }}>
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 44 }} showsVerticalScrollIndicator={false}>
 
-        {/* ── Cash or UPI confirm (always visible) ── */}
-        <Text style={{ fontSize: 11, fontWeight: '800', color: 'rgba(255,255,255,0.45)', letterSpacing: 1.8, marginBottom: 12, textTransform: 'uppercase' }}>
-          {paymentMethod === 'cash' ? 'Customer ne cash select kiya — confirm karo' : 'Payment mili? Confirm karo'}
-        </Text>
-
-        {paymentMethod === 'cash' ? (
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 18, padding: 18, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.4)' }}>
-            <Text style={{ fontSize: 15, fontWeight: '900', color: '#F59E0B', marginBottom: 6 }}>💵 Customer Ne Cash Chuna</Text>
-            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.65)', marginBottom: 16, lineHeight: 20 }}>
-              Customer ne app mein cash select ki hai. Unse ₹{paymentFare} cash lo aur neeche confirm karo.
-            </Text>
-            <Bouncy
-              style={{ backgroundColor: C.green, borderRadius: 14, padding: 16, alignItems: 'center', opacity: loading ? 0.6 : 1 }}
-              onPress={() => confirmDirectPayment('cash')} disabled={loading}>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>✅  ₹{paymentFare} Cash Mil Gaya</Text>
-            </Bouncy>
-          </View>
-        ) : (
-          <View style={{ backgroundColor: 'rgba(16,185,129,0.06)', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)', alignItems: 'center' }}>
-            <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.55)', textAlign: 'center' }}>Customer abhi app mein payment kar raha hai...</Text>
-            <FloatingDots color={C.green} />
-          </View>
+        {/* ── Cash mode: amber confirm card ── */}
+        {paymentMethod === 'cash' && (
+          <SlideIn style={{ marginBottom: 14 }}>
+            <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: R.md, padding: 20, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.38)' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={{ fontSize: 28, marginRight: 12 }}>💵</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#F59E0B' }}>Customer Ne Cash Chuna</Text>
+                  <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>Unse ₹{paymentFare} cash lo aur confirm karo</Text>
+                </View>
+              </View>
+              <Bouncy
+                style={{ backgroundColor: C.online, borderRadius: R.sm, padding: 18, alignItems: 'center', opacity: loading ? 0.6 : 1, ...SHADOW.green }}
+                onPress={() => confirmDirectPayment('cash')} disabled={loading}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 17, letterSpacing: 0.2 }}>✅  ₹{paymentFare} Cash Mil Gaya</Text>
+              </Bouncy>
+            </View>
+          </SlideIn>
         )}
 
-        {/* ── Direct confirm buttons ── */}
-        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 18 }}>
+        {/* ── Online mode: animated waiting ── */}
+        {paymentMethod !== 'cash' && (
+          <SlideIn style={{ marginBottom: 14 }}>
+            <View style={{ backgroundColor: 'rgba(0,200,83,0.07)', borderRadius: R.md, padding: 20, borderWidth: 1, borderColor: 'rgba(0,200,83,0.18)', alignItems: 'center' }}>
+              <FloatingDots color={C.online} />
+              <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.6)', textAlign: 'center', marginTop: 14, fontWeight: '600' }}>
+                Customer app mein payment kar raha hai...
+              </Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.28)', marginTop: 5 }}>Confirmed hote hi screen update ho jaayegi</Text>
+            </View>
+          </SlideIn>
+        )}
+
+        {/* ── Quick confirm row ── */}
+        <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
           <Bouncy
-            style={{ flex: 1, backgroundColor: 'rgba(16,185,129,0.10)', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(16,185,129,0.35)', opacity: loading ? 0.6 : 1 }}
+            style={{ flex: 1, backgroundColor: 'rgba(0,200,83,0.1)', borderRadius: R.sm, paddingVertical: 18, paddingHorizontal: 10, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.32)', opacity: loading ? 0.6 : 1 }}
             onPress={() => confirmDirectPayment('cash')} disabled={loading}>
-            <Text style={{ fontSize: 28, marginBottom: 4 }}>💵</Text>
-            <Text style={{ fontSize: 13, fontWeight: '900', color: C.green }}>Cash Mila</Text>
-            <Text style={{ fontSize: 11, color: 'rgba(16,185,129,0.7)', marginTop: 2 }}>₹{paymentFare}</Text>
+            <Text style={{ fontSize: 28, marginBottom: 6 }}>💵</Text>
+            <Text style={{ fontSize: 14, fontWeight: '900', color: C.online }}>Cash Mila</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(0,200,83,0.55)', marginTop: 4, fontWeight: '700' }}>₹{paymentFare}</Text>
           </Bouncy>
           <Bouncy
-            style={{ flex: 1, backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 16, padding: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.3)', opacity: loading ? 0.6 : 1 }}
+            style={{ flex: 1, backgroundColor: 'rgba(255,45,120,0.07)', borderRadius: R.sm, paddingVertical: 18, paddingHorizontal: 10, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.28)', opacity: loading ? 0.6 : 1 }}
             onPress={() => confirmDirectPayment('upi_direct')} disabled={loading}>
-            <Text style={{ fontSize: 28, marginBottom: 4 }}>📱</Text>
-            <Text style={{ fontSize: 13, fontWeight: '900', color: C.pink }}>UPI Mila</Text>
-            <Text style={{ fontSize: 11, color: 'rgba(233,30,99,0.6)', marginTop: 2 }}>₹{paymentFare}</Text>
+            <Text style={{ fontSize: 28, marginBottom: 6 }}>📱</Text>
+            <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>UPI Mila</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,45,120,0.55)', marginTop: 4, fontWeight: '700' }}>₹{paymentFare}</Text>
           </Bouncy>
         </View>
 
         {/* ── Divider ── */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18 }}>
-          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
-          <Text style={{ color: 'rgba(255,255,255,0.35)', marginHorizontal: 14, fontSize: 12, fontWeight: '700' }}>YA CUSTOMER KO DIKHAO</Text>
-          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 22 }}>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.07)' }} />
+          <Text style={{ color: 'rgba(255,255,255,0.22)', marginHorizontal: 14, fontSize: 10, fontWeight: '800', letterSpacing: 1.8 }}>YA CUSTOMER KO DIKHAO</Text>
+          <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.07)' }} />
         </View>
 
-        {/* ── My UPI QR ── */}
+        {/* ── QR Code ── */}
         {driverUpiId ? (() => {
           const upiLink = `upi://pay?pa=${encodeURIComponent(driverUpiId)}&pn=${encodeURIComponent(driverInfo?.name || 'Driver')}&am=${paymentFare}&cu=INR&tn=Sppero%20Trip`;
-          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=10&data=${encodeURIComponent(upiLink)}`;
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=12&data=${encodeURIComponent(upiLink)}`;
           return (
-            <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 20, padding: 18, marginBottom: 16, alignItems: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.12)' }}>
-              <Text style={{ fontSize: 14, fontWeight: '900', color: '#fff', marginBottom: 4 }}>📱 Customer Ko Dikhao</Text>
-              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)', marginBottom: 14 }}>GPay · PhonePe · Paytm · Any UPI</Text>
-              <View style={{ backgroundColor: '#fff', borderRadius: 16, padding: 8 }}>
-                <Image source={{ uri: qrUrl }} style={{ width: 210, height: 210, borderRadius: 10 }} resizeMode="contain" />
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: R.md, padding: 22, marginBottom: 16, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.09)' }}>
+              <Text style={{ fontSize: 15, fontWeight: '900', color: '#fff', marginBottom: 3 }}>📱 Customer Ko Dikhao</Text>
+              <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 18, letterSpacing: 0.3 }}>GPay · PhonePe · Paytm · Any UPI</Text>
+              <View style={{ backgroundColor: '#FFFFFF', borderRadius: R.md, padding: 10, elevation: 12, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 16 }}>
+                <Image source={{ uri: qrUrl }} style={{ width: 220, height: 220, borderRadius: R.xs }} resizeMode="contain" />
               </View>
-              <Text style={{ fontSize: 12, color: C.pink, marginTop: 12, fontWeight: '700' }}>{driverUpiId}</Text>
-              <View style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 20, paddingVertical: 8, marginTop: 10, elevation: 4, shadowColor: C.pink, shadowOpacity: 0.5, shadowRadius: 8 }}>
-                <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900' }}>₹{paymentFare}</Text>
+              <Text style={{ fontSize: 13, color: C.pink, marginTop: 16, fontWeight: '800', letterSpacing: 0.2 }}>{driverUpiId}</Text>
+              <View style={{ backgroundColor: C.pink, borderRadius: R.full, paddingHorizontal: 28, paddingVertical: 10, marginTop: 12, ...SHADOW.pink }}>
+                <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900', letterSpacing: -1 }}>₹{paymentFare}</Text>
               </View>
             </View>
           );
         })() : (
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 13, color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>⚠️ Profile mein UPI ID set karo QR dikhane ke liye</Text>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.07)', borderRadius: R.sm, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.22)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={{ fontSize: 18 }}>⚠️</Text>
+            <Text style={{ fontSize: 12, color: '#F59E0B', fontWeight: '600', flex: 1 }}>Profile mein UPI ID set karo QR dikhane ke liye</Text>
           </View>
         )}
-
-        {/* ── Net earning note ── */}
-        <View style={{ backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontSize: 18 }}>💡</Text>
-          <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.5)', lineHeight: 18, flex: 1 }}>
-            15% platform fee ke baad aapki net kamai ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)} hogi
-          </Text>
-        </View>
 
         {/* ── Payment not received ── */}
         <TouchableOpacity
@@ -3262,13 +3275,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               }},
             ]
           )}
-          style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderRadius: 16, padding: 16, marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1.5, borderColor: 'rgba(239,68,68,0.3)' }}>
-          <Text style={{ fontSize: 22 }}>🚨</Text>
+          style={{ backgroundColor: 'rgba(239,68,68,0.07)', borderRadius: R.sm, padding: 15, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: 'rgba(239,68,68,0.22)' }}>
+          <Text style={{ fontSize: 20 }}>🚨</Text>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: '900', fontSize: 13, color: '#ef4444' }}>Customer Ne Payment Nahi Ki</Text>
-            <Text style={{ fontSize: 11, color: 'rgba(239,68,68,0.65)', marginTop: 2 }}>Cash liye bina chale gaye? Report karo</Text>
+            <Text style={{ fontWeight: '800', fontSize: 13, color: '#EF4444' }}>Customer Ne Payment Nahi Ki</Text>
+            <Text style={{ fontSize: 11, color: 'rgba(239,68,68,0.55)', marginTop: 2 }}>Cash liye bina chale gaye? Tap to report</Text>
           </View>
-          <Text style={{ color: '#ef4444', fontSize: 20 }}>›</Text>
+          <Text style={{ color: 'rgba(239,68,68,0.4)', fontSize: 18 }}>›</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -3333,102 +3346,134 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ TRIP SUMMARY ═══
   if (tripSummary) return (
-    <ScreenIn style={s.screen}>
-      <View style={[s.hero, { paddingTop: 50 }]}>
+    <ScreenIn style={{ flex: 1, backgroundColor: C.bgDark }}>
+
+      {/* ── Hero: celebration + earnings ── */}
+      <View style={{
+        paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 16 : 52,
+        paddingBottom: 32, paddingHorizontal: 24, alignItems: 'center', overflow: 'hidden',
+      }}>
         <Celebration />
-        <Text style={{ fontSize: 60 }}>🎉</Text>
-        <Text style={s.heroTitle}>Trip Complete!</Text>
-        <CountUp value={tripSummary.earned} style={{ color: C.green, fontSize: 36, fontWeight: 'bold', marginTop: 8 }} />
-        <Text style={{ color: '#aaa', fontSize: 12, marginTop: 2 }}>Aapki kamai is trip se</Text>
+        <View style={{ position: 'absolute', width: 360, height: 360, borderRadius: 180, backgroundColor: 'rgba(0,200,83,0.05)', top: -100, left: -100 }} />
+        <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.04)', bottom: -60, right: -60 }} />
+
+        <Text style={{ fontSize: 54, marginBottom: 8 }}>🎉</Text>
+        <Text style={{ fontSize: 11, fontWeight: '900', letterSpacing: 2.8, color: C.online, marginBottom: 6 }}>TRIP COMPLETE</Text>
+        <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 10 }}>Aapki kamai is trip se</Text>
+        <CountUp value={tripSummary.earned} prefix="₹" style={{ ...T.earnings, color: C.online, letterSpacing: -2.5, lineHeight: 58 }} />
       </View>
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
-        <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 24, elevation: 4, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={[s.sectionTitle, { marginBottom: 16 }]}>💰 Earning Summary</Text>
-          {/* Payment method badge */}
-          <View style={{ backgroundColor: tripSummary.payment_method === 'cash' ? 'rgba(16,185,129,0.12)' : tripSummary.payment_method === 'wallet' ? 'rgba(233,30,99,0.08)' : 'rgba(168,85,247,0.12)', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: tripSummary.payment_method === 'cash' ? 'rgba(16,185,129,0.3)' : tripSummary.payment_method === 'wallet' ? 'rgba(233,30,99,0.3)' : 'rgba(168,85,247,0.3)' }}>
-            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#0F172A' }}>
-              {tripSummary.payment_method === 'cash' ? '💵 Cash Payment' : tripSummary.payment_method === 'wallet' ? '💰 Wallet Payment' : '💳 Online Payment'}
-            </Text>
+
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
+
+        {/* ── Earnings breakdown card ── */}
+        <SlideIn style={{ marginBottom: 14 }}>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: R.md, padding: 20, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+
+            {/* Payment method badge */}
+            <View style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              backgroundColor: tripSummary.payment_method === 'cash' ? 'rgba(0,200,83,0.13)' : tripSummary.payment_method === 'wallet' ? 'rgba(255,45,120,0.1)' : 'rgba(168,85,247,0.13)',
+              borderRadius: R.full, paddingHorizontal: 20, paddingVertical: 8, marginBottom: 18, alignSelf: 'center',
+              borderWidth: 1, borderColor: tripSummary.payment_method === 'cash' ? 'rgba(0,200,83,0.32)' : tripSummary.payment_method === 'wallet' ? 'rgba(255,45,120,0.28)' : 'rgba(168,85,247,0.32)',
+            }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: tripSummary.payment_method === 'cash' ? C.online : tripSummary.payment_method === 'wallet' ? C.pink : '#A855F7' }}>
+                {tripSummary.payment_method === 'cash' ? '💵 Cash Payment' : tripSummary.payment_method === 'wallet' ? '💰 Wallet Payment' : '💳 Online Payment'}
+              </Text>
+            </View>
+
+            {/* Hourly badge */}
+            {tripSummary.isHourly && (
+              <View style={{ backgroundColor: 'rgba(0,200,83,0.09)', borderRadius: R.xs, padding: 11, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(0,200,83,0.2)', alignItems: 'center' }}>
+                <Text style={{ fontSize: 13, fontWeight: '800', color: C.online }}>⏱️ Hourly Trip</Text>
+                {tripSummary.earlyEnd && <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>Early end — 70% minimum protection applied</Text>}
+                {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#F59E0B', marginTop: 4 }}>📍 {tripSummary.extraKmInfo}</Text>}
+              </View>
+            )}
+
+            {/* Breakdown rows */}
+            {[
+              { label: 'Total Fare', val: '₹' + tripSummary.fare, accent: false },
+              { label: `Platform Fee (${tripSummary.isHourly ? '12' : '15'}%)`, val: tripSummary.fee, accent: false },
+              { label: 'Aapki Kamai', val: tripSummary.earned, accent: true },
+            ].map((row, i) => (
+              <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 13, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: 'rgba(255,255,255,0.06)' }}>
+                <Text style={{ fontSize: 13, color: row.accent ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.38)' }}>{row.label}</Text>
+                <Text style={{ fontSize: row.accent ? 24 : 14, fontWeight: row.accent ? '900' : '600', color: row.accent ? C.online : 'rgba(255,255,255,0.55)', letterSpacing: row.accent ? -0.5 : 0 }}>{row.val}</Text>
+              </View>
+            ))}
           </View>
-          {tripSummary.isHourly && (
-            <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 10, padding: 10, marginBottom: 14, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: C.green }}>⏱️ Hourly Trip · 💰 Wallet Payment</Text>
-              {tripSummary.earlyEnd && <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 4 }}>Early end — 70% minimum protection applied</Text>}
-              {tripSummary.extraKmInfo && <Text style={{ fontSize: 12, color: '#F59E0B', marginTop: 4 }}>📍 {tripSummary.extraKmInfo}</Text>}
-            </View>
-          )}
-          {[['Total Fare', '₹' + tripSummary.fare],[`Platform Fee (${tripSummary.isHourly ? '12' : '15'}%)`, tripSummary.fee],['Aapki Kamai', tripSummary.earned]].map(([k, v], i) => (
-            <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 10, borderBottomWidth: i < 4 ? 1 : 0, borderBottomColor: '#334155' }}>
-              <Text style={{ fontSize: 14, color: '#94A3B8' }}>{k}</Text>
-              <Text style={{ fontSize: 14, fontWeight: i === 4 ? 'bold' : '500', color: i === 4 ? C.green : '#E2E8F0' }}>{v}</Text>
-            </View>
-          ))}
-        </View>
-        {/* Ride Extension Request — same customer wants another trip */}
+        </SlideIn>
+
+        {/* ── Extension Request ── */}
         {extRequest && (
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 16, padding: 16, marginBottom: 14, borderWidth: 2, borderColor: 'rgba(245,158,11,0.4)' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
-              <Text style={{ fontSize: 28, marginRight: 10 }}>🔄</Text>
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.09)', borderRadius: R.md, padding: 18, marginBottom: 14, borderWidth: 2, borderColor: 'rgba(245,158,11,0.38)' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+              <Text style={{ fontSize: 28, marginRight: 12 }}>🔄</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: '#F59E0B', fontWeight: '800', fontSize: 15 }}>Ride Extension Request!</Text>
-                <Text style={{ color: '#94A3B8', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} — same customer</Text>
+                <Text style={{ color: '#F59E0B', fontWeight: '900', fontSize: 15 }}>Ride Extension Request!</Text>
+                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, marginTop: 2 }}>{extRequest.customer_name} — same customer</Text>
               </View>
-              <View style={{ backgroundColor: C.pink, borderRadius: 20, width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 16 }}>{extRespSec}</Text>
+              <View style={{ backgroundColor: C.pink, borderRadius: R.full, width: 44, height: 44, alignItems: 'center', justifyContent: 'center', ...SHADOW.pink }}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 17 }}>{extRespSec}</Text>
               </View>
             </View>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ color: '#64748B', fontSize: 11 }}>Naya destination</Text>
-              <Text style={{ color: '#0F172A', fontWeight: '700', fontSize: 14, marginTop: 2 }}>{extRequest.new_drop}</Text>
-              <Text style={{ color: C.green, fontWeight: 'bold', fontSize: 18, marginTop: 6 }}>₹{Math.round(extRequest.estimated_fare)}</Text>
-              <Text style={{ color: '#64748B', fontSize: 11 }}>Estimated fare</Text>
+            <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: R.xs, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+              <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, letterSpacing: 1.4, marginBottom: 5 }}>NAYA DESTINATION</Text>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>{extRequest.new_drop}</Text>
+              <Text style={{ color: C.online, fontWeight: '900', fontSize: 22, marginTop: 8, letterSpacing: -0.5 }}>₹{Math.round(extRequest.estimated_fare)}</Text>
             </View>
             <View style={{ flexDirection: 'row', gap: 10 }}>
-              <Bouncy style={{ flex: 1, backgroundColor: C.green, borderRadius: 12, padding: 14, alignItems: 'center' }} onPress={acceptExtension} disabled={extAccLoading}>
-                <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{extAccLoading ? '...' : '✅ Accept'}</Text>
+              <Bouncy style={{ flex: 1, backgroundColor: C.online, borderRadius: R.xs, padding: 15, alignItems: 'center', ...SHADOW.green }} onPress={acceptExtension} disabled={extAccLoading}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{extAccLoading ? '⏳' : '✅  Accept'}</Text>
               </Bouncy>
-              <Bouncy style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }} onPress={rejectExtension}>
-                <Text style={{ color: '#94A3B8', fontWeight: 'bold', fontSize: 15 }}>✗ Reject</Text>
+              <Bouncy style={{ flex: 1, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: R.xs, padding: 15, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)' }} onPress={rejectExtension}>
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontWeight: '700', fontSize: 15 }}>✗  Reject</Text>
               </Bouncy>
             </View>
           </View>
         )}
-        {/* Rate Customer */}
+
+        {/* ── Rate Customer ── */}
         {!custRatingDone ? (
-          <View style={{ backgroundColor: '#F8FAFC', borderRadius: 20, padding: 20, elevation: 3, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-            <Text style={{ fontSize: 15, fontWeight: '800', color: '#0F172A', marginBottom: 2 }}>Customer ko Rate karo</Text>
-            <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 14 }}>Yeh customer kaisa tha? (1–5 stars)</Text>
-            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 14 }}>
+          <View style={{ backgroundColor: 'rgba(255,255,255,0.04)', borderRadius: R.md, padding: 20, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)' }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: '#fff', marginBottom: 3 }}>Customer ko Rate karo</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.32)', marginBottom: 18 }}>Yeh customer kaisa tha?</Text>
+            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, marginBottom: 18 }}>
               {[1,2,3,4,5].map(star => (
-                <TouchableOpacity key={star} onPress={() => setCustRatingStars(star)}>
-                  <Text style={{ fontSize: 38, opacity: star <= custRatingStars ? 1 : 0.25 }}>⭐</Text>
+                <TouchableOpacity key={star} onPress={() => setCustRatingStars(star)} style={{ padding: 4 }}>
+                  <Text style={{ fontSize: 42, opacity: star <= custRatingStars ? 1 : 0.18 }}>⭐</Text>
                 </TouchableOpacity>
               ))}
             </View>
-            {custRatingStars > 0 && (
-              <TouchableOpacity onPress={rateCustomer}
-                style={{ backgroundColor: C.green, borderRadius: 12, padding: 13, alignItems: 'center', elevation: 3, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 6 }}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Submit Rating</Text>
-              </TouchableOpacity>
-            )}
-            {custRatingStars === 0 && (
-              <TouchableOpacity onPress={() => setCustRatingDone(true)}>
-                <Text style={{ textAlign: 'center', color: '#475569', fontSize: 12, marginTop: 4 }}>Skip</Text>
+            {custRatingStars > 0 ? (
+              <Bouncy onPress={rateCustomer} style={{ backgroundColor: C.online, borderRadius: R.xs, padding: 15, alignItems: 'center', ...SHADOW.green }}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 14 }}>Submit {custRatingStars}★ Rating</Text>
+              </Bouncy>
+            ) : (
+              <TouchableOpacity onPress={() => setCustRatingDone(true)} style={{ alignItems: 'center', paddingVertical: 8 }}>
+                <Text style={{ color: 'rgba(255,255,255,0.28)', fontSize: 12, fontWeight: '600' }}>Skip</Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
-          <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 16, padding: 16, marginBottom: 16, alignItems: 'center', flexDirection: 'row', gap: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-            <Text style={{ fontSize: 22 }}>✅</Text>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: C.green }}>Customer rating submit ho gaya!</Text>
+          <View style={{ backgroundColor: 'rgba(0,200,83,0.09)', borderRadius: R.sm, padding: 14, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(0,200,83,0.22)' }}>
+            <Text style={{ fontSize: 20 }}>✅</Text>
+            <Text style={{ fontSize: 13, fontWeight: '700', color: C.online }}>Customer rating submit ho gaya!</Text>
           </View>
         )}
+
+        {/* ── Complaint ── */}
         <TouchableOpacity onPress={() => { setDrvCmpType(''); setDrvCmpTitle(''); setDrvCmpDesc(''); setDrvCmpRideId(tripSummary?.ride_id || lastRideId || ''); setDrvCmpStep(1); setDrSubScreen('complaint-new'); setTripSummary(null); }}
-          style={{ backgroundColor: 'rgba(233,69,96,0.08)', borderRadius: 12, padding: 14, marginBottom: 10, borderWidth: 1.5, borderColor: C.pink, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          style={{ backgroundColor: 'rgba(239,68,68,0.07)', borderRadius: R.xs, padding: 15, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(239,68,68,0.24)', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
           <Text style={{ fontSize: 18 }}>⚠️</Text>
-          <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
+          <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 14 }}>Customer Issue? Complaint File Karo</Text>
         </TouchableOpacity>
-        <Bouncy style={[s.btn, { backgroundColor: C.green, shadowColor: C.green, shadowOpacity: 0.4, shadowRadius: 8, elevation: 4 }]} onPress={() => { setTripSummary(null); setExtRequest(null); }}><Text style={s.btnTxt}>🏠 Next Ride ke liye Ready</Text></Bouncy>
+
+        {/* ── Next ride CTA ── */}
+        <Bouncy style={{ backgroundColor: C.online, borderRadius: R.sm, padding: 18, alignItems: 'center', ...SHADOW.green }} onPress={() => { setTripSummary(null); setExtRequest(null); }}>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>🏠  Next Ride ke liye Ready</Text>
+        </Bouncy>
+
       </ScrollView>
     </ScreenIn>
   );
