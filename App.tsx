@@ -3598,42 +3598,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.09)',
         gap:10,
       }}>
-        {/* ETA / distance info row */}
-        {(distToPickup || tripRemainingEta) ? (
-          <View style={{ flexDirection:'row', justifyContent:'center', gap:10 }}>
-            {activeRide?.status !== 'started' && distToPickup ? (
-              <View style={{ backgroundColor:'rgba(26,115,232,0.14)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(26,115,232,0.35)' }}>
-                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>📍 {distToPickup}</Text>
-              </View>
-            ) : tripRemainingEta ? (
-              <View style={{ backgroundColor:'rgba(26,115,232,0.14)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(26,115,232,0.35)' }}>
-                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>🛣️ {tripRemainingEta}</Text>
-              </View>
-            ) : null}
-          </View>
-        ) : null}
-
-        {/* Google Maps deep-link — always visible for matched/started */}
-        {(activeRide?.status === 'matched' || activeRide?.status === 'started') && (
-          <TouchableOpacity
-            activeOpacity={0.82}
-            onPress={() => {
-              const destLat = activeRide.status === 'started' ? activeRide.drop_lat  : activeRide.pickup_lat;
-              const destLng = activeRide.status === 'started' ? activeRide.drop_lng  : activeRide.pickup_lng;
-              if (!destLat || !destLng) return;
-              Linking.openURL(`google.navigation:q=${destLat},${destLng}&mode=driving`)
-                .catch(() => Linking.openURL(`https://maps.google.com/?daddr=${destLat},${destLng}`));
-            }}
-            style={{
-              flexDirection:'row', alignItems:'center', justifyContent:'center', gap:8,
-              backgroundColor:'rgba(26,115,232,0.12)',
-              borderRadius:14, paddingVertical:12,
-              borderWidth:1.5, borderColor:'rgba(26,115,232,0.35)',
-            }}>
-            <Text style={{ fontSize:18 }}>🗺️</Text>
-            <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>Maps mein kholein</Text>
-          </TouchableOpacity>
-        )}
+        {/* Navigation app options */}
+        {(activeRide?.status === 'matched' || activeRide?.status === 'started') && (() => {
+          const destLat = activeRide.status === 'started' ? activeRide.drop_lat : activeRide.pickup_lat;
+          const destLng = activeRide.status === 'started' ? activeRide.drop_lng : activeRide.pickup_lng;
+          const openGoogle = () => {
+            if (!destLat || !destLng) return;
+            Linking.openURL(`google.navigation:q=${destLat},${destLng}&mode=driving`)
+              .catch(() => Linking.openURL(`https://maps.google.com/?daddr=${destLat},${destLng}`));
+          };
+          const openWaze = () => {
+            if (!destLat || !destLng) return;
+            Linking.openURL(`waze://?ll=${destLat},${destLng}&navigate=yes`)
+              .catch(() => Linking.openURL(`https://waze.com/ul?ll=${destLat},${destLng}&navigate=yes`));
+          };
+          return (
+            <View style={{ flexDirection:'row', gap:8 }}>
+              <TouchableOpacity activeOpacity={0.82} onPress={openGoogle}
+                style={{ flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6, backgroundColor:'rgba(26,115,232,0.12)', borderRadius:14, paddingVertical:12, borderWidth:1.5, borderColor:'rgba(26,115,232,0.35)' }}>
+                <Text style={{ fontSize:17 }}>🗺️</Text>
+                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:13 }}>Google Maps</Text>
+              </TouchableOpacity>
+              <TouchableOpacity activeOpacity={0.82} onPress={openWaze}
+                style={{ flex:1, flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6, backgroundColor:'rgba(0,200,83,0.08)', borderRadius:14, paddingVertical:12, borderWidth:1.5, borderColor:'rgba(0,200,83,0.28)' }}>
+                <Text style={{ fontSize:17 }}>🚗</Text>
+                <Text style={{ color:'#00C853', fontWeight:'800', fontSize:13 }}>Waze</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })()}
 
         {/* Primary action button */}
         {activeRide?.status === 'matched' && (
@@ -4107,7 +4100,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={s.tripArrow}>↓</Text>
                 <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
               </View>
-              {eta ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
 
               {distToPickup && (activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.25)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
@@ -4861,11 +4853,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
 
               {/* ETA / Distance banners */}
-              {eta ? (
-                <View style={{ backgroundColor: 'rgba(34,197,94,0.1)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}>
-                  <Text style={{ color: C.green, fontWeight: '700', fontSize: 14 }}>🕐 {eta}</Text>
-                </View>
-              ) : null}
               {distToPickup && (activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.25)' }}>
                   <Text style={{ color: C.pink, fontWeight: '700', fontSize: 15 }}>📍 {distToPickup}</Text>
@@ -4902,14 +4889,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {/* ── Primary CTA: Arrived at pickup ── */}
               {activeRide.status === 'matched' && (
-                <Bouncy style={[s.tripBtn, { paddingVertical: 20, marginBottom: 28 }]} onPress={markArrived} disabled={loading}>
-                  <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
-                </Bouncy>
+                <View>
+                  <Bouncy style={[s.tripBtn, { paddingVertical: 20, marginBottom: 12 }]} onPress={markArrived} disabled={loading}>
+                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '📍 Pickup pe pahunch gaya'}</Text>
+                  </Bouncy>
+                  <TouchableOpacity onPress={() => setShowDriverCancelModal(true)} style={{ alignItems: 'center', paddingVertical: 8, marginBottom: 16 }} disabled={loading}>
+                    <Text style={{ color: '#94A3B8', fontSize: 13, fontWeight: '600' }}>✕ Trip Cancel Karo</Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {/* ── OTP entry — cancel ABOVE so keyboard never hides it ── */}
               {activeRide.status === 'arrived' && (
                 <View>
+                  {/* Driver waiting hints */}
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }} contentContainerStyle={{ gap: 10, paddingHorizontal: 2 }}>
+                    {[
+                      { emoji: '🙏', text: 'Thodi patience rakhein\nCustomer aa rahe hain jaldi' },
+                      { emoji: '⏱️', text: 'Sppero aapka time\nvalue karta hai' },
+                      { emoji: '💡', text: 'Zaroorat ho toh customer\nko call ya msg karein' },
+                      { emoji: '🚗', text: 'Customer ki destination\ntake help karna' },
+                    ].map((tip, i) => (
+                      <View key={i} style={{ backgroundColor: 'rgba(37,99,235,0.06)', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: 'rgba(37,99,235,0.16)', width: 158 }}>
+                        <Text style={{ fontSize: 22, marginBottom: 7 }}>{tip.emoji}</Text>
+                        <Text style={{ fontSize: 12, color: '#475569', fontWeight: '600', lineHeight: 18 }}>{tip.text}</Text>
+                      </View>
+                    ))}
+                  </ScrollView>
                   <Bouncy
                     style={[s.cancelBtn, { borderWidth: 1.5, borderColor: C.pink, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 20 }]}
                     onPress={() => setShowDriverCancelModal(true)}
