@@ -815,11 +815,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     // AppState: app comes back to foreground → immediate poll + socket reconnect
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
-        useDriverStore.getState().triggerPoll?.();
+        const storeState = useDriverStore.getState();
+        // If polling timer is missing but driver is online, restart polling
+        if (!storeState._pollTimer && (globalThis as any).__driverPhone) {
+          startPolling((globalThis as any).__driverPhone);
+        } else {
+          storeState.triggerPoll?.();
+        }
         const sock = (globalThis as any).__driverSocket;
         if (sock && !sock.connected) sock.connect();
         // Refresh wallet + commission so stale cache doesn't show
-        const ph = useDriverStore.getState().activeRide?.driver_phone
+        const ph = storeState.activeRide?.driver_phone
           || (globalThis as any).__driverPhone;
         if (ph) { loadDriverWallet(ph); loadCommissionHistory(ph); registerFCM(ph); }
       }
