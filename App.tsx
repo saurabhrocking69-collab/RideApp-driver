@@ -3598,6 +3598,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.09)',
         gap:10,
       }}>
+        {/* ETA / distance info row */}
+        {(distToPickup || tripRemainingEta) ? (
+          <View style={{ flexDirection:'row', justifyContent:'center', gap:10 }}>
+            {activeRide?.status !== 'started' && distToPickup ? (
+              <View style={{ backgroundColor:'rgba(26,115,232,0.14)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(26,115,232,0.35)' }}>
+                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>📍 {distToPickup}</Text>
+              </View>
+            ) : tripRemainingEta ? (
+              <View style={{ backgroundColor:'rgba(26,115,232,0.14)', borderRadius:10, paddingHorizontal:16, paddingVertical:8, borderWidth:1, borderColor:'rgba(26,115,232,0.35)' }}>
+                <Text style={{ color:'#4285F4', fontWeight:'800', fontSize:15 }}>🛣️ {tripRemainingEta}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
         {/* Navigation app options */}
         {(activeRide?.status === 'matched' || activeRide?.status === 'started') && (() => {
           const destLat = activeRide.status === 'started' ? activeRide.drop_lat : activeRide.pickup_lat;
