@@ -465,6 +465,9 @@ function App() {
   const [bankMsg, setBankMsg]           = useState('');
   const [showDriverCancelModal, setShowDriverCancelModal] = useState(false);
   const [cancelReason, setCancelReason]         = useState('');
+  const [earlyFlagModal, setEarlyFlagModal] = useState<{ dist: string } | null>(null);
+  const [distWarnModal, setDistWarnModal]   = useState<{ dist: string } | null>(null);
+  const distWarnResolveRef = useRef<((v: boolean) => void) | null>(null);
   const [paymentRideId, setPaymentRideId] = useState('');
   const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -1899,16 +1902,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
       if (distKm > 0.8) {
-        const confirm = await new Promise<boolean>(resolve =>
-          Alert.alert(
-            '⚠️ Aap drop location se door hain',
-            `Aap abhi drop se ${distKm.toFixed(1)}km door hain.\n\nAbhi complete karne se platform policy violation hoga aur customer ko alert jaayega. Kya waqai complete karna chahte ho?`,
-            [
-              { text: 'Cancel — Drop Karo Pehle', style: 'cancel', onPress: () => resolve(false) },
-              { text: 'Haan, Complete Karo', style: 'destructive', onPress: () => resolve(true) },
-            ]
-          )
-        );
+        const confirm = await new Promise<boolean>(resolve => {
+          distWarnResolveRef.current = resolve;
+          setDistWarnModal({ dist: distKm.toFixed(1) });
+        });
         if (!confirm) return;
       }
     }
@@ -1923,11 +1920,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       try { data = await res.json(); } catch (_e) {}
       if (res.ok || data.success) {
         if (data.early_completion) {
-          Alert.alert(
-            '⚠️ Early Completion Flagged',
-            `Trip complete hua — lekin system ne detect kiya ki aap drop se ${data.dist_from_drop}km door the.\n\nCustomer ko alert bheja gaya hai aur yeh policy violation record hua.`,
-            [{ text: 'Samajh Gaya' }]
-          );
+          setEarlyFlagModal({ dist: data.dist_from_drop });
         }
         setPaymentRideId(rideId);
         setPaymentFare(rideFare);
@@ -3373,29 +3366,52 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ DRIVER CANCEL MODAL ═══
   if (showDriverCancelModal) return (
     <View style={s.screen}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
-        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 20, paddingBottom: 30, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
-          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 16 }} />
-          <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0F172A', marginBottom: 6 }}>Trip Cancel karein?</Text>
-          <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 10, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-            <Text style={{ fontSize: 13, color: '#F59E0B', fontWeight: '600' }}>⚠️ Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
+      <View style={{ flex: 1, backgroundColor: 'rgba(8,14,24,0.82)', justifyContent: 'flex-end' }}>
+        <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 20, paddingBottom: 36 }}>
+          {/* Drag pill */}
+          <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 20 }} />
+          {/* Icon + title */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+            <View style={{ width: 52, height: 52, borderRadius: 16, backgroundColor: 'rgba(255,45,120,0.10)', borderWidth: 1.5, borderColor: 'rgba(255,45,120,0.25)', alignItems: 'center', justifyContent: 'center' }}>
+              <Ionicons name="close-circle" size={28} color={C.pink} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 19, fontWeight: '900', color: '#0F172A', letterSpacing: -0.3 }}>Trip Cancel karein?</Text>
+              <Text style={{ fontSize: 12, color: '#94A3B8', marginTop: 2 }}>Aage badhne se pehle reason chunein</Text>
+            </View>
           </View>
-          <Text style={{ fontSize: 14, fontWeight: '600', color: '#64748B', marginBottom: 10 }}>Cancel ka reason?</Text>
+          {/* Warning banner */}
+          <View style={{ backgroundColor: 'rgba(245,158,11,0.09)', borderRadius: 12, padding: 13, marginBottom: 18, borderWidth: 1, borderColor: 'rgba(245,158,11,0.28)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Ionicons name="warning" size={18} color="#F59E0B" />
+            <Text style={{ fontSize: 13, color: '#92650A', fontWeight: '600', flex: 1, lineHeight: 18 }}>Zyada cancel karne se aapka account suspend ho sakta hai!</Text>
+          </View>
+          {/* Reason selector */}
+          <Text style={{ fontSize: 13, fontWeight: '700', color: '#475569', marginBottom: 10, letterSpacing: 0.3, textTransform: 'uppercase' }}>Reason Chunein</Text>
           {['Customer nahi mila', 'Galat location', 'Emergency aa gayi', 'Vehicle problem', 'Customer rude tha'].map((reason, i) => (
             <TouchableOpacity key={i}
-              style={{ backgroundColor: cancelReason === reason ? C.pink : '#F8FAFC', borderRadius: 10, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: cancelReason === reason ? C.pink : '#E2E8F0' }}
+              style={{
+                borderRadius: 12, padding: 14, marginBottom: 8,
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: cancelReason === reason ? 'rgba(255,45,120,0.07)' : '#F8FAFC',
+                borderWidth: 1.5,
+                borderColor: cancelReason === reason ? C.pink : '#E2E8F0',
+              }}
               onPress={() => setCancelReason(reason)}>
-              <Text style={{ fontSize: 14, color: cancelReason === reason ? '#fff' : '#0F172A' }}>{reason}</Text>
+              <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: cancelReason === reason ? C.pink : '#CBD5E1', backgroundColor: cancelReason === reason ? C.pink : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                {cancelReason === reason && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#fff' }} />}
+              </View>
+              <Text style={{ fontSize: 14, fontWeight: '600', color: cancelReason === reason ? C.pink : '#334155', flex: 1 }}>{reason}</Text>
             </TouchableOpacity>
           ))}
+          {/* Actions */}
           <TouchableOpacity
-            style={{ backgroundColor: C.pink, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 8, opacity: cancelReason ? 1 : 0.5 }}
+            style={{ backgroundColor: C.pink, borderRadius: 14, padding: 16, alignItems: 'center', marginTop: 10, opacity: cancelReason ? 1 : 0.45, elevation: cancelReason ? 6 : 0, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 10 }}
             disabled={!cancelReason || loading}
             onPress={cancelTrip}>
-            <Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 15 }}>{loading ? '⏳ Cancel ho raha hai...' : '✕ Trip Cancel Karo'}</Text>
+            <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.2 }}>{loading ? 'Cancel ho raha hai…' : 'Trip Cancel Karo'}</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={{ padding: 14, alignItems: 'center' }} onPress={() => { setShowDriverCancelModal(false); setCancelReason(''); }}>
-            <Text style={{ color: '#64748B', fontWeight: 'bold', fontSize: 14 }}>Nahi, trip rakhni hai</Text>
+          <TouchableOpacity style={{ padding: 16, alignItems: 'center' }} onPress={() => { setShowDriverCancelModal(false); setCancelReason(''); }}>
+            <Text style={{ color: '#64748B', fontWeight: '700', fontSize: 14 }}>Nahi, trip jari rakhni hai</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -3417,6 +3433,77 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           style={{ backgroundColor: '#FF2D78', borderRadius: 14, paddingVertical: 15, paddingHorizontal: 52, elevation: 6, shadowColor: '#FF2D78', shadowOpacity: 0.35, shadowRadius: 8 }}
         >
           <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.3 }}>Okay</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // ═══ DISTANCE WARNING MODAL ═══
+  if (distWarnModal) return (
+    <View style={{ flex: 1, backgroundColor: 'rgba(8,14,24,0.90)', justifyContent: 'flex-end' }}>
+      <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 24, paddingBottom: 40 }}>
+        <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 24 }} />
+        {/* Route visual */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 8 }}>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(66,133,244,0.12)', borderWidth: 2, borderColor: '#4285F4', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="car" size={22} color="#4285F4" />
+          </View>
+          <View style={{ flex: 1, marginHorizontal: 8, alignItems: 'center' }}>
+            <View style={{ width: '100%', borderBottomWidth: 2, borderColor: '#E2E8F0', borderStyle: 'dashed' }} />
+            <View style={{ position: 'absolute', backgroundColor: '#FFF7ED', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: 'rgba(239,68,68,0.3)' }}>
+              <Text style={{ fontSize: 11, fontWeight: '800', color: '#EF4444' }}>{distWarnModal.dist} km door</Text>
+            </View>
+          </View>
+          <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(239,68,68,0.10)', borderWidth: 2, borderColor: '#EF4444', alignItems: 'center', justifyContent: 'center' }}>
+            <Ionicons name="location" size={22} color="#EF4444" />
+          </View>
+        </View>
+        <Text style={{ fontSize: 21, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginBottom: 10, letterSpacing: -0.4 }}>Drop se Door Hain</Text>
+        <Text style={{ fontSize: 14, color: '#64748B', textAlign: 'center', lineHeight: 22, marginBottom: 28 }}>
+          Aap abhi drop location se <Text style={{ fontWeight: '900', color: '#EF4444' }}>{distWarnModal.dist} km</Text> door hain.{'\n'}
+          Abhi complete karne se <Text style={{ fontWeight: '700', color: '#0F172A' }}>platform policy violation</Text> record hogi aur customer ko alert jaayega.
+        </Text>
+        {/* Primary — go to drop */}
+        <TouchableOpacity
+          style={{ backgroundColor: C.yellow, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 10, elevation: 6, shadowColor: C.yellow, shadowOpacity: 0.38, shadowRadius: 10 }}
+          onPress={() => { distWarnResolveRef.current?.(false); setDistWarnModal(null); }}>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.2 }}>Drop Location Pe Jao Pehle</Text>
+        </TouchableOpacity>
+        {/* Secondary — force complete */}
+        <TouchableOpacity
+          style={{ borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+          onPress={() => { distWarnResolveRef.current?.(true); setDistWarnModal(null); }}>
+          <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>Phir Bhi Complete Karo</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  // ═══ EARLY COMPLETION FLAGGED MODAL ═══
+  if (earlyFlagModal) return (
+    <View style={{ flex: 1, backgroundColor: 'rgba(8,14,24,0.92)', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+      <View style={{ backgroundColor: '#FFFFFF', borderRadius: 28, padding: 30, width: '100%', alignItems: 'center', elevation: 24, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 24 }}>
+        {/* Warning icon */}
+        <View style={{ width: 76, height: 76, borderRadius: 24, backgroundColor: 'rgba(245,158,11,0.10)', borderWidth: 2, borderColor: 'rgba(245,158,11,0.35)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          <Ionicons name="warning" size={38} color="#F59E0B" />
+        </View>
+        <Text style={{ fontSize: 21, fontWeight: '900', color: '#0F172A', textAlign: 'center', marginBottom: 6, letterSpacing: -0.3 }}>Early Completion Flagged</Text>
+        {/* Distance highlight */}
+        <View style={{ backgroundColor: '#FFF7ED', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 18, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(245,158,11,0.28)', alignItems: 'center' }}>
+          <Text style={{ fontSize: 13, color: '#92650A', textAlign: 'center', lineHeight: 20 }}>
+            Trip complete hua — lekin system ne detect kiya ki aap drop se{' '}
+            <Text style={{ fontWeight: '900', fontSize: 15, color: '#D97706' }}>{earlyFlagModal.dist} km</Text>
+            {' '}door the.
+          </Text>
+        </View>
+        <Text style={{ fontSize: 13, color: '#94A3B8', textAlign: 'center', lineHeight: 20, marginBottom: 28 }}>
+          Customer ko alert bheja gaya hai aur yeh{'\n'}
+          <Text style={{ fontWeight: '700', color: '#475569' }}>policy violation record</Text> hua.
+        </Text>
+        <TouchableOpacity
+          style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 15, paddingHorizontal: 56, elevation: 6, shadowColor: C.pink, shadowOpacity: 0.38, shadowRadius: 10 }}
+          onPress={() => setEarlyFlagModal(null)}>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.3 }}>Samajh Gaya</Text>
         </TouchableOpacity>
       </View>
     </View>
