@@ -25,7 +25,7 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.saurabhspero.rideappdriver",
-      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "READ_EXTERNAL_STORAGE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION"],
+      "permissions": ["CAMERA", "RECEIVE_BOOT_COMPLETED", "VIBRATE", "POST_NOTIFICATIONS", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "ACCESS_BACKGROUND_LOCATION", "READ_EXTERNAL_STORAGE", "WAKE_LOCK", "FOREGROUND_SERVICE", "FOREGROUND_SERVICE_LOCATION", "USE_FULL_SCREEN_INTENT"],
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4"
@@ -44,13 +44,22 @@
         "color": "#e94560",
         "defaultChannel": "ride_requests",
         "mode": "production",
+        "sounds": ["./assets/sounds/ride_alert.wav"],
         "channels": [
           {
             "name": "ride_requests",
             "importance": 5,
             "bypassDnd": true,
-            "sound": "default",
+            "sound": "ride_alert",
             "vibrationPattern": [0, 500, 150, 500, 150, 800],
+            "lockscreenVisibility": 1
+          },
+          {
+            "name": "ride_requests_v2",
+            "importance": 5,
+            "bypassDnd": true,
+            "sound": "ride_alert",
+            "vibrationPattern": [0, 800, 200, 800, 200, 800],
             "lockscreenVisibility": 1
           },
           {

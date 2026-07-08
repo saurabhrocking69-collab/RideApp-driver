@@ -15,6 +15,7 @@ import { useVoiceNav } from './useVoiceNav';
 import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
 import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
+import { Audio } from 'expo-av';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
 import { io, Socket } from 'socket.io-client';
@@ -369,13 +370,18 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     if (lastId === String(rd.ride.id)) return; // already notified for this ride
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
     // Local notification — bypasses FCM entirely, guaranteed delivery from background task.
-    // ride_requests_v2: MAX importance, bypassDnd, 3s vibration.
+    // Category 'ride_request' shows Accept ✅ / Decline ✕ action buttons on lock screen.
+    const rideEmoji = rd.ride.ride_type === 'bike' ? '🏍️' : rd.ride.ride_type === 'car' ? '🚕' : '🛺';
+    const fareStr   = rd.ride.fare ? `₹${rd.ride.fare}` : '';
+    const pickup    = (rd.ride.pickup || 'Pickup').slice(0, 45);
+    const drop      = (rd.ride.drop_location || 'Drop').slice(0, 45);
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: '🚖 Nayi Ride Request!',
-        body: `₹${rd.ride.fare || '?'} · ${(rd.ride.pickup || 'Pickup location').slice(0, 60)}`,
-        sound: 'default',
-        data: { type: 'new_ride' },
+        title: `${rideEmoji} Nayi Ride Request! ${fareStr}`,
+        body: `${pickup} → ${drop}`,
+        sound: 'ride_alert',
+        categoryIdentifier: 'ride_request',
+        data: { type: 'new_ride', ride_id: String(rd.ride.id) },
         ...(Platform.OS === 'android' ? { channelId: 'ride_requests_v2' } : {}),
       },
       trigger: null,
@@ -430,6 +436,7 @@ function App() {
   }, []);
   const socketRef = useRef<Socket | null>(null);
   const onlineNotifIdRef = useRef<string | null>(null);
+  const alarmSoundRef = useRef<Audio.Sound | null>(null);
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
@@ -723,14 +730,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Notification Handler ──────────────────────
   useEffect(() => {
+    // Register Accept / Decline action buttons for ride-request notifications
+    Notifications.setNotificationCategoryAsync('ride_request', [
+      {
+        identifier: 'notif_accept',
+        buttonTitle: '✅ Accept',
+        options: { opensAppToForeground: true },
+      },
+      {
+        identifier: 'notif_decline',
+        buttonTitle: '✕ Decline',
+        options: { opensAppToForeground: false, isDestructive: true },
+      },
+    ]).catch(() => {});
+
     if (Platform.OS === 'android') {
       // v2 channel — Android locks channel settings after first creation; v2 forces
       // correct MAX+bypassDnd settings on every device regardless of previous installs.
       Notifications.setNotificationChannelAsync('ride_requests_v2', {
         name: 'Ride Requests',
         importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
-        vibrationPattern: [0, 800, 200, 800, 200, 800],   // ~3 seconds
+        sound: 'ride_alert',
+        vibrationPattern: [0, 800, 200, 800, 200, 800],
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
         bypassDnd: true,
@@ -740,7 +761,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       Notifications.setNotificationChannelAsync('ride_requests', {
         name: 'Ride Requests (Legacy)',
         importance: Notifications.AndroidImportance.MAX,
-        sound: 'default',
+        sound: 'ride_alert',
         vibrationPattern: [0, 800, 200, 800, 200, 800],
         enableVibrate: true,
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
@@ -774,11 +795,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     });
 
     // Notification arrives while app is alive (foreground OR minimized with fg service)
-    // → start looping alarm immediately, then fetch ride details
+    // Alarm ringtone is handled by the rideReq useEffect; just poll here.
     const sub1 = Notifications.addNotificationReceivedListener(n => {
       const data = n.request.content.data as any;
       if (data?.type === 'new_ride') {
-        Vibration.vibrate([0, 800, 200, 800, 200, 800]); // ~3 seconds
+        Vibration.vibrate([0, 600, 150, 600]); // short vibrate — audio alarm handles the rest
         useDriverStore.getState().triggerPoll?.();
       }
       if (data?.type === 'ride_cancelled') {
@@ -790,9 +811,37 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
     });
 
-    // Tap: notification tapped (background/killed) → open home + poll
+    // Notification action buttons: Accept / Decline from lock screen
     const handleDriverNotifTap = (response: any) => {
-      const data = response?.notification?.request?.content?.data as any;
+      const data   = response?.notification?.request?.content?.data as any;
+      const action = response?.actionIdentifier as string | undefined;
+
+      // ── Accept button tapped directly on notification ──
+      if (action === 'notif_accept' && data?.ride_id) {
+        const rideId = data.ride_id;
+        setScreen('home'); setActiveTab('live');
+        // Poll first so pendingRide is populated, then accept
+        useDriverStore.getState().triggerPoll?.();
+        const driverPhone = (globalThis as any).__driverPhone;
+        if (driverPhone) {
+          apiPost('/api/rides/accept', { ride_id: rideId, driver_phone: driverPhone })
+            .catch(() => {});
+        }
+        return;
+      }
+
+      // ── Decline button tapped directly on notification ──
+      if (action === 'notif_decline' && data?.ride_id) {
+        const driverPhone = (globalThis as any).__driverPhone;
+        if (driverPhone) {
+          apiPost('/api/rides/reject-offer', { ride_id: data.ride_id, driver_phone: driverPhone })
+            .catch(() => {});
+        }
+        useDriverStore.setState({ pendingRide: null });
+        return;
+      }
+
+      // ── Regular notification tap / dismiss ──
       if (data?.type === 'new_ride') {
         setScreen('home'); setActiveTab('live');
         useDriverStore.getState().triggerPoll?.();
@@ -1207,6 +1256,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const iv = setInterval(fetchRemaining, 30000);
     return () => clearInterval(iv);
   }, [activeRide?.status, activeRide?.id]);
+
+  // ── Alarm ringtone: loop while ride request is pending, stop otherwise ───────
+  useEffect(() => {
+    let active = true;
+    if (rideReq) {
+      Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false }).catch(() => {});
+      const sound = new Audio.Sound();
+      alarmSoundRef.current = sound;
+      sound.loadAsync(require('./assets/sounds/ride_alert.wav')).then(() => {
+        if (!active) { sound.unloadAsync().catch(() => {}); return; }
+        sound.setIsLoopingAsync(true).catch(() => {});
+        sound.playAsync().catch(() => {});
+      }).catch(() => {});
+    } else {
+      const s = alarmSoundRef.current;
+      if (s) {
+        alarmSoundRef.current = null;
+        s.stopAsync().catch(() => {}).finally(() => s.unloadAsync().catch(() => {}));
+      }
+    }
+    return () => {
+      active = false;
+      const s = alarmSoundRef.current;
+      if (s) {
+        alarmSoundRef.current = null;
+        s.stopAsync().catch(() => {}).finally(() => s.unloadAsync().catch(() => {}));
+      }
+    };
+  }, [rideReq?.id]);
 
   // ── Auto-switch to Live tab when a ride or request appears ──
   useEffect(() => {
