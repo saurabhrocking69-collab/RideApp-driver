@@ -3441,7 +3441,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ DISTANCE WARNING MODAL ═══
   if (distWarnModal) return (
     <View style={{ flex: 1, backgroundColor: 'rgba(8,14,24,0.90)', justifyContent: 'flex-end' }}>
-      <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 24, paddingBottom: 40 }}>
+      <View style={{ backgroundColor: '#FFFFFF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingTop: 12, paddingHorizontal: 24, paddingBottom: Platform.OS === 'android' ? 68 : 44 }}>
         <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: '#CBD5E1', alignSelf: 'center', marginBottom: 24 }} />
         {/* Route visual */}
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, paddingHorizontal: 8 }}>
@@ -3465,15 +3465,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </Text>
         {/* Primary — go to drop */}
         <TouchableOpacity
-          style={{ backgroundColor: C.yellow, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 10, elevation: 6, shadowColor: C.yellow, shadowOpacity: 0.38, shadowRadius: 10 }}
+          style={{ backgroundColor: '#FF2D78', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 10, elevation: 6, shadowColor: '#FF2D78', shadowOpacity: 0.40, shadowRadius: 10 }}
           onPress={() => { distWarnResolveRef.current?.(false); setDistWarnModal(null); }}>
           <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15, letterSpacing: 0.2 }}>Drop Location Pe Jao Pehle</Text>
         </TouchableOpacity>
-        {/* Secondary — force complete */}
+        {/* Secondary — force complete (danger) */}
         <TouchableOpacity
-          style={{ borderWidth: 1.5, borderColor: '#E2E8F0', borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}
+          style={{ borderWidth: 1.5, borderColor: '#EF4444', borderRadius: 14, paddingVertical: 14, alignItems: 'center', backgroundColor: '#FFF5F5' }}
           onPress={() => { distWarnResolveRef.current?.(true); setDistWarnModal(null); }}>
-          <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>Phir Bhi Complete Karo</Text>
+          <Text style={{ color: '#EF4444', fontWeight: '700', fontSize: 14 }}>Phir Bhi Complete Karo</Text>
         </TouchableOpacity>
       </View>
     </View>
