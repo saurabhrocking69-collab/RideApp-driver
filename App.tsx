@@ -325,6 +325,83 @@ const MapOverlay = ({ hasRoute, pickup, drop, live = false }: any) => {
 type Screen = 'splash' | 'login' | 'permissions' | 'home';
 const SCREEN_H = Dimensions.get('window').height;
 
+// ─── SkeletonBox + Skeleton Cards — shimmer loading placeholders ──────────────
+const _SKEL_W = Dimensions.get('window').width;
+const SkeletonBox = ({ width, height, radius = 8, style }: { width?: number; height: number; radius?: number; style?: any }) => {
+  const shine = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(Animated.timing(shine, { toValue: 1, duration: 1100, useNativeDriver: true }));
+    loop.start();
+    return () => loop.stop();
+  }, []);
+  const w = width ?? _SKEL_W;
+  const tx = shine.interpolate({ inputRange: [0, 1], outputRange: [-w, w] });
+  return (
+    <View style={[{ width, height, borderRadius: radius, backgroundColor: '#E8EEF2', overflow: 'hidden' }, style]}>
+      <Animated.View style={{ position: 'absolute', top: 0, bottom: 0, width: '100%', backgroundColor: 'rgba(255,255,255,0.62)', transform: [{ translateX: tx }] }} />
+    </View>
+  );
+};
+const SkeletonRideCard = () => (
+  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View style={{ gap: 8 }}>
+        <SkeletonBox width={140} height={13} radius={6} />
+        <SkeletonBox width={110} height={11} radius={5} />
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 7 }}>
+        <SkeletonBox width={54} height={16} radius={5} />
+        <SkeletonBox width={44} height={11} radius={4} />
+      </View>
+    </View>
+  </View>
+);
+const SkeletonHourlyCard = () => (
+  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+      <View style={{ gap: 8 }}>
+        <SkeletonBox width={150} height={13} radius={6} />
+        <SkeletonBox width={120} height={11} radius={5} />
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 7 }}>
+        <SkeletonBox width={54} height={16} radius={5} />
+        <SkeletonBox width={48} height={11} radius={4} />
+      </View>
+    </View>
+  </View>
+);
+const SkeletonCommissionRow = () => (
+  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0', borderLeftWidth: 3, borderLeftColor: '#E2E8F0' }}>
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <View style={{ gap: 8 }}>
+        <View style={{ flexDirection: 'row', gap: 6 }}>
+          <SkeletonBox width={64} height={20} radius={6} />
+          <SkeletonBox width={48} height={20} radius={6} />
+        </View>
+        <SkeletonBox width={130} height={11} radius={5} />
+      </View>
+      <View style={{ alignItems: 'flex-end', gap: 6 }}>
+        <SkeletonBox width={50} height={14} radius={5} />
+        <SkeletonBox width={44} height={11} radius={4} />
+      </View>
+    </View>
+  </View>
+);
+const SkeletonBonusCard = () => (
+  <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+      <SkeletonBox width={40} height={40} radius={20} style={{ marginRight: 12 }} />
+      <View style={{ flex: 1, gap: 8 }}>
+        <SkeletonBox width={160} height={14} radius={6} />
+        <SkeletonBox width={120} height={11} radius={5} />
+      </View>
+    </View>
+    <SkeletonBox height={10} radius={5} />
+    <View style={{ height: 8 }} />
+    <SkeletonBox width={200} height={10} radius={5} />
+  </View>
+);
+
 // ─── Background Location Task ────────────────────────────────────────────────
 // MUST be defined at module level, before any component mounts.
 // When app is minimized/screen locked, this task fires every ~5s and pings backend.
@@ -6690,7 +6767,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </>)}
 
         {walletEarningsTab === 'rides' && (<>
-          {driverRideHistory.length === 0 ? (
+          {!walletLoaded ? (
+            [1,2,3,4].map(i => <SkeletonRideCard key={i} />)
+          ) : driverRideHistory.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
               <Text style={{ fontSize: 36 }}>🛺</Text>
               <Text style={{ color: '#475569', marginTop: 10 }}>Koi completed ride nahi mili</Text>
@@ -6712,7 +6791,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </>)}
 
         {walletEarningsTab === 'hourly' && (<>
-          {driverHourlyHistory.length === 0 ? (
+          {!walletLoaded ? (
+            [1,2,3].map(i => <SkeletonHourlyCard key={i} />)
+          ) : driverHourlyHistory.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 40 }}>
               <Text style={{ fontSize: 36 }}>⏱️</Text>
               <Text style={{ color: '#475569', marginTop: 10 }}>Koi hourly ride nahi mili</Text>
@@ -6797,7 +6878,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           {/* Per-ride commission history */}
           <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A', marginTop: 8, marginBottom: 8 }}>Per-Ride Commission</Text>
-          {commissionData.records.length === 0 ? (
+          {!walletLoaded ? (
+            [1,2,3].map(i => <SkeletonCommissionRow key={i} />)
+          ) : commissionData.records.length === 0 ? (
             <View style={{ alignItems: 'center', padding: 30 }}>
               <Text style={{ fontSize: 32 }}>📋</Text>
               <Text style={{ color: '#475569', marginTop: 8 }}>Koi commission record nahi</Text>
@@ -6946,8 +7029,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         ) : null}
 
         {bonusLoading && !dash ? (
-          <View style={{ alignItems: 'center', paddingVertical: 40 }}>
-            <Text style={{ color: '#999', fontSize: 14 }}>Loading bonus data...</Text>
+          <View style={{ paddingVertical: 8 }}>
+            <SkeletonBonusCard />
+            <SkeletonBonusCard />
+            <SkeletonBonusCard />
           </View>
         ) : (
           <>
