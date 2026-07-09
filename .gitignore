@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# IDE cache (Android Studio / IntelliJ)
+.idea/
