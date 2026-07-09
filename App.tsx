@@ -475,6 +475,9 @@ function App() {
   const [navMuted, setNavMuted]     = useState(false);
   const [inNavMode, setInNavMode]   = useState(false);
   const [showFuelLog, setShowFuelLog] = useState(false);
+  const [showNotifCenter, setShowNotifCenter] = useState(false);
+  const [driverNotifs, setDriverNotifs] = useState<any[]>([]);
+  const [notifUnread, setNotifUnread] = useState(0);
   const [chatMsgs, setChatMsgs]         = useState<any[]>([]);
   const [chatInput, setChatInput]       = useState('');
   const [showChat, setShowChat]         = useState(false);
@@ -644,7 +647,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
               const pd = await AsyncStorage.getItem('_permsDone').catch(() => null);
-              navTo = pd ? 'home' : 'permissions'; loadUpiId(savedPhone); registerFCM(savedPhone); fetchDriverLevel(savedPhone);
+              navTo = pd ? 'home' : 'permissions'; loadUpiId(savedPhone); registerFCM(savedPhone); fetchDriverLevel(savedPhone); fetchDriverNotifs(savedPhone);
               // Restore active ride into store so home screen shows it immediately.
               // If a ride is active, also restore isOnline=true and restart polling so
               // the header shows "Online" and ride events keep flowing.
@@ -812,6 +815,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (data?.type === 'hourly_extend') {
         Vibration.vibrate([0, 400, 200, 400]);
       }
+      if (data?.type === 'broadcast') {
+        // Add to notification center and show unread badge
+        const newNotif = {
+          title: n.request.content.title || 'Sppero',
+          message: n.request.content.body || '',
+          created_at: new Date().toISOString(),
+          type: 'broadcast',
+        };
+        setDriverNotifs(prev => [newNotif, ...prev].slice(0, 30));
+        setNotifUnread(c => c + 1);
+      }
     });
 
     // Notification action buttons: Accept / Decline from lock screen
@@ -970,6 +984,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     return () => backHandler.remove();
   }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen]);
 
+  // Refresh driver notifications when center is opened
+  useEffect(() => {
+    if (showNotifCenter && phone) fetchDriverNotifs(phone);
+  }, [showNotifCenter]);
+
   // Load earnings-tab data when tab becomes active (not in render body — avoids infinite loop on network failure)
   useEffect(() => {
     if (activeTab === 'earnings' && phone) {
@@ -1085,6 +1104,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const d = await apiGet(`/api/driver/level/${ph}`);
       if (!d._error && d.level && Array.isArray(d.benefits)) setDriverLevel(d);
+    } catch (_e) {}
+  };
+
+  const fetchDriverNotifs = async (ph: string) => {
+    try {
+      const d = await apiGet(`/api/notifications?target=${ph}&role=driver`);
+      if (d.notifications && Array.isArray(d.notifications)) {
+        setDriverNotifs(d.notifications);
+        setNotifUnread(d.notifications.length);
+      }
     } catch (_e) {}
   };
 
@@ -1615,7 +1644,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
-        loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone);
+        loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone); fetchDriverNotifs(data.driver.phone);
         setScreen(pd2 ? 'home' : 'permissions');
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
@@ -3935,8 +3964,58 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
         </View>
+        <TouchableOpacity
+          onPress={() => { setNotifUnread(0); fetchDriverNotifs(phone); setShowNotifCenter(true); }}
+          style={{ padding: 8, marginRight: 10, position: 'relative' }}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={notifUnread > 0 ? 'notifications' : 'notifications-outline'} size={22} color="#fff" />
+          {notifUnread > 0 && (
+            <View style={{ position: 'absolute', top: 5, right: 5, width: 9, height: 9, borderRadius: 5, backgroundColor: C.pink, borderWidth: 1.5, borderColor: '#1E1B4B' }} />
+          )}
+        </TouchableOpacity>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: C.online, false: C.glassBorder }} thumbColor="#fff" />
       </View>
+
+      {/* ── Driver Notification Center Modal ─────────────────────────────── */}
+      <Modal visible={showNotifCenter} animationType="slide" transparent={false} onRequestClose={() => setShowNotifCenter(false)}>
+        <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
+          {/* Header */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 14,
+            paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 56,
+            backgroundColor: '#1E1B4B', borderBottomWidth: 1, borderBottomColor: '#312E81' }}>
+            <TouchableOpacity onPress={() => setShowNotifCenter(false)} style={{ marginRight: 12 }}>
+              <Ionicons name="arrow-back" size={24} color="#fff" />
+            </TouchableOpacity>
+            <Ionicons name="notifications" size={20} color={C.pink} style={{ marginRight: 8 }} />
+            <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', flex: 1 }}>Notifications</Text>
+          </View>
+          {/* List */}
+          <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+            {driverNotifs.length === 0 ? (
+              <View style={{ alignItems: 'center', marginTop: 60 }}>
+                <Ionicons name="notifications-off-outline" size={48} color="#334155" />
+                <Text style={{ color: '#475569', fontSize: 14, marginTop: 12, fontWeight: '600' }}>Koi notification nahi abhi</Text>
+              </View>
+            ) : (
+              driverNotifs.map((n: any, i: number) => (
+                <View key={i} style={{ backgroundColor: '#1E293B', borderRadius: 14, padding: 14, marginBottom: 10,
+                  borderWidth: 1, borderColor: n.type === 'broadcast' ? '#4F46E5' : '#334155' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Ionicons name={n.type === 'broadcast' ? 'megaphone' : 'notifications'} size={16}
+                      color={n.type === 'broadcast' ? '#818CF8' : C.pink} />
+                    <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, flex: 1 }}>{n.title}</Text>
+                  </View>
+                  <Text style={{ color: '#94A3B8', fontSize: 13, lineHeight: 19 }}>{n.message || n.body}</Text>
+                  <Text style={{ color: '#475569', fontSize: 11, marginTop: 6 }}>
+                    {new Date(n.created_at).toLocaleString('hi-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              ))
+            )}
+          </ScrollView>
+        </View>
+      </Modal>
       {/* Content */}
       <View style={{ flex: 1, backgroundColor: '#F1F5F9', borderTopLeftRadius: 28, borderTopRightRadius: 28, marginTop: -24, paddingTop: 16, paddingHorizontal: 16 }}>
         <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets contentContainerStyle={{ paddingBottom: 130 }}>
