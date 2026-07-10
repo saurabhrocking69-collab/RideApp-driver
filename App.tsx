@@ -496,6 +496,62 @@ async function stopBgLocation(): Promise<void> {
   } catch (_e) {}
 }
 
+// ── Pre-queue card — floating offer shown to driver while on active/payment screen ─
+function PreQueueCard({ preQueued, phone, onAccept, onDecline }: {
+  preQueued: { rideId: number; pickup: string; fare: string; rideType: string; etaMin: number };
+  phone: string;
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  const slideAnim = useRef(new Animated.Value(120)).current;
+  useEffect(() => {
+    Animated.spring(slideAnim, { toValue: 0, tension: 90, friction: 11, useNativeDriver: true }).start();
+  }, []);
+
+  const RIDE_ICONS: Record<string, string> = { bike: '🏍️', auto: '🛺', car: '🚕', eriksha: '🛵', luxury: '🚙', electric_auto: '🌿', green_bike: '⚡' };
+  const icon = RIDE_ICONS[preQueued.rideType] || '🚗';
+
+  return (
+    <Animated.View style={{
+      position: 'absolute', bottom: 90, left: 12, right: 12, zIndex: 1000,
+      transform: [{ translateY: slideAnim }],
+      backgroundColor: '#0A0F1E',
+      borderRadius: 18, borderWidth: 2, borderColor: '#7C3AED',
+      shadowColor: '#7C3AED', shadowOpacity: 0.55, shadowRadius: 18, elevation: 20,
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <View style={{ backgroundColor: '#7C3AED', paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Text style={{ fontSize: 18 }}>{icon}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Next Ride Ready!</Text>
+          <Text style={{ color: 'rgba(255,255,255,0.72)', fontSize: 11 }}>Complete current trip, then go here</Text>
+        </View>
+        <Text style={{ color: '#E9D5FF', fontWeight: '800', fontSize: 14 }}>{preQueued.fare}</Text>
+      </View>
+
+      {/* Pickup info */}
+      <View style={{ paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+        <Ionicons name="location-sharp" size={18} color="#A78BFA" />
+        <Text style={{ flex: 1, color: '#E2E8F0', fontSize: 13, fontWeight: '600' }} numberOfLines={2}>{preQueued.pickup}</Text>
+        <View style={{ backgroundColor: '#1E0A3C', borderRadius: 10, paddingHorizontal: 9, paddingVertical: 4, borderWidth: 1, borderColor: '#7C3AED' }}>
+          <Text style={{ color: '#A78BFA', fontSize: 11, fontWeight: '800' }}>~{preQueued.etaMin} min</Text>
+        </View>
+      </View>
+
+      {/* Buttons */}
+      <View style={{ flexDirection: 'row', gap: 10, paddingHorizontal: 16, paddingBottom: 16 }}>
+        <TouchableOpacity onPress={onDecline} style={{ flex: 1, paddingVertical: 11, borderRadius: 10, backgroundColor: '#1E293B', alignItems: 'center', borderWidth: 1, borderColor: '#334155' }}>
+          <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 13 }}>Not Now</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={onAccept} style={{ flex: 2, paddingVertical: 11, borderRadius: 10, backgroundColor: '#7C3AED', alignItems: 'center', shadowColor: '#7C3AED', shadowOpacity: 0.5, shadowRadius: 8, elevation: 8 }}>
+          <Text style={{ color: '#fff', fontWeight: '900', fontSize: 13 }}>Queue This Ride ✓</Text>
+        </TouchableOpacity>
+      </View>
+    </Animated.View>
+  );
+}
+
 function App() {
   const [screen, setScreen]         = useState<Screen>('splash');
   const splashLogo  = useRef(new Animated.Value(0)).current;
@@ -518,6 +574,10 @@ function App() {
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
+  // Pre-assignment queue — a ride offered to this driver while they're still on an active trip
+  const [preQueued, setPreQueued]          = useState<{ rideId: number; pickup: string; fare: string; rideType: string; etaMin: number } | null>(null);
+  const [preQueueAccepted, setPreQueueAccepted] = useState(false);
+  const [pendingActivatedRide, setPendingActivatedRide] = useState<any>(null);
   const [earnings, setEarnings]     = useState(0);
   const [rides, setRides]           = useState(0);
   const [result, setResult]         = useState('');
@@ -1887,6 +1947,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               });
             }
           } catch (_e) {}
+        });
+        // Pre-assignment: a new customer ride is offered while this driver is still active
+        s.on('preRideQueued', (data: any) => {
+          setPreQueued({ rideId: data.rideId, pickup: data.pickup, fare: data.fare, rideType: data.rideType, etaMin: data.etaMin ?? 8 });
+          setPreQueueAccepted(false);
+          // Auto-dismiss card after 60s if driver doesn't respond
+          setTimeout(() => {
+            setPreQueued(prev => (prev?.rideId === data.rideId ? null : prev));
+          }, 60 * 1000);
+        });
+        s.on('preRideCancelled', (data: any) => {
+          setPreQueued(prev => {
+            if (prev?.rideId === data.rideId) { setResult('🚫 Queued ride was cancelled by customer'); return null; }
+            return prev;
+          });
+          setPreQueueAccepted(false);
+        });
+        s.on('preRideActivated', (data: any) => {
+          // Driver's queued ride is now fully assigned — store it, show after trip summary dismissed
+          setPendingActivatedRide({ id: data.rideId, pickup: data.pickup, drop_location: data.dropLocation, fare: data.fare, ride_type: data.rideType, status: 'matched' });
+          setPreQueued(null);
         });
         s.on('chatMessage', (msg: any) => {
           setChatMsgs((prev: any[]) => [...prev, msg]);
@@ -3319,6 +3400,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   if (paymentWaiting) return (
     <ScreenIn style={{ flex: 1, backgroundColor: C.bgDark }}>
 
+      {/* ── Pre-queue floating card — shown when a next ride is offered ── */}
+      {preQueued && !preQueueAccepted && (
+        <PreQueueCard
+          preQueued={preQueued}
+          phone={phone}
+          onAccept={() => {
+            fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+              .then(r => r.json())
+              .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+              .catch(() => setResult('❌ Network error'));
+          }}
+          onDecline={() => {
+            fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+              .then(() => { setPreQueued(null); })
+              .catch(() => setPreQueued(null));
+          }}
+        />
+      )}
+      {preQueued && preQueueAccepted && (
+        <View style={{ position: 'absolute', bottom: 90, left: 16, right: 16, zIndex: 999, backgroundColor: '#022C22', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#4ADE80', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 18 }}>✅</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#4ADE80', fontWeight: '900', fontSize: 13 }}>Next Ride Queued!</Text>
+            <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2 }}>{preQueued.pickup} · {preQueued.fare}</Text>
+          </View>
+        </View>
+      )}
+
       {/* ── Hero: fare + net earning ── */}
       <View style={{
         paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 20 : 56,
@@ -3741,8 +3850,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </TouchableOpacity>
 
         {/* ── Next ride CTA ── */}
-        <Bouncy style={{ backgroundColor: C.online, borderRadius: R.sm, padding: 18, alignItems: 'center', ...SHADOW.green }} onPress={() => { setTripSummary(null); setExtRequest(null); }}>
-          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>🏠  Next Ride ke liye Ready</Text>
+        <Bouncy style={{ backgroundColor: C.online, borderRadius: R.sm, padding: 18, alignItems: 'center', ...SHADOW.green }} onPress={() => {
+          setTripSummary(null); setExtRequest(null);
+          // If a queued ride was activated while we were on the summary screen, load it now
+          if (pendingActivatedRide) {
+            setActiveRide(pendingActivatedRide);
+            useDriverStore.setState({ activeRide: pendingActivatedRide });
+            setPendingActivatedRide(null);
+          }
+        }}>
+          <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.2 }}>
+            {pendingActivatedRide ? '🏍️  Go to Queued Ride' : '🏠  Next Ride ke liye Ready'}
+          </Text>
         </Bouncy>
 
       </ScrollView>
