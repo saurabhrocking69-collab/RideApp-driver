@@ -496,12 +496,13 @@ async function stopBgLocation(): Promise<void> {
   } catch (_e) {}
 }
 
-// ── Pre-queue card — floating offer shown to driver while on active/payment screen ─
-function PreQueueCard({ preQueued, phone, onAccept, onDecline }: {
+// ── Pre-queue card — floating offer shown to driver while on active/payment/nav screen ─
+function PreQueueCard({ preQueued, phone, onAccept, onDecline, containerStyle }: {
   preQueued: { rideId: number; pickup: string; fare: string; rideType: string; etaMin: number };
   phone: string;
   onAccept: () => void;
   onDecline: () => void;
+  containerStyle?: object;
 }) {
   const slideAnim = useRef(new Animated.Value(120)).current;
   useEffect(() => {
@@ -512,14 +513,14 @@ function PreQueueCard({ preQueued, phone, onAccept, onDecline }: {
   const icon = RIDE_ICONS[preQueued.rideType] || '🚗';
 
   return (
-    <Animated.View style={{
+    <Animated.View style={[{
       position: 'absolute', bottom: 90, left: 12, right: 12, zIndex: 1000,
       transform: [{ translateY: slideAnim }],
       backgroundColor: '#0A0F1E',
       borderRadius: 18, borderWidth: 2, borderColor: '#7C3AED',
       shadowColor: '#7C3AED', shadowOpacity: 0.55, shadowRadius: 18, elevation: 20,
       overflow: 'hidden',
-    }}>
+    }, containerStyle]}>
       {/* Header */}
       <View style={{ backgroundColor: '#7C3AED', paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
         <Text style={{ fontSize: 18 }}>{icon}</Text>
@@ -570,6 +571,7 @@ function App() {
   const socketRef = useRef<Socket | null>(null);
   const onlineNotifIdRef = useRef<string | null>(null);
   const alarmSoundRef = useRef<Audio.Sound | null>(null);
+  const preQueueSoundRef = useRef<Audio.Sound | null>(null);
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
@@ -1455,6 +1457,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
   }, [rideReq?.id]);
 
+  // ── Pre-queue offer sound: play ride_alert once (no loop) when a queued ride is offered ──
+  useEffect(() => {
+    if (!preQueued) {
+      const s = preQueueSoundRef.current;
+      if (s) { preQueueSoundRef.current = null; s.stopAsync().catch(() => {}).finally(() => s.unloadAsync().catch(() => {})); }
+      return;
+    }
+    let active = true;
+    Audio.setAudioModeAsync({ playsInSilentModeIOS: true, staysActiveInBackground: false }).catch(() => {});
+    const sound = new Audio.Sound();
+    preQueueSoundRef.current = sound;
+    sound.loadAsync(require('./assets/sounds/ride_alert.wav')).then(() => {
+      if (!active) { sound.unloadAsync().catch(() => {}); return; }
+      sound.setIsLoopingAsync(false).catch(() => {});
+      sound.playAsync().catch(() => {});
+    }).catch(() => {});
+    return () => {
+      active = false;
+      const s = preQueueSoundRef.current;
+      if (s) { preQueueSoundRef.current = null; s.stopAsync().catch(() => {}).finally(() => s.unloadAsync().catch(() => {})); }
+    };
+  }, [preQueued?.rideId]);
+
   // ── Auto-switch to Live tab when a ride or request appears ──
   useEffect(() => {
     if (rideReq || activeRide || hourlyRideReq || activeHourlyRide) {
@@ -1936,11 +1961,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             const res = await fetch(`${API}/api/rides/payment-status/${data.ride_id}`);
             const d = await res.json();
             if (d.payment_status === 'completed') {
-              const fare = parseFloat(d.fare || 0);
+              const fare = d.net_fare != null ? parseFloat(d.net_fare) : Math.max(0, parseFloat(d.fare || 0) - parseFloat(d.discount || 0));
               setPaymentMethod(d.payment_method || '');
               setPaymentWaiting(false);
               setTripSummary({
-                fare: String(d.fare),
+                fare: '₹' + fare.toFixed(0),
                 payment_method: d.payment_method,
                 earned: '₹' + (fare * 0.85).toFixed(0),
                 fee: '₹' + (fare * 0.15).toFixed(0),
@@ -1952,10 +1977,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         s.on('preRideQueued', (data: any) => {
           setPreQueued({ rideId: data.rideId, pickup: data.pickup, fare: data.fare, rideType: data.rideType, etaMin: data.etaMin ?? 8 });
           setPreQueueAccepted(false);
-          // Auto-dismiss card after 60s if driver doesn't respond
+          // Auto-dismiss 10s before server timeout (server gives 180s, we clear at 170s)
           setTimeout(() => {
             setPreQueued(prev => (prev?.rideId === data.rideId ? null : prev));
-          }, 60 * 1000);
+          }, 170 * 1000);
         });
         s.on('preRideCancelled', (data: any) => {
           setPreQueued(prev => {
@@ -2274,7 +2299,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput }) });
+      const res = await fetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput, driver_phone: phone }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide((p: any) => ({ ...p, status: 'active', started_at: new Date().toISOString() })); setHourlyOtpInput(''); setResult(''); }
       else setResult('❌ ' + (data.message || 'Galat OTP!'));
@@ -3856,6 +3881,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           if (pendingActivatedRide) {
             setActiveRide(pendingActivatedRide);
             useDriverStore.setState({ activeRide: pendingActivatedRide });
+            socketRef.current?.emit('joinRide', { rideId: pendingActivatedRide.id });
             setPendingActivatedRide(null);
           }
         }}>
@@ -3988,6 +4014,40 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         borderTopWidth:1, borderTopColor:'rgba(255,255,255,0.09)',
         gap:10,
       }}>
+        {/* Pre-queue compact banner — shows at top of strip so driver can accept without leaving nav */}
+        {preQueued && !preQueueAccepted && (
+          <View style={{ backgroundColor: '#3B0764', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1.5, borderColor: '#7C3AED' }}>
+            <Text style={{ fontSize: 15 }}>🏍️</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Next Ride Aa Gayi!</Text>
+              <Text style={{ color: 'rgba(255,255,255,0.65)', fontSize: 11 }} numberOfLines={1}>{preQueued.pickup} · {preQueued.fare}</Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => {
+                fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+                  .then(() => setPreQueued(null)).catch(() => setPreQueued(null));
+              }}
+              style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
+              <Text style={{ color: 'rgba(255,255,255,0.45)', fontWeight: '700', fontSize: 13 }}>✗</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+                  .then(r => r.json())
+                  .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+                  .catch(() => setResult('❌ Network error'));
+              }}
+              style={{ backgroundColor: '#7C3AED', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Queue ✓</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {preQueued && preQueueAccepted && (
+          <View style={{ backgroundColor: '#022C22', borderRadius: 12, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: '#4ADE80' }}>
+            <Text style={{ fontSize: 15 }}>✅</Text>
+            <Text style={{ color: '#4ADE80', fontWeight: '900', fontSize: 12, flex: 1 }}>Next Ride Queued! Trip complete karo phir jao.</Text>
+          </View>
+        )}
         {/* ETA / distance info row */}
         {(distToPickup || tripRemainingEta) ? (
           <View style={{ flexDirection:'row', justifyContent:'center', gap:10 }}>
@@ -4134,6 +4194,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           }}>
           <Text style={{ fontSize: 22 }}>📢</Text>
         </TouchableOpacity>
+      )}
+      {/* Pre-queue offer — home tab non-nav mode only; NavOverlay handles nav mode internally */}
+      {!inNavMode && preQueued && !preQueueAccepted && (
+        <PreQueueCard
+          preQueued={preQueued}
+          phone={phone}
+          onAccept={() => {
+            fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+              .then(r => r.json())
+              .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+              .catch(() => setResult('❌ Network error'));
+          }}
+          onDecline={() => {
+            fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+              .then(() => { setPreQueued(null); })
+              .catch(() => setPreQueued(null));
+          }}
+        />
+      )}
+      {!inNavMode && preQueued && preQueueAccepted && (
+        <View style={{ position: 'absolute', bottom: 90, left: 16, right: 16, zIndex: 999, backgroundColor: '#022C22', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#4ADE80', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+          <Text style={{ fontSize: 18 }}>✅</Text>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#4ADE80', fontWeight: '900', fontSize: 13 }}>Next Ride Queued!</Text>
+            <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2 }}>{preQueued.pickup} · {preQueued.fare}</Text>
+          </View>
+        </View>
       )}
       {/* Top bar */}
       <View style={s.topBar}>
@@ -4761,7 +4848,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
                 <Text style={{ color: '#94A3B8', fontSize: 13 }}>{activeHourlyRide.package_hours === 8 ? 'Full Day' : `${activeHourlyRide.package_hours}h`} · {activeHourlyRide.km_included} km · ₹{activeHourlyRide.base_fare}</Text>
                 <Text style={{ color: activeHourlyRide.status === 'active' ? C.green : C.pink, fontSize: 12, fontWeight: '600' }}>
-                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : '🛣️ Trip chal rahi hai'}
+                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : activeHourlyRide.status === 'arrived' ? '📍 Pickup pe pahunche' : '🛣️ Trip chal rahi hai'}
                 </Text>
               </View>
 
@@ -5128,6 +5215,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               )}
 
+              {/* Scheduled ride badge */}
+              {rideReq?.is_scheduled && (
+                <View style={{ backgroundColor: 'rgba(99,102,241,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 6, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.5)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 15 }}>📅</Text>
+                  <Text style={{ color: '#818CF8', fontWeight: '900', fontSize: 13, letterSpacing: 0.5 }}>
+                    SCHEDULED — {rideReq.scheduled_at ? new Date(rideReq.scheduled_at).toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : ''}
+                  </Text>
+                </View>
+              )}
+
               {/* Big earn number — the hero moment */}
               <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.xl, paddingVertical: SP.md, marginTop: SP.md, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
@@ -5176,8 +5273,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               </View>
 
+              {/* Scheduled ride info banner */}
+              {rideReq?.is_scheduled && rideReq?.scheduled_at && (
+                <View style={{ backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: R.md, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.35)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <Text style={{ fontSize: 22 }}>📅</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#6366F1', fontWeight: '900', fontSize: 13 }}>SCHEDULED RIDE</Text>
+                    <Text style={{ color: '#818CF8', fontSize: 12, marginTop: 2 }}>
+                      Pickup time: {new Date(rideReq.scheduled_at).toLocaleString('hi-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}
+                    </Text>
+                    <Text style={{ color: 'rgba(99,102,241,0.7)', fontSize: 11, marginTop: 2 }}>Abhi accept karo — aapke paas kaafi time hai</Text>
+                  </View>
+                </View>
+              )}
+
               {/* Countdown */}
-              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />}
+              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || (rideReq.is_scheduled ? 120 : 30)} onTimeout={rejectRide} />}
 
               {/* Accept / Reject */}
               <View style={{ flexDirection: 'row', gap: 14, marginTop: SP.md }}>
@@ -5250,6 +5361,24 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <TripStatusBar status={activeRide.status} />
+
+              {/* Scheduled ride reminder — only shown before trip starts */}
+              {activeRide.is_scheduled && activeRide.scheduled_at && activeRide.status === 'matched' && (() => {
+                const pickupTime = new Date(activeRide.scheduled_at);
+                const minsLeft = Math.round((pickupTime.getTime() - Date.now()) / 60000);
+                const timeStr = pickupTime.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
+                return (
+                  <View style={{ backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.4)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 26 }}>📅</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: '#6366F1', fontWeight: '900', fontSize: 14 }}>SCHEDULED RIDE — {timeStr}</Text>
+                      <Text style={{ color: '#818CF8', fontSize: 12, marginTop: 3 }}>
+                        {minsLeft > 0 ? `${minsLeft} minute mein pickup pe pahunchna hai` : 'Pickup time aa gayi — jaldi jao!'}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
 
               {/* Status banner */}
               <View style={{ backgroundColor: activeRide.status === 'matched' ? C.green : activeRide.status === 'arrived' ? '#2563EB' : C.green, borderRadius: 14, padding: 14, marginBottom: 14, alignItems: 'center' }}>
@@ -5600,6 +5729,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         )}
 
         <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        {/* Pre-queue offer — live tab non-nav mode; NavOverlay handles nav mode */}
+        {!inNavMode && preQueued && !preQueueAccepted && (
+          <PreQueueCard
+            preQueued={preQueued}
+            phone={phone}
+            onAccept={() => {
+              fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+                .then(r => r.json())
+                .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+                .catch(() => setResult('❌ Network error'));
+            }}
+            onDecline={() => {
+              fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+                .then(() => { setPreQueued(null); })
+                .catch(() => setPreQueued(null));
+            }}
+          />
+        )}
+        {!inNavMode && preQueued && preQueueAccepted && (
+          <View style={{ position: 'absolute', bottom: 90, left: 16, right: 16, zIndex: 999, backgroundColor: '#022C22', borderRadius: 14, padding: 14, borderWidth: 1.5, borderColor: '#4ADE80', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <Text style={{ fontSize: 18 }}>✅</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ color: '#4ADE80', fontWeight: '900', fontSize: 13 }}>Next Ride Queued!</Text>
+              <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2 }}>{preQueued.pickup} · {preQueued.fare}</Text>
+            </View>
+          </View>
+        )}
         {NavOverlay}
       </View>
     );
