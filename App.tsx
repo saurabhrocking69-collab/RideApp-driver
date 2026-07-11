@@ -2134,11 +2134,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         if (data.early_completion) {
           setEarlyFlagModal({ dist: data.dist_from_drop });
         }
+        // Use net fare from API (actual recalculated fare minus coupon discount).
+        // Fallback: subtract discount from estimate if API didn't return fare.
+        const discountAmt = parseFloat(String(activeRide?.discount || '0')) || 0;
+        const netFare = data.fare != null
+          ? Math.round(data.fare)
+          : Math.max(0, Math.round(parseFloat(rideFare)) - Math.round(discountAmt));
         setPaymentRideId(rideId);
-        setPaymentFare(rideFare);
+        setPaymentFare(String(netFare));
         setPaymentMethod(ridePMethod);
         setPaymentWaiting(true);
-        setEarnings(e => e + parseFloat(rideFare));
+        setEarnings(e => e + netFare);
         setRides(r => r + 1);
         setLastRideId(rideId);
         setActiveRide(null);
@@ -4611,7 +4617,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={s.tripCustName}>{activeRide.passenger_name || 'Passenger'}</Text>
                   <Text style={s.tripCustPhone}>📞 {activeRide.passenger_phone_masked || '**********'}</Text>
                 </View>
-                <Text style={s.tripFare}>₹{activeRide.fare}</Text>
+                <Text style={s.tripFare}>₹{Math.max(0, Math.round(parseFloat(String(activeRide.fare||'0')) - parseFloat(String(activeRide.discount||'0'))))}</Text>
               </View>
 
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
@@ -5399,7 +5405,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ fontSize: 17, fontWeight: '900', color: '#0F172A' }}>{activeRide.passenger_name || 'Passenger'}</Text>
                     <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>📞 {activeRide.passenger_phone_masked || '**********'}</Text>
                   </View>
-                  <Text style={{ fontSize: 24, fontWeight: '900', color: C.green }}>₹{activeRide.fare}</Text>
+                  <Text style={{ fontSize: 24, fontWeight: '900', color: C.green }}>₹{Math.max(0, Math.round(parseFloat(String(activeRide.fare||'0')) - parseFloat(String(activeRide.discount||'0'))))}</Text>
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <TouchableOpacity style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: '#BBF7D0' }} onPress={() => { setUnreadChat(0); setShowChat(true); }}>
