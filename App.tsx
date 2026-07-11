@@ -1017,22 +1017,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
     Notifications.getLastNotificationResponseAsync().then(r => { if (r) handleDriverNotifTap(r); });
 
-    // AppState: app comes back to foreground → immediate poll + socket reconnect
+    // AppState: app comes back to foreground → staggered refresh to avoid burst
     const appStateSub = AppState.addEventListener('change', (nextState) => {
       if (nextState === 'active') {
         const storeState = useDriverStore.getState();
-        // If polling timer is missing but driver is online, restart polling
+        // Reconnect socket immediately
+        const sock = (globalThis as any).__driverSocket;
+        if (sock && !sock.connected) sock.connect();
+        // Restart or trigger poll
         if (!storeState._pollTimer && (globalThis as any).__driverPhone) {
           startPolling((globalThis as any).__driverPhone);
         } else {
           storeState.triggerPoll?.();
         }
-        const sock = (globalThis as any).__driverSocket;
-        if (sock && !sock.connected) sock.connect();
-        // Refresh wallet + commission so stale cache doesn't show
-        const ph = storeState.activeRide?.driver_phone
-          || (globalThis as any).__driverPhone;
-        if (ph) { loadDriverWallet(ph); loadCommissionHistory(ph); registerFCM(ph); }
+        // Stagger heavy refreshes so they don't all fire at once
+        const ph = storeState.activeRide?.driver_phone || (globalThis as any).__driverPhone;
+        if (ph) {
+          setTimeout(() => loadDriverWallet(ph), 500);
+          setTimeout(() => loadCommissionHistory(ph), 1500);
+          setTimeout(() => registerFCM(ph), 3000);
+        }
       }
     });
 
@@ -1501,7 +1505,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       try { const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); lastChatCount.current = (d.messages || []).length; setUnreadChat(0); } catch (_e) {}
     };
     load();
-    const iv = setInterval(load, 2500);
+    const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
   }, [showChat, activeRide?.id]);
 
@@ -1516,7 +1520,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } catch (_e) {}
     };
     load();
-    const iv = setInterval(load, 2500);
+    const iv = setInterval(load, 5000);
     return () => clearInterval(iv);
   }, [showHourlyChat, activeHourlyRide?.id]);
 

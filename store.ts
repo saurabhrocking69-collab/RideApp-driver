@@ -69,7 +69,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
       busy = false;
     };
 
-    const timer = setInterval(doPoll, 2000);
+    const timer = setInterval(doPoll, 6000);
     set({ _pollTimer: timer, _pollFn: doPoll });
   },
 
