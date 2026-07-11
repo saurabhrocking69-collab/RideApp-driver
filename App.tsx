@@ -5225,16 +5225,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               )}
 
-              {/* Scheduled ride badge */}
-              {rideReq?.is_scheduled && (
-                <View style={{ backgroundColor: 'rgba(99,102,241,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 6, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.5)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  <Text style={{ fontSize: 15 }}>📅</Text>
-                  <Text style={{ color: '#818CF8', fontWeight: '900', fontSize: 13, letterSpacing: 0.5 }}>
-                    SCHEDULED — {rideReq.scheduled_at ? new Date(rideReq.scheduled_at).toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : ''}
-                  </Text>
-                </View>
-              )}
-
               {/* Big earn number — the hero moment */}
               <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.xl, paddingVertical: SP.md, marginTop: SP.md, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
@@ -5283,22 +5273,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               </View>
 
-              {/* Scheduled ride info banner */}
-              {rideReq?.is_scheduled && rideReq?.scheduled_at && (
-                <View style={{ backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: R.md, padding: 14, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.35)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 22 }}>📅</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#6366F1', fontWeight: '900', fontSize: 13 }}>SCHEDULED RIDE</Text>
-                    <Text style={{ color: '#818CF8', fontSize: 12, marginTop: 2 }}>
-                      Pickup time: {new Date(rideReq.scheduled_at).toLocaleString('hi-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' })}
-                    </Text>
-                    <Text style={{ color: 'rgba(99,102,241,0.7)', fontSize: 11, marginTop: 2 }}>Abhi accept karo — aapke paas kaafi time hai</Text>
-                  </View>
-                </View>
-              )}
-
               {/* Countdown */}
-              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || (rideReq.is_scheduled ? 120 : 30)} onTimeout={rejectRide} />}
+              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />}
 
               {/* Accept / Reject */}
               <View style={{ flexDirection: 'row', gap: 14, marginTop: SP.md }}>
@@ -5371,24 +5347,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
               <TripStatusBar status={activeRide.status} />
-
-              {/* Scheduled ride reminder — only shown before trip starts */}
-              {activeRide.is_scheduled && activeRide.scheduled_at && activeRide.status === 'matched' && (() => {
-                const pickupTime = new Date(activeRide.scheduled_at);
-                const minsLeft = Math.round((pickupTime.getTime() - Date.now()) / 60000);
-                const timeStr = pickupTime.toLocaleTimeString('hi-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' });
-                return (
-                  <View style={{ backgroundColor: 'rgba(99,102,241,0.12)', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1.5, borderColor: 'rgba(99,102,241,0.4)', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                    <Text style={{ fontSize: 26 }}>📅</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: '#6366F1', fontWeight: '900', fontSize: 14 }}>SCHEDULED RIDE — {timeStr}</Text>
-                      <Text style={{ color: '#818CF8', fontSize: 12, marginTop: 3 }}>
-                        {minsLeft > 0 ? `${minsLeft} minute mein pickup pe pahunchna hai` : 'Pickup time aa gayi — jaldi jao!'}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })()}
 
               {/* Status banner */}
               <View style={{ backgroundColor: activeRide.status === 'matched' ? C.green : activeRide.status === 'arrived' ? '#2563EB' : C.green, borderRadius: 14, padding: 14, marginBottom: 14, alignItems: 'center' }}>
