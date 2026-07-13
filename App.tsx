@@ -728,6 +728,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [drvCmpDetail, setDrvCmpDetail]     = useState<any>(null);
   const [drvCmpStep, setDrvCmpStep]         = useState(1);
   const [drvCmpRideId, setDrvCmpRideId]     = useState('');
+  const [drvEvidenceUploading, setDrvEvidenceUploading] = useState(false);
   const [lastRideId, setLastRideId]         = useState<string>('');
 
   // ── Cancel Popup (customer or driver cancels) ─
@@ -6201,9 +6202,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       try {
                         const r = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
                         const d = await r.json();
-                        setDrvCmpDetail(d);
-                        setDrSubScreen('complaint-detail');
-                      } catch {}
+                        if (d?.complaint) {
+                          setDrvEvidenceUploading(false);
+                          setDrvCmpDetail(d);
+                          setDrSubScreen('complaint-detail');
+                        } else {
+                          Alert.alert('Error', d?.error || 'Complaint load nahi hui — dobara try karo');
+                        }
+                      } catch {
+                        Alert.alert('Error', 'Network error — internet check karo aur retry karo');
+                      }
                       setDrvCmpLoading(false);
                     }} style={{ backgroundColor: '#F8FAFC', borderRadius: 16, marginBottom: 10, overflow: 'hidden', elevation: 3, borderWidth: needsAction ? 2 : 1, borderColor: needsAction ? C.pink : '#334155' }}>
                       {needsAction && (
@@ -6460,7 +6468,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const sm = statusMeta[c?.status] || { color: '#9ca3af', bg: 'rgba(156,163,175,0.1)', label: c?.status, icon: '📋' };
       const typeEmoji: any = { customer_no_show:'🚫', property_damage:'🔧', abusive_behavior:'😠', false_accusation:'⚖️', wrong_location:'📍', payment_issue:'💸', other:'📝' };
       const isClosed = ['resolved','closed'].includes(c?.status);
-      const [drvEvidenceUploading, setDrvEvidenceUploading] = React.useState(false);
       const uploadDrvEvidence = async () => {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) { Alert.alert('Permission', 'Gallery access chahiye'); return; }
@@ -6489,8 +6496,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ color: '#0F172A', fontSize: 18 }}>‹</Text>
             </TouchableOpacity>
-            <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 17, flex: 1 }}>Complaint Detail</Text>
-            <Text style={{ color: '#475569', fontSize: 10 }}>#{c?.id?.slice(-8)}</Text>
+            <Text style={{ color: '#0F172A', fontWeight: '900', fontSize: 17, flex: 1 }}>Complaint #{String(c?.id || '')}</Text>
+            <TouchableOpacity onPress={async () => {
+              setDrvCmpLoading(true);
+              try {
+                const r2 = await fetch(`${API}/api/complaints/${c.id}?phone=${encodeURIComponent(phone)}`);
+                const d2 = await r2.json();
+                if (d2?.complaint) setDrvCmpDetail(d2);
+              } catch {}
+              setDrvCmpLoading(false);
+            }} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 16 }}>{drvCmpLoading ? '⏳' : '🔄'}</Text>
+            </TouchableOpacity>
           </View>
 
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 40 }}>
