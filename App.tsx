@@ -592,7 +592,7 @@ function App() {
   const driverGpsRef                = useRef<any>(null);
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
-  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders'>('');
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list'>('');
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -607,6 +607,17 @@ function App() {
   const [earlyFlagModal, setEarlyFlagModal] = useState<{ dist: string } | null>(null);
   const [distWarnModal, setDistWarnModal]   = useState<{ dist: string } | null>(null);
   const distWarnResolveRef = useRef<((v: boolean) => void) | null>(null);
+  const [driverTickets, setDriverTickets]                         = useState<any[]>([]);
+  const [driverTicketsLoading, setDriverTicketsLoading]           = useState(false);
+  const [driverActiveTicket, setDriverActiveTicket]               = useState<any>(null);
+  const [driverTicketDetail, setDriverTicketDetail]               = useState<any>(null);
+  const [driverTicketDetailLoading, setDriverTicketDetailLoading] = useState(false);
+  const [driverTicketCategory, setDriverTicketCategory]           = useState('');
+  const [driverTicketDesc, setDriverTicketDesc]                   = useState('');
+  const [driverTicketSubmitting, setDriverTicketSubmitting]       = useState(false);
+  const [driverTicketSuccess, setDriverTicketSuccess]             = useState<any>(null);
+  const [driverTicketReply, setDriverTicketReply]                 = useState('');
+  const [driverTicketReplying, setDriverTicketReplying]           = useState(false);
   const [paymentRideId, setPaymentRideId] = useState('');
   const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
@@ -992,6 +1003,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
       if (data?.type === 'hourly_extend') {
         setScreen('home'); setActiveTab('live');
+      }
+      if (data?.type === 'support_reply' || data?.type === 'support_resolved') {
+        const dp = (globalThis as any).__driverPhone;
+        setDriverActiveTicket(null);
+        setDriverTicketDetail(null);
+        setDriverTickets([]);
+        setDriverTicketsLoading(true);
+        setDrSubScreen('ticket-list');
+        if (dp) {
+          fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(dp)}&role=driver`)
+            .then(r => r.json())
+            .then(d => setDriverTickets(d.tickets || []))
+            .catch(() => {})
+            .finally(() => setDriverTicketsLoading(false));
+        } else {
+          setDriverTicketsLoading(false);
+        }
       }
     };
     const sub2 = Notifications.addNotificationResponseReceivedListener(handleDriverNotifTap);
@@ -5713,6 +5741,40 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       </View>
     );
 
+    const DRIVER_CATS = [
+      { key: 'abusive_customer', icon: '😡', label: 'Abusive\nCustomer',      priority: 'urgent' },
+      { key: 'customer_no_show', icon: '🚷', label: 'Customer\nNo-Show',      priority: 'high'   },
+      { key: 'payment_refused',  icon: '💸', label: 'Payment\nRefused',       priority: 'high'   },
+      { key: 'false_accusation', icon: '⚠️',  label: 'False\nAccusation',     priority: 'high'   },
+      { key: 'vehicle_damage',   icon: '🔧', label: 'Vehicle\nDamage',        priority: 'high'   },
+      { key: 'wrong_location',   icon: '📍', label: 'Wrong\nLocation',        priority: 'normal' },
+      { key: 'earnings_issue',   icon: '💰', label: 'Earnings /\nCommission', priority: 'normal' },
+      { key: 'app_gps_issue',    icon: '📱', label: 'App / GPS\nIssue',       priority: 'normal' },
+      { key: 'driver_other',     icon: '📝', label: 'Other',                  priority: 'low'    },
+    ];
+    const DPX: Record<string, string> = { urgent: '#EF4444', high: '#F59E0B', normal: '#3B82F6', low: '#94A3B8' };
+    const DSX: Record<string, string> = { open: '#F59E0B', in_progress: '#3B82F6', resolved: '#059669' };
+    const DSL: Record<string, string> = { open: 'Open', in_progress: 'In Progress', resolved: 'Resolved' };
+    const DSLA: Record<string, number> = { urgent: 4, high: 24, normal: 48, low: 72 };
+    const dfmt = (iso: string) => { try { return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }); } catch { return iso; } };
+    const dago = (iso: string) => { const m = Math.floor((Date.now() - new Date(iso).getTime()) / 60000); if (m < 1) return 'just now'; if (m < 60) return `${m}m`; const h = Math.floor(m / 60); if (h < 24) return `${h}h`; return `${Math.floor(h / 24)}d`; };
+    const dCat   = DRIVER_CATS.find(c => c.key === driverTicketCategory);
+    const canSub = !!driverTicketCategory && driverTicketDesc.trim().length >= 10 && !driverTicketSubmitting;
+    const doSubmitTicket = async () => {
+      if (!canSub) return;
+      setDriverTicketSubmitting(true);
+      try {
+        const r = await fetch(`${API}/api/support/tickets`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone, role: 'driver', category: driverTicketCategory, description: driverTicketDesc.trim() }),
+        });
+        const d = await r.json();
+        if (d.error) { Alert.alert('Error', d.error); return; }
+        setDriverTicketSuccess(d);
+      } catch { Alert.alert('Error', 'Submit nahi ho saka.'); }
+      finally { setDriverTicketSubmitting(false); }
+    };
+
     if (driverSubScreen === 'documents') return (
       <View style={s.screen}>
         <SubHeader title="📋 Documents" />
@@ -5881,6 +5943,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4, textAlign: 'center' }}>24x7 help ke liye humse contact karo</Text>
           </View>
           {[
+            { icon: '🎫', label: 'Ticket Daalo', sub: 'Issue formally report karo', color: C.pink, action: () => { setDriverTicketCategory(''); setDriverTicketDesc(''); setDriverTicketSuccess(null); setDrSubScreen('ticket-new'); } },
+            { icon: '📋', label: 'Mere Tickets', sub: 'Purane issues track karo', color: '#3B82F6', action: () => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); } },
             { icon: '💬', label: 'WhatsApp', sub: 'Sabse fast response', color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
             { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
             { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, action: () => Linking.openURL('mailto:driver.support@sppero.com') },
@@ -5913,6 +5977,283 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
       </View>
     );
+
+    if (driverSubScreen === 'ticket-new') {
+      if (driverTicketSuccess) return (
+        <View style={s.screen}>
+          <View style={s.topBar}>
+            <TouchableOpacity onPress={() => setDrSubScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+            <Text style={s.greeting}>Ticket Filed</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 24, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 52, marginBottom: 16 }}>✅</Text>
+              <Text style={{ fontSize: 18, fontWeight: '900', color: '#0F172A', marginBottom: 8 }}>Ticket Submit Ho Gaya!</Text>
+              <View style={{ backgroundColor: '#FFF1F5', borderRadius: 12, paddingHorizontal: 20, paddingVertical: 10, marginBottom: 16, borderWidth: 1, borderColor: '#FFB3C8' }}>
+                <Text style={{ fontFamily: 'monospace', fontSize: 18, fontWeight: '900', color: C.pink, letterSpacing: 1 }}>{driverTicketSuccess.ticket_no}</Text>
+              </View>
+              <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', lineHeight: 20, marginBottom: 24 }}>
+                Hum <Text style={{ fontWeight: '800', color: '#0F172A' }}>{driverTicketSuccess.sla_hours} ghante</Text> mein reply karenge.{'\n'}Notification aayega jab hum reply karein.
+              </Text>
+              <TouchableOpacity
+                onPress={() => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); }}
+                style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: 10 }}>
+                <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Mere Tickets Dekho</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setDrSubScreen('support')} style={{ paddingVertical: 10 }}>
+                <Text style={{ color: '#64748B', fontWeight: '700', fontSize: 13 }}>Support Pe Wapas</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        </View>
+      );
+      return (
+        <View style={s.screen}>
+          <View style={s.topBar}>
+            <TouchableOpacity onPress={() => setDrSubScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+            <Text style={s.greeting}>🎫 Ticket Daalo</Text>
+            <View style={{ width: 40 }} />
+          </View>
+          <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#64748B', letterSpacing: 1.2, marginBottom: 12 }}>ISSUE TYPE SELECT KARO</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+                {DRIVER_CATS.map(cat => {
+                  const isSel = driverTicketCategory === cat.key;
+                  return (
+                    <TouchableOpacity key={cat.key} onPress={() => setDriverTicketCategory(cat.key)}
+                      style={{ width: '30%', minWidth: 100, flexGrow: 1, backgroundColor: isSel ? '#FFF1F5' : '#F8FAFC', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 8, alignItems: 'center', borderWidth: 1.5, borderColor: isSel ? C.pink : '#E2E8F0' }}>
+                      <Text style={{ fontSize: 24, marginBottom: 6 }}>{cat.icon}</Text>
+                      <Text style={{ fontSize: 11, fontWeight: '700', color: isSel ? C.pink : '#0F172A', textAlign: 'center', lineHeight: 15 }}>{cat.label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {dCat && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, backgroundColor: DPX[dCat.priority] + '15', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: DPX[dCat.priority] + '44' }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: DPX[dCat.priority], marginRight: 8 }} />
+                  <Text style={{ fontSize: 12, color: DPX[dCat.priority], fontWeight: '800' }}>{dCat.priority.toUpperCase()} PRIORITY</Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', marginLeft: 8 }}>· {DSLA[dCat.priority]}h mein reply</Text>
+                </View>
+              )}
+              <Text style={{ fontSize: 12, fontWeight: '800', color: '#64748B', letterSpacing: 1.2, marginBottom: 10 }}>ISSUE DESCRIBE KARO</Text>
+              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1.5, borderColor: '#E2E8F0', marginBottom: 8 }}>
+                <TextInput
+                  value={driverTicketDesc}
+                  onChangeText={setDriverTicketDesc}
+                  placeholder="Kya hua detail mein batao... (minimum 10 characters)"
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                  numberOfLines={5}
+                  textAlignVertical="top"
+                  style={{ padding: 14, fontSize: 14, color: '#0F172A', minHeight: 120 }}
+                />
+              </View>
+              <Text style={{ fontSize: 11, color: driverTicketDesc.length < 10 ? '#94A3B8' : '#059669', fontWeight: '700', textAlign: 'right', marginBottom: 20 }}>
+                {driverTicketDesc.length} chars {driverTicketDesc.length < 10 ? `(${10 - driverTicketDesc.length} aur chahiye)` : '✓'}
+              </Text>
+              <TouchableOpacity onPress={doSubmitTicket} disabled={!canSub}
+                style={{ backgroundColor: canSub ? C.pink : '#E2E8F0', borderRadius: 16, paddingVertical: 16, alignItems: 'center' }}>
+                {driverTicketSubmitting
+                  ? <ActivityIndicator color="#fff" />
+                  : <Text style={{ color: canSub ? '#fff' : '#94A3B8', fontWeight: '900', fontSize: 16 }}>Submit Ticket</Text>
+                }
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        </View>
+      );
+    }
+
+    if (driverSubScreen === 'ticket-list') {
+      const sendDReply = async () => {
+        if (!driverTicketReply.trim() || !driverActiveTicket || driverTicketReplying) return;
+        setDriverTicketReplying(true);
+        try {
+          await fetch(`${API}/api/support/tickets/${driverActiveTicket.id}/reply`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, message: driverTicketReply.trim() }),
+          });
+          setDriverTicketReply('');
+          const r = await fetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`);
+          const d = await r.json();
+          setDriverTicketDetail(d);
+        } catch { Alert.alert('Error', 'Reply nahi gaya.'); }
+        finally { setDriverTicketReplying(false); }
+      };
+
+      if (driverActiveTicket) {
+        const ticket   = driverTicketDetail?.ticket   ?? driverActiveTicket;
+        const messages = driverTicketDetail?.messages ?? [];
+        return (
+          <View style={s.screen}>
+            <View style={s.topBar}>
+              <TouchableOpacity onPress={() => { setDriverActiveTicket(null); setDriverTicketDetail(null); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+              <Text style={s.greeting} numberOfLines={1}>{driverActiveTicket.ticket_no || 'Ticket'}</Text>
+              <View style={{ width: 40 }} />
+            </View>
+            <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+              <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }}>
+                <View style={{ backgroundColor: '#F8FAFC', borderRadius: 18, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10, gap: 8, flexWrap: 'wrap' }}>
+                    <Text style={{ fontFamily: 'monospace', fontSize: 12, fontWeight: '800', color: C.pink }}>{ticket.ticket_no}</Text>
+                    <View style={{ backgroundColor: DSX[ticket.status] + '20', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: DSX[ticket.status] }}>{DSL[ticket.status] || ticket.status}</Text>
+                    </View>
+                    <View style={{ backgroundColor: DPX[ticket.priority] + '20', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 }}>
+                      <Text style={{ fontSize: 10, fontWeight: '900', color: DPX[ticket.priority] }}>{(ticket.priority || '').toUpperCase()}</Text>
+                    </View>
+                  </View>
+                  <Text style={{ fontSize: 15, fontWeight: '900', color: '#0F172A', marginBottom: 4 }}>{ticket.title}</Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', lineHeight: 18 }}>{ticket.description}</Text>
+                  <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 8 }}>{dfmt(ticket.created_at)}</Text>
+                  {ticket.status === 'resolved' && ticket.resolution_note && (
+                    <View style={{ marginTop: 12, backgroundColor: 'rgba(5,150,105,0.08)', borderRadius: 10, padding: 12, borderWidth: 1, borderColor: 'rgba(5,150,105,0.25)' }}>
+                      <Text style={{ fontSize: 11, fontWeight: '800', color: '#059669', marginBottom: 4 }}>RESOLVED</Text>
+                      <Text style={{ fontSize: 12, color: '#0F172A', lineHeight: 18 }}>{ticket.resolution_note}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={{ fontSize: 11, fontWeight: '800', color: '#64748B', letterSpacing: 1.2, marginBottom: 12 }}>MESSAGES</Text>
+                {driverTicketDetailLoading && <ActivityIndicator color={C.pink} style={{ paddingVertical: 20 }} />}
+                {messages.map((msg: any, i: number) => {
+                  const isUser = msg.sender === 'user';
+                  const isSys  = msg.sender === 'system';
+                  if (isSys) return (
+                    <View key={i} style={{ alignItems: 'center', marginBottom: 12 }}>
+                      <Text style={{ fontSize: 11, color: '#94A3B8', backgroundColor: '#F1F5F9', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20 }}>{msg.message}</Text>
+                    </View>
+                  );
+                  return (
+                    <View key={i} style={{ marginBottom: 12, alignItems: isUser ? 'flex-end' : 'flex-start' }}>
+                      <View style={{ maxWidth: '80%', backgroundColor: isUser ? '#FFF1F5' : '#F8FAFC', borderRadius: 14, padding: 12, borderWidth: 1, borderColor: isUser ? '#FFB3C8' : '#E2E8F0' }}>
+                        {!isUser && <Text style={{ fontSize: 10, fontWeight: '800', color: C.pink, marginBottom: 4 }}>Support Team</Text>}
+                        <Text style={{ fontSize: 13, color: '#0F172A', lineHeight: 19 }}>{msg.message}</Text>
+                        <Text style={{ fontSize: 10, color: '#94A3B8', marginTop: 4, textAlign: isUser ? 'right' : 'left' }}>{dago(msg.created_at)}</Text>
+                      </View>
+                    </View>
+                  );
+                })}
+                {messages.length === 0 && !driverTicketDetailLoading && (
+                  <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center', paddingVertical: 10 }}>Koi message nahi abhi.</Text>
+                )}
+              </ScrollView>
+              {ticket.status !== 'resolved'
+                ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'flex-end', padding: 12, gap: 10, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#E2E8F0' }}>
+                    <TextInput
+                      value={driverTicketReply}
+                      onChangeText={setDriverTicketReply}
+                      placeholder="Message likho..."
+                      placeholderTextColor="#94A3B8"
+                      multiline
+                      style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, fontSize: 14, color: '#0F172A', maxHeight: 100, borderWidth: 1, borderColor: '#E2E8F0' }}
+                    />
+                    <TouchableOpacity onPress={sendDReply} disabled={!driverTicketReply.trim() || driverTicketReplying}
+                      style={{ backgroundColor: driverTicketReply.trim() ? C.pink : '#E2E8F0', borderRadius: 14, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' }}>
+                      {driverTicketReplying ? <ActivityIndicator color="#fff" size="small" /> : <Ionicons name="send" size={18} color="#fff" />}
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={{ padding: 12, backgroundColor: 'rgba(5,150,105,0.06)', borderTopWidth: 1, borderTopColor: 'rgba(5,150,105,0.2)', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 12, color: '#059669', fontWeight: '700' }}>Yeh ticket resolved ho gaya hai</Text>
+                  </View>
+                )
+              }
+            </KeyboardAvoidingView>
+            <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          </View>
+        );
+      }
+
+      return (
+        <View style={s.screen}>
+          <View style={s.topBar}>
+            <TouchableOpacity onPress={() => setDrSubScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+            <Text style={s.greeting}>📋 Mere Tickets</Text>
+            <TouchableOpacity
+              onPress={() => { setDriverTickets([]); setDriverTicketsLoading(true); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); }}
+              style={{ padding: 4 }}>
+              <Ionicons name="refresh" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+          {driverTicketsLoading
+            ? (
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <ActivityIndicator size="large" color={C.pink} />
+                <Text style={{ color: '#64748B', marginTop: 12, fontSize: 13 }}>Load ho raha hai...</Text>
+              </View>
+            )
+            : driverTickets.length === 0
+              ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+                  <Text style={{ fontSize: 52, marginBottom: 16 }}>🎫</Text>
+                  <Text style={{ fontSize: 17, fontWeight: '900', color: '#0F172A', marginBottom: 8 }}>Koi ticket nahi</Text>
+                  <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center', marginBottom: 24, lineHeight: 20 }}>
+                    Koi issue hai? Ticket daalo aur hum help karenge.
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => { setDriverTicketCategory(''); setDriverTicketDesc(''); setDriverTicketSuccess(null); setDrSubScreen('ticket-new'); }}
+                    style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32 }}>
+                    <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Ticket Daalo</Text>
+                  </TouchableOpacity>
+                </View>
+              )
+              : (
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+                  {driverTickets.map((t: any) => {
+                    const unread = parseInt(t.unread_replies) || 0;
+                    return (
+                      <TouchableOpacity key={t.id}
+                        onPress={async () => {
+                          setDriverActiveTicket(t);
+                          setDriverTicketDetailLoading(true);
+                          setDriverTicketDetail(null);
+                          try {
+                            const r = await fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
+                            const d = await r.json();
+                            setDriverTicketDetail(d);
+                          } catch {}
+                          finally { setDriverTicketDetailLoading(false); }
+                        }}
+                        style={{ backgroundColor: '#F8FAFC', borderRadius: 18, padding: 16, marginBottom: 12, borderWidth: 1.5, borderColor: unread > 0 ? C.pink : '#E2E8F0', elevation: unread > 0 ? 3 : 1 }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap', flex: 1 }}>
+                            <Text style={{ fontFamily: 'monospace', fontSize: 11, fontWeight: '800', color: C.pink }}>{t.ticket_no || `#${t.id}`}</Text>
+                            <View style={{ backgroundColor: DSX[t.status] + '20', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '900', color: DSX[t.status] }}>{DSL[t.status] || t.status}</Text>
+                            </View>
+                            <View style={{ backgroundColor: DPX[t.priority] + '20', borderRadius: 20, paddingHorizontal: 9, paddingVertical: 3 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '900', color: DPX[t.priority] }}>{(t.priority || '').toUpperCase()}</Text>
+                            </View>
+                          </View>
+                          {unread > 0 && (
+                            <View style={{ backgroundColor: C.pink, borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 }}>
+                              <Text style={{ fontSize: 10, fontWeight: '900', color: '#fff' }}>{unread} new</Text>
+                            </View>
+                          )}
+                        </View>
+                        <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>{t.title}</Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <Text style={{ fontSize: 11, color: '#64748B' }}>{dfmt(t.created_at)}</Text>
+                          {t.status === 'resolved'
+                            ? <Text style={{ fontSize: 11, color: '#059669', fontWeight: '700' }}>Resolved ✓</Text>
+                            : <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
+                          }
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              )
+          }
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        </View>
+      );
+    }
 
     // ─── Driver: All Orders ───
     if (driverSubScreen === 'orders') {
