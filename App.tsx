@@ -6504,8 +6504,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             loadDriverSub(phone, driverInfo?.vehicle_type);
           } else { setSubResult('❌ ' + (verRes.error || 'Verification failed')); }
         } catch (e: any) {
-          if (e?.code === 'PAYMENT_CANCELLED') { setSubResult('Payment cancel ho gayi.'); }
-          else { setSubResult('❌ ' + (e?.description || e?.message || 'Kuch problem aayi')); }
+          if (e?.code === 'PAYMENT_CANCELLED' || e?.error?.reason === 'payment_cancelled') {
+            setSubResult('');  // user cancelled — no error needed
+          } else {
+            const rzp = e?.error || e;
+            const desc = typeof rzp?.description === 'string' && rzp.description !== 'undefined' ? rzp.description : null;
+            const reason = rzp?.reason || rzp?.code;
+            let msg = 'Payment nahi ho payi. Dobara try karo.';
+            if (desc) msg = desc;
+            else if (reason === 'payment_error') msg = 'Bank ya card se payment fail ho gayi. Dusra card ya UPI try karo.';
+            else if (reason === 'BAD_REQUEST_ERROR') msg = 'Payment request mein kuch gadbad. Support se contact karo.';
+            setSubResult('❌ ' + msg);
+          }
         }
         setSubLoading(false);
       };
