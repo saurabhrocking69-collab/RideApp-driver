@@ -1055,6 +1055,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
   }, []);
 
+  // On foreground return: refresh open ticket detail OR ticket list
+  const driverActiveTicketRef = useRef<any>(null);
+  useEffect(() => { driverActiveTicketRef.current = driverActiveTicket; }, [driverActiveTicket]);
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', s => {
+      if (s !== 'active') return;
+      const t = driverActiveTicketRef.current;
+      if (t) {
+        fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`)
+          .then(r => r.json())
+          .then(d => setDriverTicketDetail(d))
+          .catch(() => {});
+      } else if (driverSubScreen === 'ticket-list') {
+        fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`)
+          .then(r => r.json())
+          .then(d => setDriverTickets(d.tickets || []))
+          .catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, [phone, driverSubScreen]);
 
   // ── FCM Token Register ────────────────────────
   const registerFCM = async (userPhone: string) => {
@@ -5764,9 +5785,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (!canSub) return;
       setDriverTicketSubmitting(true);
       try {
+        const rideLinkedCats = ['payment_refused','abusive_customer','customer_no_show','vehicle_damage','false_accusation','wrong_location'];
+        const linkedRideId = rideLinkedCats.includes(driverTicketCategory) && paymentRideId ? paymentRideId : undefined;
         const r = await fetch(`${API}/api/support/tickets`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone, role: 'driver', category: driverTicketCategory, description: driverTicketDesc.trim() }),
+          body: JSON.stringify({ phone, role: 'driver', category: driverTicketCategory, description: driverTicketDesc.trim(), ...(linkedRideId ? { ride_id: linkedRideId } : {}) }),
         });
         const d = await r.json();
         if (d.error) { Alert.alert('Error', d.error); return; }
@@ -6093,7 +6116,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={s.topBar}>
               <TouchableOpacity onPress={() => { setDriverActiveTicket(null); setDriverTicketDetail(null); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
               <Text style={s.greeting} numberOfLines={1}>{driverActiveTicket.ticket_no || 'Ticket'}</Text>
-              <View style={{ width: 40 }} />
+              <TouchableOpacity onPress={() => { setDriverTicketDetailLoading(true); fetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`).then(r => r.json()).then(d => setDriverTicketDetail(d)).catch(() => {}).finally(() => setDriverTicketDetailLoading(false)); }} style={{ padding: 4 }}><Ionicons name="refresh" size={20} color="#fff" /></TouchableOpacity>
             </View>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }}>
