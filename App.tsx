@@ -6577,13 +6577,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
                 {subPlans.map((p: any) => {
                   const selected = subSelectedPlan?.id === p.id;
+                  const isDaily = (p.validity_days === 1 || p.validity_days === '1');
+                  if (isDaily) {
+                    return (
+                      <Bouncy key={p.id} onPress={() => setSubSelectedPlan(selected ? null : p)} style={{ width: '100%' }}>
+                        <View style={{ borderRadius: 16, padding: 16, borderWidth: 2, borderColor: selected ? '#F59E0B' : '#FCD34D', backgroundColor: selected ? '#78350F' : '#1C0A00', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <View>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                              <View style={{ backgroundColor: '#F59E0B', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 }}>
+                                <Text style={{ color: '#000', fontSize: 10, fontWeight: '900' }}>⚡ DAILY TRIAL</Text>
+                              </View>
+                            </View>
+                            <Text style={{ color: '#FCD34D', fontSize: 13, fontWeight: '800' }}>{p.ride_count} rides · sirf aaj ke liye</Text>
+                            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 2 }}>1 din mein use karo — kal expire</Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', lineHeight: 32 }}>₹{parseFloat(p.price).toFixed(0)}</Text>
+                            {p.original_price && <Text style={{ color: '#94A3B8', fontSize: 12, textDecorationLine: 'line-through' }}>₹{parseFloat(p.original_price).toFixed(0)}</Text>}
+                            {selected && <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '800', marginTop: 4 }}>✓ Selected</Text>}
+                          </View>
+                        </View>
+                      </Bouncy>
+                    );
+                  }
                   return (
                     <Bouncy key={p.id} onPress={() => setSubSelectedPlan(selected ? null : p)} style={{ flex: 1, minWidth: 130 }}>
                       <View style={{ borderRadius: 14, padding: 14, borderWidth: 2, borderColor: selected ? '#22C55E' : '#E2E8F0', backgroundColor: selected ? '#F0FDF4' : '#fff', alignItems: 'center' }}>
                         <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>{p.ride_count} RIDES</Text>
                         <Text style={{ color: '#0F172A', fontSize: 24, fontWeight: '900' }}>₹{parseFloat(p.price).toFixed(0)}</Text>
                         {p.original_price && <Text style={{ color: '#94A3B8', fontSize: 11, textDecorationLine: 'line-through' }}>₹{parseFloat(p.original_price).toFixed(0)}</Text>}
-                        <Text style={{ color: '#64748B', fontSize: 10, marginTop: 4 }}>{p.validity_days === 1 ? '1 din valid ⚡' : `${p.validity_days || 60} din valid`}</Text>
+                        <Text style={{ color: '#64748B', fontSize: 10, marginTop: 4 }}>{`${p.validity_days || 60} din valid`}</Text>
                         {selected && <Text style={{ color: '#22C55E', fontSize: 11, fontWeight: '700', marginTop: 4 }}>✓ Selected</Text>}
                       </View>
                     </Bouncy>
@@ -6594,10 +6617,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
             {/* Subscribe button */}
             {subSelectedPlan && (
-              <Bouncy onPress={doSubscribe} disabled={subLoading} style={{ backgroundColor: subLoading ? '#86EFAC' : '#22C55E', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 12 }}>
-                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
-                  {subLoading ? '⏳ Processing...' : `Subscribe → Pay ₹${parseFloat(subSelectedPlan.price).toFixed(0)}`}
+              <Bouncy onPress={doSubscribe} disabled={subLoading}
+                style={{
+                  backgroundColor: subLoading
+                    ? ((subSelectedPlan.validity_days == 1) ? '#D97706' : '#86EFAC')
+                    : ((subSelectedPlan.validity_days == 1) ? '#F59E0B' : '#22C55E'),
+                  borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 12,
+                }}>
+                <Text style={{ color: (subSelectedPlan.validity_days == 1) ? '#000' : '#fff', fontSize: 16, fontWeight: '900' }}>
+                  {subLoading ? '⏳ Processing...' : (subSelectedPlan.validity_days == 1
+                    ? `⚡ Try Today → Pay ₹${parseFloat(subSelectedPlan.price).toFixed(0)}`
+                    : `Subscribe → Pay ₹${parseFloat(subSelectedPlan.price).toFixed(0)}`)}
                 </Text>
+                {(subSelectedPlan.validity_days == 1) && !subLoading &&
+                  <Text style={{ color: '#78350F', fontSize: 11, marginTop: 2 }}>Sirf aaj ke liye · kal expire hoga</Text>}
               </Bouncy>
             )}
 
@@ -6607,7 +6640,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 8 }}>Terms & Conditions</Text>
               {[
-                '✅ Subscription 60 din mein use karo (ya rides khatam hone tak)',
+                `✅ Subscription ${subSelectedPlan && (subSelectedPlan.validity_days === 1 || subSelectedPlan.validity_days === '1') ? '1 din' : '60 din'} mein use karo (ya rides khatam hone tak)`,
                 '✅ ₹0 commission — har ride pe pura paisa aapka',
                 '✅ Daily / weekly bonus incentives bhi milenge',
                 '❌ Plan purchase karne ke baad refund nahi hoga',
