@@ -592,7 +592,7 @@ function App() {
   const driverGpsRef                = useRef<any>(null);
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
-  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list'>('');
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list' | 'subscription'>('');
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -660,6 +660,33 @@ function App() {
   const [payoutInput, setPayoutInput] = useState('');
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
+
+  // Subscription data
+  const [driverSub, setDriverSub] = useState<any>(null);   // { active, queued, total_savings, vehicle_category }
+  const [subPlans, setSubPlans]   = useState<any[]>([]);
+  const [subSelectedPlan, setSubSelectedPlan] = useState<any>(null);
+  const [subLoading, setSubLoading] = useState(false);
+  const [subResult, setSubResult]   = useState('');
+
+  const vehicleCategoryFor = (vt: string) => {
+    const v = (vt || '').toLowerCase();
+    if (['bike','green_bike'].includes(v)) return 'bike';
+    if (['auto','electric_auto','e_riksha','eriksha'].includes(v)) return 'auto';
+    if (['car','luxury','ultra_luxury'].includes(v)) return 'car';
+    return 'bike';
+  };
+
+  const loadDriverSub = async (ph: string, vehicleType?: string) => {
+    try {
+      const cat = vehicleType ? vehicleCategoryFor(vehicleType) : null;
+      const [myRes, plansRes] = await Promise.all([
+        fetch(`${API}/api/subscriptions/my?phone=${encodeURIComponent(ph)}`).then(r => r.json()),
+        cat ? fetch(`${API}/api/subscriptions/plans?vehicle_category=${cat}`).then(r => r.json()) : Promise.resolve({ plans: [] }),
+      ]);
+      setDriverSub(myRes);
+      setSubPlans(plansRes.plans || []);
+    } catch (_e) {}
+  };
 
   // Commission data
   const [commissionData, setCommissionData] = useState<{ pending_commission: number; total_commission: number; settled_commission: number; records: any[]; payments: any[] }>({ pending_commission: 0, total_commission: 0, settled_commission: 0, records: [], payments: [] });
@@ -777,7 +804,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
               const pd = await AsyncStorage.getItem('_permsDone').catch(() => null);
-              navTo = pd ? 'home' : 'permissions'; loadUpiId(savedPhone); registerFCM(savedPhone); fetchDriverLevel(savedPhone); fetchDriverNotifs(savedPhone);
+              navTo = pd ? 'home' : 'permissions'; loadUpiId(savedPhone); registerFCM(savedPhone); fetchDriverLevel(savedPhone); fetchDriverNotifs(savedPhone); loadDriverSub(savedPhone, data.driver.vehicle_type);
               // Restore active ride into store so home screen shows it immediately.
               // If a ride is active, also restore isOnline=true and restart polling so
               // the header shows "Online" and ride events keep flowing.
@@ -1839,7 +1866,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         await AsyncStorage.setItem('driverPhone', data.driver.phone);
         await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
         registerFCM(data.driver.phone);
-        loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone); fetchDriverNotifs(data.driver.phone);
+        loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone); fetchDriverNotifs(data.driver.phone); loadDriverSub(data.driver.phone, data.driver.vehicle_type);
         setScreen(pd2 ? 'home' : 'permissions');
       } else { setDriverInfo(data.driver); }
     } catch (_e) { setResult('❌ Server error'); }
@@ -4765,8 +4792,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Big fare card */}
                 <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, alignItems: 'center', elevation: 4, shadowColor: '#22C55E', shadowOpacity: 0.18, shadowRadius: 10 }}>
                   <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 4, fontWeight: '700', letterSpacing: 1.5 }}>AAPKI KAMAI</Text>
-                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
-                  <Text style={{ color: '#64748B', fontSize: 12 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>
+                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                  {driverSub?.active
+                    ? <Text style={{ color: '#22C55E', fontSize: 12, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
+                    : <Text style={{ color: '#64748B', fontSize: 12 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>}
                 </View>
 
                 {/* Distance badges */}
@@ -4854,7 +4883,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
                 )}
                 <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88).toFixed(0)} (12% commission, wallet se guaranteed)</Text>
+                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '600' }}>💰 Aapki kamai: ₹{driverSub?.active ? Math.round(parseFloat(hourlyRideReq.base_fare || 0)) : Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)} {driverSub?.active ? '(✅ Subscribed · ₹0 Commission)' : '(12% commission, wallet se guaranteed)'}</Text>
                 </View>
                 {!hourlyRideReq.scheduled_at && <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />}
                 <View style={[s.rideActions, { marginTop: 12 }]}>
@@ -5250,8 +5279,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Big earn number — the hero moment */}
               <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.xl, paddingVertical: SP.md, marginTop: SP.md, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
-                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>₹{Math.round((rideReq?.fare || 0) * 0.88)}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>
+                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                {driverSub?.active
+                  ? <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
+                  : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>}
               </View>
             </View>
 
@@ -5333,7 +5364,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
                 <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12, alignItems: 'center' }}>
                   <Text style={{ color: C.green, fontSize: 11, fontWeight: '800' }}>💰 Aapki Kamai</Text>
-                  <Text style={{ color: '#15803D', fontSize: 22, fontWeight: '900', marginTop: 2 }}>₹{Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
+                  <Text style={{ color: '#15803D', fontSize: 22, fontWeight: '900', marginTop: 2 }}>₹{driverSub?.active ? Math.round(parseFloat(hourlyRideReq.base_fare || 0)) : Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
+                  {driverSub?.active && <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: '700' }}>✅ ₹0 Commission</Text>}
                 </View>
               </View>
               <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 }}>PICKUP</Text>
@@ -6274,6 +6306,163 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )
           }
           <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        </View>
+      );
+    }
+
+    // ─── Driver: Subscription ───
+    if (driverSubScreen === 'subscription') {
+      const activeSub = driverSub?.active;
+      const queuedSub = driverSub?.queued;
+      const catLabel: any = { bike: '🏍️ Bike', auto: '🛺 Auto', car: '🚗 Car' };
+      const pct = activeSub ? Math.round((activeSub.rides_used / activeSub.rides_total) * 100) : 0;
+
+      const doSubscribe = async () => {
+        if (!subSelectedPlan) return;
+        setSubLoading(true); setSubResult('');
+        try {
+          const RazorpayCheckout = require('react-native-razorpay').default;
+          const orderRes = await fetch(`${API}/api/subscriptions/create-order`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, plan_id: subSelectedPlan.id }),
+          }).then(r => r.json());
+          if (!orderRes.success) { setSubResult('❌ ' + (orderRes.error || 'Order failed')); setSubLoading(false); return; }
+
+          const rzpOptions = {
+            description: subSelectedPlan.name,
+            currency: 'INR',
+            key: orderRes.key_id,
+            amount: orderRes.amount,
+            name: 'Sppero Subscription',
+            order_id: orderRes.order_id,
+            prefill: { contact: phone, name: driverInfo?.name || 'Driver' },
+            theme: { color: '#22C55E' },
+          };
+
+          const paymentData: any = await new Promise((resolve, reject) => {
+            RazorpayCheckout.open(rzpOptions).then(resolve).catch(reject);
+          });
+
+          const verRes = await fetch(`${API}/api/subscriptions/verify`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              phone,
+              razorpay_order_id: paymentData.razorpay_order_id,
+              razorpay_payment_id: paymentData.razorpay_payment_id,
+              razorpay_signature: paymentData.razorpay_signature,
+            }),
+          }).then(r => r.json());
+
+          if (verRes.success) {
+            setSubResult(verRes.status === 'queued'
+              ? '✅ Plan queued! Current plan khatam hone ke baad start hoga.'
+              : '🎉 Subscription active! Ab 0% commission milega.');
+            setSubSelectedPlan(null);
+            loadDriverSub(phone, driverInfo?.vehicle_type);
+          } else { setSubResult('❌ ' + (verRes.error || 'Verification failed')); }
+        } catch (e: any) {
+          if (e?.code === 'PAYMENT_CANCELLED') { setSubResult('Payment cancel ho gayi.'); }
+          else { setSubResult('❌ ' + (e?.description || e?.message || 'Kuch problem aayi')); }
+        }
+        setSubLoading(false);
+      };
+
+      return (
+        <View style={s.screen}>
+          <SubHeader title="🎯 Subscription" />
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+
+            {/* Active plan card */}
+            {activeSub ? (
+              <View style={{ backgroundColor: '#022c22', borderRadius: 18, padding: 18, marginBottom: 16, borderWidth: 1.5, borderColor: '#22C55E' }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <Text style={{ color: '#22C55E', fontSize: 13, fontWeight: '800' }}>{catLabel[activeSub.vehicle_category] || activeSub.vehicle_category} · {activeSub.plan_name}</Text>
+                  <View style={{ backgroundColor: '#22C55E', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 20 }}>
+                    <Text style={{ color: '#022c22', fontSize: 11, fontWeight: '800' }}>ACTIVE</Text>
+                  </View>
+                </View>
+                <View style={{ backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, height: 8, marginBottom: 6 }}>
+                  <View style={{ backgroundColor: '#22C55E', borderRadius: 8, height: 8, width: pct + '%' as any }} />
+                </View>
+                <Text style={{ color: '#86EFAC', fontSize: 12, marginBottom: 2 }}>
+                  {activeSub.rides_used} used · {activeSub.rides_remaining} remaining out of {activeSub.rides_total}
+                </Text>
+                <Text style={{ color: '#6EE7B7', fontSize: 11, marginBottom: 10 }}>
+                  Expires: {new Date(activeSub.expires_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', borderTopWidth: 1, borderTopColor: 'rgba(34,197,94,0.3)', paddingTop: 10 }}>
+                  <Text style={{ color: '#A7F3D0', fontSize: 12 }}>💰 Commission Saved</Text>
+                  <Text style={{ color: '#22C55E', fontSize: 18, fontWeight: '900' }}>₹{parseFloat(driverSub?.total_savings || 0).toFixed(0)}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={{ backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(34,197,94,0.2)', alignItems: 'center' }}>
+                <Text style={{ color: '#22C55E', fontSize: 14, fontWeight: '700' }}>✨ Abhi koi active plan nahi</Text>
+                <Text style={{ color: '#64748B', fontSize: 12, marginTop: 4 }}>Neeche se plan choose karo — ₹0 commission milega!</Text>
+              </View>
+            )}
+
+            {/* Queued plan */}
+            {queuedSub && (
+              <View style={{ backgroundColor: '#fefce8', borderRadius: 14, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#fde68a', flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Text style={{ fontSize: 20 }}>⏳</Text>
+                <View>
+                  <Text style={{ color: '#78350F', fontSize: 12, fontWeight: '700' }}>Next Plan Queued</Text>
+                  <Text style={{ color: '#92400E', fontSize: 11 }}>{queuedSub.plan_name} · {queuedSub.rides_total} rides</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Plan selection */}
+            <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 12 }}>
+              {activeSub ? 'Next Plan Chunno' : 'Plan Chunno'}
+            </Text>
+
+            {subPlans.length === 0 ? (
+              <Text style={{ color: '#94A3B8', fontSize: 13, textAlign: 'center' }}>Plans load ho rahe hain...</Text>
+            ) : (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+                {subPlans.map((p: any) => {
+                  const selected = subSelectedPlan?.id === p.id;
+                  return (
+                    <Bouncy key={p.id} onPress={() => setSubSelectedPlan(selected ? null : p)} style={{ flex: 1, minWidth: 130 }}>
+                      <View style={{ borderRadius: 14, padding: 14, borderWidth: 2, borderColor: selected ? '#22C55E' : '#E2E8F0', backgroundColor: selected ? '#F0FDF4' : '#fff', alignItems: 'center' }}>
+                        <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>{p.ride_count} RIDES</Text>
+                        <Text style={{ color: '#0F172A', fontSize: 24, fontWeight: '900' }}>₹{parseFloat(p.price).toFixed(0)}</Text>
+                        {p.original_price && <Text style={{ color: '#94A3B8', fontSize: 11, textDecorationLine: 'line-through' }}>₹{parseFloat(p.original_price).toFixed(0)}</Text>}
+                        <Text style={{ color: '#64748B', fontSize: 10, marginTop: 4 }}>60 din valid</Text>
+                        {selected && <Text style={{ color: '#22C55E', fontSize: 11, fontWeight: '700', marginTop: 4 }}>✓ Selected</Text>}
+                      </View>
+                    </Bouncy>
+                  );
+                })}
+              </View>
+            )}
+
+            {/* Subscribe button */}
+            {subSelectedPlan && (
+              <Bouncy onPress={doSubscribe} disabled={subLoading} style={{ backgroundColor: subLoading ? '#86EFAC' : '#22C55E', borderRadius: 14, padding: 16, alignItems: 'center', marginBottom: 12 }}>
+                <Text style={{ color: '#fff', fontSize: 16, fontWeight: '900' }}>
+                  {subLoading ? '⏳ Processing...' : `Subscribe → Pay ₹${parseFloat(subSelectedPlan.price).toFixed(0)}`}
+                </Text>
+              </Bouncy>
+            )}
+
+            {subResult ? <Text style={{ textAlign: 'center', fontSize: 13, color: subResult.startsWith('❌') ? '#EF4444' : '#22C55E', marginBottom: 12, fontWeight: '600' }}>{subResult}</Text> : null}
+
+            {/* Terms */}
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: '#374151', marginBottom: 8 }}>Terms & Conditions</Text>
+              {[
+                '✅ Subscription 60 din mein use karo (ya rides khatam hone tak)',
+                '✅ ₹0 commission — har ride pe pura paisa aapka',
+                '✅ Daily / weekly bonus incentives bhi milenge',
+                '❌ Plan purchase karne ke baad refund nahi hoga',
+                '💡 GST subscription price mein included hai',
+                '📌 Ek active plan hone par naya plan queue hota hai',
+              ].map((t, i) => <Text key={i} style={{ fontSize: 12, color: '#64748B', marginBottom: 4 }}>{t}</Text>)}
+            </View>
+          </ScrollView>
         </View>
       );
     }
@@ -7458,13 +7647,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
 
         {([
+          ['🎯', 'Subscription', 'Zero commission ride packs', 'subscription'],
           ['📦', 'All Orders', 'Rides history, completed & cancelled', 'orders'],
           ['📋', 'Documents', 'License, RC verification', 'documents'],
           ['🏦', 'Bank Details', 'Payout account', 'bank'],
           ['📞', 'Support', '24x7 help', 'support'],
           ['⚙️', 'Settings', 'Preferences', 'settings'],
         ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
-          <Bouncy key={key} style={s.menuItem} onPress={() => { if (key === 'orders') { setOrdersData(null); setOrdersLoading(false); setOrdersPeriod('day'); setOrdersDate(new Date()); setOrdersFilter('all'); } setDrSubScreen(key as any); setBankMsg(''); }}>
+          <Bouncy key={key} style={s.menuItem} onPress={() => {
+            if (key === 'orders') { setOrdersData(null); setOrdersLoading(false); setOrdersPeriod('day'); setOrdersDate(new Date()); setOrdersFilter('all'); }
+            if (key === 'subscription') { setSubResult(''); setSubSelectedPlan(null); loadDriverSub(phone, driverInfo?.vehicle_type); }
+            setDrSubScreen(key as any); setBankMsg('');
+          }}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#0F172A', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{sub}</Text></View>
             <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
