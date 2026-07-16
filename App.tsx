@@ -668,6 +668,55 @@ function App() {
   const [subLoading, setSubLoading] = useState(false);
   const [subResult, setSubResult]   = useState('');
 
+  // ── Subscription hint (one-time, home tab) ──────────────────────────────
+  const [showSubHint, setShowSubHint]   = useState(false);
+  const subHintTY      = useRef(new Animated.Value(140)).current;
+  const subHintOpacity = useRef(new Animated.Value(0)).current;
+  const subHintShimmer = useRef(new Animated.Value(0)).current;
+  const subHintBobY    = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    if (!driverSub || driverSub.active) return;
+    let timer: any;
+    AsyncStorage.getItem('_subHintShown').then(v => {
+      if (v) return;
+      timer = setTimeout(() => {
+        setShowSubHint(true);
+        Animated.parallel([
+          Animated.spring(subHintTY, { toValue: 0, useNativeDriver: true, tension: 50, friction: 8 }),
+          Animated.timing(subHintOpacity, { toValue: 1, duration: 400, useNativeDriver: true }),
+        ]).start(() => {
+          // Attention bob after slide-in
+          Animated.sequence([
+            Animated.timing(subHintBobY, { toValue: -10, duration: 280, useNativeDriver: true }),
+            Animated.timing(subHintBobY, { toValue: 0,   duration: 280, useNativeDriver: true }),
+            Animated.timing(subHintBobY, { toValue: -5,  duration: 200, useNativeDriver: true }),
+            Animated.timing(subHintBobY, { toValue: 0,   duration: 200, useNativeDriver: true }),
+          ]).start();
+          // Shimmer sweep — repeats every ~3.4s
+          Animated.loop(
+            Animated.sequence([
+              Animated.timing(subHintShimmer, { toValue: 1, duration: 1400, useNativeDriver: true }),
+              Animated.delay(2000),
+              Animated.timing(subHintShimmer, { toValue: 0, duration: 0, useNativeDriver: true }),
+            ])
+          ).start();
+        });
+      }, 3500);
+    });
+    return () => { if (timer) clearTimeout(timer); };
+  }, [driverSub]);
+
+  const dismissSubHint = async () => {
+    subHintShimmer.stopAnimation();
+    Animated.parallel([
+      Animated.timing(subHintTY, { toValue: 160, duration: 320, useNativeDriver: true }),
+      Animated.timing(subHintOpacity, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]).start(() => setShowSubHint(false));
+    await AsyncStorage.setItem('_subHintShown', '1');
+  };
+  // ────────────────────────────────────────────────────────────────────────
+
   const vehicleCategoryFor = (vt: string) => {
     const v = (vt || '').toLowerCase();
     if (['bike','green_bike'].includes(v)) return 'bike';
@@ -4281,6 +4330,100 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         </View>
       )}
+      {/* ── One-time subscription hint ── */}
+      {showSubHint && !activeRide && !rideReq && !hourlyRideReq && (
+        <Animated.View style={{
+          position: 'absolute', bottom: Platform.OS === 'android' ? 88 : 72, left: 12, right: 12, zIndex: 400,
+          transform: [{ translateY: subHintTY }, { translateY: subHintBobY }],
+          opacity: subHintOpacity,
+        }}>
+          <View style={{
+            backgroundColor: '#010F09', borderRadius: 22, borderWidth: 1.5, borderColor: '#22C55E',
+            overflow: 'hidden', elevation: 24,
+            shadowColor: '#22C55E', shadowOpacity: 0.45, shadowRadius: 22, shadowOffset: { width: 0, height: 4 },
+          }}>
+            {/* Shimmer sweep */}
+            <Animated.View pointerEvents="none" style={{
+              position: 'absolute', top: 0, bottom: 0, width: 80,
+              backgroundColor: 'rgba(255,255,255,0.055)',
+              transform: [{ translateX: subHintShimmer.interpolate({ inputRange: [0, 1], outputRange: [-80, 420] }) }],
+              zIndex: 50,
+            }} />
+
+            <View style={{ padding: 16 }}>
+              {/* Header row */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+                <View style={{ backgroundColor: 'rgba(34,197,94,0.18)', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(34,197,94,0.35)', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                  <Text style={{ fontSize: 11 }}>✨</Text>
+                  <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: '900', letterSpacing: 1.4 }}>SPECIAL OFFER</Text>
+                </View>
+                <View style={{ flex: 1 }} />
+                <TouchableOpacity onPress={dismissSubHint} hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}>
+                  <Text style={{ color: '#4ADE80', fontSize: 20, fontWeight: '300', lineHeight: 22 }}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Headline */}
+              <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: -0.3, marginBottom: 4 }}>
+                Har ride pe pura paisa! 💰
+              </Text>
+              <Text style={{ color: '#6EE7B7', fontSize: 12, lineHeight: 18, marginBottom: 14 }}>
+                Subscription lo — ₹0 commission, har ride pe. Sirf ek baar khareedna hai.
+              </Text>
+
+              {/* Divider */}
+              <View style={{ height: 1, backgroundColor: 'rgba(34,197,94,0.15)', marginBottom: 14 }} />
+
+              {/* Category tiles */}
+              <View style={{ flexDirection: 'row', gap: 8, marginBottom: 14 }}>
+                {([
+                  { emoji: '🏍️', label: 'Bike Pack', detail: 'Bike + E-Bike' },
+                  { emoji: '🛺', label: 'Auto Pack', detail: 'Auto + E-Auto' },
+                  { emoji: '🚗', label: 'Car Pack',  detail: 'All Cars'      },
+                ] as const).map((item, i) => (
+                  <View key={i} style={{ flex: 1, backgroundColor: 'rgba(34,197,94,0.08)', borderRadius: 12, padding: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.18)' }}>
+                    <Text style={{ fontSize: 20, marginBottom: 3 }}>{item.emoji}</Text>
+                    <Text style={{ color: '#A7F3D0', fontSize: 9, fontWeight: '800', letterSpacing: 0.5 }}>{item.label}</Text>
+                    <View style={{ backgroundColor: '#022c22', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2, marginTop: 4, borderWidth: 1, borderColor: '#22C55E' }}>
+                      <Text style={{ color: '#22C55E', fontSize: 9, fontWeight: '900' }}>₹0 Commission</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* Key savings facts */}
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 16 }}>
+                {[
+                  { n: '0%', lbl: 'Commission' },
+                  { n: '60', lbl: 'Din valid' },
+                  { n: '15+', lbl: 'Ride packs' },
+                ].map((f, i) => (
+                  <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                    <Text style={{ color: '#22C55E', fontSize: 22, fontWeight: '900', lineHeight: 26 }}>{f.n}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 10, fontWeight: '700' }}>{f.lbl}</Text>
+                  </View>
+                ))}
+              </View>
+
+              {/* CTA */}
+              <TouchableOpacity
+                onPress={() => {
+                  dismissSubHint();
+                  setSubResult(''); setSubSelectedPlan(null);
+                  loadDriverSub(phone, driverInfo?.vehicle_type);
+                  setDrSubScreen('subscription');
+                }}
+                activeOpacity={0.82}
+                style={{ backgroundColor: '#22C55E', borderRadius: 14, paddingVertical: 14, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 8 }}
+              >
+                <Text style={{ color: '#022c22', fontSize: 15, fontWeight: '900' }}>Subscribe karo</Text>
+                <Text style={{ color: '#022c22', fontSize: 16, fontWeight: '700' }}>→</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Animated.View>
+      )}
+
       {/* Top bar */}
       <View style={s.topBar}>
         <View style={{ flex: 1 }}>
