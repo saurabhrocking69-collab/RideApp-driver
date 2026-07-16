@@ -6573,7 +6573,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         <Text style={{ color: '#64748B', fontSize: 11, fontWeight: '700', marginBottom: 4 }}>{p.ride_count} RIDES</Text>
                         <Text style={{ color: '#0F172A', fontSize: 24, fontWeight: '900' }}>₹{parseFloat(p.price).toFixed(0)}</Text>
                         {p.original_price && <Text style={{ color: '#94A3B8', fontSize: 11, textDecorationLine: 'line-through' }}>₹{parseFloat(p.original_price).toFixed(0)}</Text>}
-                        <Text style={{ color: '#64748B', fontSize: 10, marginTop: 4 }}>60 din valid</Text>
+                        <Text style={{ color: '#64748B', fontSize: 10, marginTop: 4 }}>{p.validity_days === 1 ? '1 din valid ⚡' : `${p.validity_days || 60} din valid`}</Text>
                         {selected && <Text style={{ color: '#22C55E', fontSize: 11, fontWeight: '700', marginTop: 4 }}>✓ Selected</Text>}
                       </View>
                     </Bouncy>
