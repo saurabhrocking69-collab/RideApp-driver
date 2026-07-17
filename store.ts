@@ -10,6 +10,7 @@ type DriverState = {
   pendingRide: any;
   suspended: boolean;
   pendingCommission: number;
+  hourlyBusy: boolean;
   _pollTimer: any;
   _lastRideId: string | null;
   _pollFn: (() => void) | null;
@@ -18,6 +19,7 @@ type DriverState = {
   triggerPoll: () => void;
   stopPolling: () => void;
   clearAll: () => void;
+  setHourlyBusy: (busy: boolean) => void;
 };
 
 export const useDriverStore = create<DriverState>((set, get) => ({
@@ -25,6 +27,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   pendingRide: null,
   suspended: false,
   pendingCommission: 0,
+  hourlyBusy: false,
   _pollTimer: null,
   _lastRideId: null,
   _pollFn: null,
@@ -49,6 +52,9 @@ export const useDriverStore = create<DriverState>((set, get) => ({
         // Only clear activeRide on explicit "no ride" response — not on network error
         // (transient errors would flash the card blank for 2s between polls)
         if (!ad._error) set({ activeRide: null });
+
+        // Driver engaged in hourly ride — don't surface standard ride requests
+        if (get().hourlyBusy) { set({ pendingRide: null }); busy = false; return; }
 
         const pd = await apiGet(`/api/driver/pending-ride?phone=${phone}`, 0, 5000);
         if (!pd._error) {
@@ -87,6 +93,8 @@ export const useDriverStore = create<DriverState>((set, get) => ({
 
   clearAll: () => {
     get().stopPolling();
-    set({ activeRide: null, pendingRide: null, suspended: false, pendingCommission: 0, _lastRideId: null, _pollFn: null });
+    set({ activeRide: null, pendingRide: null, suspended: false, pendingCommission: 0, hourlyBusy: false, _lastRideId: null, _pollFn: null });
   },
+
+  setHourlyBusy: (busy: boolean) => set({ hourlyBusy: busy, ...(busy ? { pendingRide: null } : {}) }),
 }));

@@ -18,7 +18,12 @@ import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBan
 import { Audio } from 'expo-av';
 import { apiGet, apiPost } from './api';
 import { useDriverStore } from './store';
+import { TR, Lang } from './translations';
 import { io, Socket } from 'socket.io-client';
+
+// Module-level lang — updated whenever the in-component state changes,
+// so sub-components (BottomNav) can read it without prop-drilling.
+let _appLang: Lang = 'hi';
 import { C, T, R, SP, SHADOW, DS } from './theme';
 
 // Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
@@ -576,6 +581,21 @@ function App() {
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
+
+  // ── Language ──────────────────────────────────
+  const [lang, setLang] = useState<Lang>('hi');
+  const t = (key: string) => TR[lang]?.[key] ?? TR.hi[key] ?? key;
+  const tp = (key: string, p: Record<string, string>) => {
+    let s = t(key);
+    for (const [k, v] of Object.entries(p)) s = s.replace(`{${k}}`, v);
+    return s;
+  };
+  const changeLang = async (l: Lang) => {
+    setLang(l); _appLang = l;
+    try { await AsyncStorage.setItem('_lang', l); } catch (_e) {}
+  };
+  // Sync module-level var whenever lang state changes
+  useEffect(() => { _appLang = lang; }, [lang]);
   // Pre-assignment queue — a ride offered to this driver while they're still on an active trip
   const [preQueued, setPreQueued]          = useState<{ rideId: number; pickup: string; fare: string; rideType: string; etaMin: number } | null>(null);
   const [preQueueAccepted, setPreQueueAccepted] = useState(false);
@@ -791,10 +811,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [liveKm, setLiveKm]                     = useState(0);
   const prevHourlyGpsRef = useRef<{lat:number,lng:number}|null>(null);
 
+  // Block standard ride requests while driver is in an active hourly booking
+  useEffect(() => {
+    useDriverStore.getState().setHourlyBusy(!!activeHourlyRide);
+  }, [activeHourlyRide]);
+
   // Registration
   const [regStep, setRegStep]       = useState(0);
   const [regData, setRegData]       = useState<any>({ phone:'', vehicle_type:'', vehicle_brand:'', vehicle_model:'', vehicle_no:'', dl_name:'', dl_number:'', dl_photo:'', vehicle_photo:'', rc_photo:'', aadhaar_number:'', aadhaar_photo:'', face_photo:'' });
   const [uploading, setUploading]   = useState('');
+  const scanLineAnim = useRef(new Animated.Value(0)).current;
   const [loginPhone, setLoginPhone] = useState('');
   const [loginOtp, setLoginOtp]     = useState('');
   const [loginOtpSent, setLoginOtpSent] = useState(false);
@@ -852,6 +878,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const timer = setTimeout(async () => {
       // Clean up any stale background location task from previous session
       stopBgLocation().catch(() => {});
+      // Restore preferred language before nav
+      try {
+        const sl = await AsyncStorage.getItem('_lang');
+        if (sl === 'en' || sl === 'hi') { setLang(sl as Lang); _appLang = sl as Lang; }
+      } catch (_e) {}
+
       let navTo: Screen = 'login';
       try {
         const savedPhone = await AsyncStorage.getItem('driverPhone');
@@ -1974,6 +2006,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Registration ───────────────────────────────
   const updateReg = (field: string, value: string) => setRegData((p: any) => ({ ...p, [field]: value }));
 
+  useEffect(() => {
+    if (uploading) {
+      scanLineAnim.setValue(0);
+      Animated.loop(
+        Animated.timing(scanLineAnim, { toValue: 1, duration: 1800, useNativeDriver: true })
+      ).start();
+    } else {
+      scanLineAnim.stopAnimation();
+      scanLineAnim.setValue(0);
+    }
+  }, [uploading]);
+
   const doUpload = async (field: string, base64: string) => {
     setUploading(field);
     try {
@@ -2548,27 +2592,67 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   // ── PhotoBox ───────────────────────────────────
-  const PhotoBox = ({ field, label, icon, cameraOnly }: any) => (
-    <View style={rs.photoBox}>
-      {regData[field] ? (
-        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>✅</Text><Text style={{ color: C.green, fontWeight: '600', marginTop: 4 }}>Uploaded</Text></View>
-      ) : uploading === field ? (
-        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 32 }}>⏳</Text><Text style={{ color: '#666', marginTop: 4 }}>Uploading...</Text></View>
-      ) : (
-        <View style={{ alignItems: 'center' }}><Text style={{ fontSize: 28 }}>{icon}</Text><Text style={{ color: '#666', fontWeight: '600', marginTop: 4, marginBottom: 10 }}>{label}</Text></View>
-      )}
-      {cameraOnly ? (
-        <View style={{ marginTop: 8, width: '100%' }}>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Selfie Lo</Text></TouchableOpacity>
-        </View>
-      ) : (
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Camera</Text></TouchableOpacity>
-          <TouchableOpacity style={rs.uploadBtn} onPress={() => fromGallery(field)}><Text style={rs.uploadBtnTxt}>🖼️ Gallery</Text></TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
+  const PhotoBox = ({ field, label, icon, cameraOnly }: any) => {
+    const isUploading = uploading === field;
+    const hasUrl = !!regData[field];
+    const SCAN_BOX_H = 130;
+    const lineY = scanLineAnim.interpolate({ inputRange: [0, 1], outputRange: [0, SCAN_BOX_H - 2] });
+    return (
+      <View style={[rs.photoBox, hasUrl && rs.photoBoxDone]}>
+        {hasUrl ? (
+          <>
+            <View style={{ width: '100%', height: SCAN_BOX_H, borderRadius: 10, overflow: 'hidden' }}>
+              <Image source={{ uri: regData[field] }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+              <View style={{ position: 'absolute', top: 8, right: 8, backgroundColor: '#059669', borderRadius: 16, paddingHorizontal: 10, paddingVertical: 4, flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                <Ionicons name="shield-checkmark" size={11} color="#fff" />
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800', letterSpacing: 0.5 }}>VERIFIED</Text>
+              </View>
+            </View>
+            <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, width: '100%' }}>
+              {!cameraOnly && (
+                <TouchableOpacity style={[rs.uploadBtn, rs.reuploadBtn]} onPress={() => fromGallery(field)} activeOpacity={0.75}>
+                  <Text style={[rs.uploadBtnTxt, { color: '#334155' }]}>🖼️ Change</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)} activeOpacity={0.75}>
+                <Text style={rs.uploadBtnTxt}>{cameraOnly ? '🔄 Re-take Selfie' : '📷 Re-take'}</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : isUploading ? (
+          <View style={{ width: '100%', height: SCAN_BOX_H, borderRadius: 10, overflow: 'hidden', backgroundColor: '#0A1628', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <View style={[rs.scanCorner, { top: 10, left: 10 }]} />
+            <View style={[rs.scanCorner, { top: 10, right: 10, borderLeftWidth: 0, borderRightWidth: 3 }]} />
+            <View style={[rs.scanCorner, { bottom: 10, left: 10, borderTopWidth: 0, borderBottomWidth: 3 }]} />
+            <View style={[rs.scanCorner, { bottom: 10, right: 10, borderTopWidth: 0, borderBottomWidth: 3, borderLeftWidth: 0, borderRightWidth: 3 }]} />
+            <Animated.View style={{ position: 'absolute', left: 0, right: 0, height: 2, backgroundColor: C.pink, opacity: 0.9, transform: [{ translateY: lineY }] }} />
+            <ActivityIndicator color={C.pink} size="small" style={{ marginBottom: 8 }} />
+            <Text style={{ color: '#94A3B8', fontSize: 11, fontWeight: '700', letterSpacing: 1.2 }}>SCANNING DOCUMENT...</Text>
+          </View>
+        ) : (
+          <View style={{ alignItems: 'center', paddingVertical: 8 }}>
+            <Text style={{ fontSize: 30 }}>{icon}</Text>
+            <Text style={{ color: '#475569', fontWeight: '600', marginTop: 6, fontSize: 14 }}>{label}</Text>
+            <Text style={{ color: '#94A3B8', fontSize: 11, marginTop: 3 }}>Clear photo · Good lighting · All details visible</Text>
+          </View>
+        )}
+        {!hasUrl && !isUploading && (
+          cameraOnly ? (
+            <View style={{ marginTop: 10, width: '100%' }}>
+              <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}>
+                <Text style={rs.uploadBtnTxt}>📷 Open Front Camera</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 10 }}>
+              <TouchableOpacity style={rs.uploadBtn} onPress={() => fromCamera(field)}><Text style={rs.uploadBtnTxt}>📷 Camera</Text></TouchableOpacity>
+              <TouchableOpacity style={rs.uploadBtn} onPress={() => fromGallery(field)}><Text style={rs.uploadBtnTxt}>🖼️ Gallery</Text></TouchableOpacity>
+            </View>
+          )
+        )}
+      </View>
+    );
+  };
 
   // ═══ SPLASH SCREEN ═══
   if (screen === 'splash') return (
@@ -3206,35 +3290,126 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {result ? <Text style={s.err}>{result}</Text> : null}
           <TouchableOpacity
             style={[s.btn, !step5Ok && { opacity: 0.5 }, { marginTop: 20 }]}
-            disabled={!step5Ok || loading}
-            onPress={submitRegistration}>
-            <Text style={s.btnTxt}>{loading ? '⏳ Submit ho raha hai...' : '✅ Registration Submit Karo'}</Text>
+            disabled={!step5Ok}
+            onPress={() => { setResult(''); setRegStep(6); }}>
+            <Text style={s.btnTxt}>Review & Submit →</Text>
           </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     );
   }
 
+  // ═══ REGISTRATION STEP 6 — Review & Submit ═══
+  if (screen === 'login' && regStep === 6) {
+    const aadhaarDigs = regData.aadhaar_number.replace(/\D/g, '');
+    const maskedAadhaar = aadhaarDigs.length >= 4 ? `XXXX XXXX ${aadhaarDigs.slice(-4)}` : '—';
+    const { width: SW } = Dimensions.get('window');
+    const THUMB_W = (SW - 40 - 12) / 2;
+    const THUMB_H = Math.round(THUMB_W * 0.7);
+    const renderDocThumb = (field: string, title: string, sub1: string, sub2: string, goStep: number) => (
+      <View key={field} style={{ width: THUMB_W, borderRadius: 12, overflow: 'hidden', borderWidth: 1.5, borderColor: regData[field] ? 'rgba(16,185,129,0.35)' : '#E2E8F0', backgroundColor: regData[field] ? 'rgba(16,185,129,0.04)' : '#F8FAFC' }}>
+        {regData[field] ? (
+          <Image source={{ uri: regData[field] }} style={{ width: THUMB_W, height: THUMB_H }} resizeMode="cover" />
+        ) : (
+          <View style={{ width: THUMB_W, height: THUMB_H, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F1F5F9' }}>
+            <Text style={{ fontSize: 22 }}>🚫</Text>
+            <Text style={{ color: '#94A3B8', fontSize: 10, marginTop: 4 }}>Not uploaded</Text>
+          </View>
+        )}
+        <View style={{ padding: 10 }}>
+          <Text style={{ fontSize: 10, fontWeight: '800', color: C.pink, letterSpacing: 0.8, marginBottom: 3 }}>{title}</Text>
+          {sub1 ? <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '600' }} numberOfLines={1}>{sub1}</Text> : null}
+          {sub2 ? <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }} numberOfLines={1}>{sub2}</Text> : null}
+          <TouchableOpacity onPress={() => { setResult(''); setRegStep(goStep); }} style={{ marginTop: 8, backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 8, padding: 6, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
+            <Text style={{ color: C.pink, fontSize: 11, fontWeight: '700' }}>✏️ Edit</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+    return (
+      <View style={s.screen}>
+        <View style={rs.regHeader}>
+          <TouchableOpacity onPress={() => setRegStep(5)} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
+          <Text style={rs.regTitle}>Review & Submit</Text>
+          <View style={{ width: 50 }} />
+        </View>
+        <View style={{ height: 4, backgroundColor: '#333' }}><View style={{ height: 4, backgroundColor: C.green, width: '100%' }} /></View>
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 20, paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
+          <View style={{ alignItems: 'center', marginTop: 10, marginBottom: 20 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 7, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+              <Ionicons name="shield-checkmark" size={15} color={C.green} style={{ marginRight: 6 }} />
+              <Text style={{ color: C.green, fontSize: 11, fontWeight: '800', letterSpacing: 1 }}>FINAL REVIEW</Text>
+            </View>
+            <Text style={[rs.bigTitle, { textAlign: 'center', marginTop: 10 }]}>Review Your Documents</Text>
+            <Text style={[rs.subTitle, { textAlign: 'center' }]}>Confirm all details are correct before submitting</Text>
+          </View>
+
+          <Text style={{ fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 1.5, marginBottom: 10 }}>IDENTITY & VEHICLE</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+            {renderDocThumb('dl_photo', 'DRIVING LICENSE', regData.dl_name || '—', regData.dl_number || '—', 3)}
+            {renderDocThumb('vehicle_photo', 'VEHICLE', (`${regData.vehicle_brand} ${regData.vehicle_model}`).trim() || regData.vehicle_type, regData.vehicle_no || '—', 4)}
+          </View>
+
+          <Text style={{ fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 1.5, marginBottom: 10 }}>IDENTITY PROOF & SELFIE</Text>
+          <View style={{ flexDirection: 'row', gap: 12, marginBottom: regData.rc_photo ? 16 : 20 }}>
+            {renderDocThumb('aadhaar_photo', 'AADHAAR CARD', maskedAadhaar, 'Government ID', 5)}
+            {renderDocThumb('face_photo', 'LIVE SELFIE', 'Face verification', 'Identity match', 5)}
+          </View>
+
+          {!!regData.rc_photo && (
+            <>
+              <Text style={{ fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 1.5, marginBottom: 10 }}>REGISTRATION CERTIFICATE</Text>
+              <View style={{ flexDirection: 'row', marginBottom: 20 }}>
+                {renderDocThumb('rc_photo', 'RC PHOTO', 'Vehicle registration', 'Optional document', 4)}
+              </View>
+            </>
+          )}
+
+          <View style={{ backgroundColor: 'rgba(239,68,68,0.07)', borderRadius: 12, padding: 14, marginBottom: 20, borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)' }}>
+            <Text style={{ color: '#DC2626', fontWeight: '800', fontSize: 13, marginBottom: 8 }}>⚠️ Before You Submit</Text>
+            <Text style={{ color: '#7F1D1D', fontSize: 12, lineHeight: 20 }}>
+              {'• All document photos must be clear and fully readable\n• Expired or blurry documents will be immediately rejected\n• Providing false information may result in a permanent ban'}
+            </Text>
+          </View>
+
+          {result ? <Text style={s.err}>{result}</Text> : null}
+          <TouchableOpacity
+            style={[s.btn, { backgroundColor: C.green }, loading && { opacity: 0.55 }]}
+            disabled={loading}
+            onPress={submitRegistration}>
+            <Text style={s.btnTxt}>{loading ? '⏳ Submitting Application...' : '🛡️ Submit Application'}</Text>
+          </TouchableOpacity>
+          <Text style={{ color: '#94A3B8', fontSize: 11, textAlign: 'center', marginTop: 12, lineHeight: 17 }}>Your documents are encrypted and securely stored</Text>
+        </ScrollView>
+      </View>
+    );
+  }
+
   // ═══ REGISTRATION DONE ═══
   if (screen === 'login' && regStep === 99) return (
     <View style={s.screen}>
-      <View style={s.hero}>
-        <Text style={{ fontSize: 70 }}>🎉</Text>
-        <Text style={s.heroTitle}>Application Submit!</Text>
-        <Text style={{ color: '#aaa', fontSize: 13, marginTop: 4 }}>Sppero Buddy Captain</Text>
+      <View style={[s.hero, { backgroundColor: '#F0FDF4' }]}>
+        <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(16,185,129,0.4)', marginBottom: 12 }}>
+          <Ionicons name="shield-checkmark" size={44} color={C.green} />
+        </View>
+        <Text style={[s.heroTitle, { color: '#064E3B' }]}>Application Submitted</Text>
+        <Text style={{ color: '#059669', fontSize: 13, marginTop: 4, fontWeight: '700', letterSpacing: 1 }}>SPPERO BUDDY CAPTAIN</Text>
       </View>
-      <View style={{ padding: 24, alignItems: 'center' }}>
-        <Text style={{ fontSize: 16, color: '#94A3B8', textAlign: 'center', lineHeight: 26 }}>
-          Aapki Sppero Buddy Captain application submit ho gayi! ✅{'\n\n'}Admin aapke sare documents — DL, Aadhaar, Vehicle aur Selfie — verify karega.
-        </Text>
-        <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 16, marginTop: 16, width: '100%', borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-          <Text style={{ color: C.green, textAlign: 'center', fontWeight: '600', fontSize: 13 }}>✅ Verification hone ke baad app khud notify kar dega</Text>
+      <View style={{ padding: 24 }}>
+        <View style={{ backgroundColor: 'rgba(16,185,129,0.07)', borderRadius: 14, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+          <Text style={{ color: '#065F46', fontSize: 14, lineHeight: 24, textAlign: 'center' }}>
+            Your application has been received. Our team will verify your Driving License, Aadhaar, Vehicle photo, and Selfie.
+          </Text>
         </View>
-        <View style={{ backgroundColor: 'rgba(245,158,11,0.1)', borderRadius: 12, padding: 16, marginTop: 10, width: '100%', borderWidth: 1, borderColor: 'rgba(245,158,11,0.3)' }}>
-          <Text style={{ color: '#F59E0B', textAlign: 'center', fontWeight: '600' }}>⏳ Status: Verification Pending</Text>
+        <View style={{ backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 12, padding: 14, marginBottom: 24, borderWidth: 1, borderColor: 'rgba(245,158,11,0.25)', flexDirection: 'row', alignItems: 'center' }}>
+          <Ionicons name="time" size={20} color="#F59E0B" style={{ marginRight: 10 }} />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 13 }}>Verification in Progress</Text>
+            <Text style={{ color: '#B45309', fontSize: 12, marginTop: 2 }}>You'll be notified once your account is approved</Text>
+          </View>
         </View>
-        <TouchableOpacity style={[s.btn, { marginTop: 24, width: '100%' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}>
-          <Text style={s.btnTxt}>🏠 Login Screen pe jao</Text>
+        <TouchableOpacity style={[s.btn, { backgroundColor: '#0F172A' }]} onPress={() => { setRegStep(0); setPhone(regData.phone); }}>
+          <Text style={s.btnTxt}>← Back to Login</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -3282,11 +3457,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ LOGIN ═══
   if (screen === 'login') {
     const LOGIN_CAPTIONS = [
-      { emoji: '👑', line1: 'Become Your', line2: 'Own Boss', sub: 'No office. No fixed hours. You decide when you drive.' },
-      { emoji: '🗺️', line1: 'Help People Reach', line2: 'Their Destination', sub: 'Every ride is a story of trust & service.' },
-      { emoji: '💰', line1: 'Earn ₹800+', line2: 'Every Day', sub: 'Steady income credited instantly to your wallet.' },
-      { emoji: '🛺', line1: 'India Ka Apna', line2: 'Ride Platform', sub: 'Built for Bharat. Powered by 10,000+ Captains.' },
-      { emoji: '⭐', line1: 'Join & Keep', line2: 'Earning Daily', sub: 'Morning, afternoon or night — your schedule, your earnings.' },
+      { emoji: '👑', line1: t('cap0_l1'), line2: t('cap0_l2'), sub: t('cap0_sub') },
+      { emoji: '🗺️', line1: t('cap1_l1'), line2: t('cap1_l2'), sub: t('cap1_sub') },
+      { emoji: '💰', line1: t('cap2_l1'), line2: t('cap2_l2'), sub: t('cap2_sub') },
+      { emoji: '🛺', line1: t('cap3_l1'), line2: t('cap3_l2'), sub: t('cap3_sub') },
+      { emoji: '⭐', line1: t('cap4_l1'), line2: t('cap4_l2'), sub: t('cap4_sub') },
     ];
     const cap = LOGIN_CAPTIONS[loginCaptionIdx];
 
@@ -3434,15 +3609,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           )}
 
           {/* Drag handle */}
-          {!loginOtpSent && <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 18 }} />}
+          {!loginOtpSent && <View style={{ width: 44, height: 4, borderRadius: 2, backgroundColor: '#E2E8F0', alignSelf: 'center', marginBottom: 14 }} />}
+
+          {/* Language picker — only on main login screen */}
+          {!loginOtpSent && (
+            <View style={{ marginBottom: 18 }}>
+              <Text style={{ fontSize: 10, fontWeight: '800', color: '#94A3B8', letterSpacing: 1.2, textAlign: 'center', marginBottom: 8 }}>{t('lang_choose').toUpperCase()}</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => changeLang('hi')}
+                  style={{ flex: 1, borderRadius: 14, borderWidth: 2, borderColor: lang === 'hi' ? C.pink : '#E2E8F0', backgroundColor: lang === 'hi' ? 'rgba(233,30,99,0.07)' : '#F8FAFC', paddingVertical: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, marginBottom: 2 }}>🇮🇳</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: lang === 'hi' ? C.pink : '#94A3B8' }}>{t('lang_hi_label')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => changeLang('en')}
+                  style={{ flex: 1, borderRadius: 14, borderWidth: 2, borderColor: lang === 'en' ? C.pink : '#E2E8F0', backgroundColor: lang === 'en' ? 'rgba(233,30,99,0.07)' : '#F8FAFC', paddingVertical: 10, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 18, marginBottom: 2 }}>🇬🇧</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: lang === 'en' ? C.pink : '#94A3B8' }}>{t('lang_en_label')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           <Text style={{ color: '#0F172A', fontSize: 21, fontWeight: '900', marginBottom: 4 }}>
-            {loginOtpSent ? '🔑 OTP Enter Karo' : '🚗 Captain Login'}
+            {loginOtpSent ? t('login_otp_title') : t('login_title')}
           </Text>
           <Text style={{ color: '#64748B', fontSize: 13, marginBottom: 22, lineHeight: 19 }}>
             {loginOtpSent
-              ? `+91 ${loginPhone} par 6-digit code bheja gaya`
-              : 'Sppero ke saath drive karo aur roz kamaao'}
+              ? tp('login_otp_sub', { phone: loginPhone })
+              : t('login_subtitle')}
           </Text>
 
           {!loginOtpSent ? (
@@ -3474,7 +3670,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 disabled={loginPhone.length !== 10 || loading}
                 onPress={doLogin}>
                 <Text style={{ color: loginPhone.length !== 10 ? '#94A3B8' : '#fff', fontSize: 16, fontWeight: '900', letterSpacing: 0.3 }}>
-                  {loading ? '⏳ OTP bhej rahe hain...' : 'OTP Bhejo →'}
+                  {loading ? t('login_sending') : t('login_send_otp')}
                 </Text>
               </Bouncy>
 
@@ -3508,7 +3704,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* OTP sent notice */}
               <View style={{ backgroundColor: 'rgba(233,30,99,0.06)', borderRadius: 14, padding: 14, marginBottom: 18, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
                 <Text style={{ fontSize: 20 }}>📱</Text>
-                <Text style={{ fontSize: 12, color: C.pink, flex: 1, fontWeight: '600', lineHeight: 18 }}>SMS se OTP copy karke paste karo — 6 boxes mein auto-fill ho jaayega!</Text>
+                <Text style={{ fontSize: 12, color: C.pink, flex: 1, fontWeight: '600', lineHeight: 18 }}>{t('login_otp_tip')}</Text>
               </View>
 
               {/* 6 OTP Boxes */}
@@ -3544,7 +3740,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 disabled={loading || loginOtpDigits.join('').length < 6}
                 onPress={() => verifyLoginOtp()}>
                 <Text style={{ color: (loading || loginOtpDigits.join('').length < 6) ? '#94A3B8' : '#fff', fontSize: 16, fontWeight: '900' }}>
-                  {loading ? '⏳ Verify ho raha hai...' : '✅ Login Karo'}
+                  {loading ? t('login_verifying') : t('login_verify')}
                 </Text>
               </Bouncy>
 
@@ -3552,13 +3748,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ alignItems: 'center', marginBottom: 12 }}>
                 {loginCanResend
                   ? <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setLoginOtp(''); setResult(''); doLogin(); }}>
-                      <Text style={{ color: C.pink, fontWeight: '800', fontSize: 13 }}>🔄 OTP Dobara Bhejo</Text>
+                      <Text style={{ color: C.pink, fontWeight: '800', fontSize: 13 }}>{t('login_resend')}</Text>
                     </TouchableOpacity>
-                  : <Text style={{ color: '#94A3B8', fontSize: 12 }}>Dobara bhejne ke liye <Text style={{ color: C.pink, fontWeight: '700' }}>{loginResendTimer}s</Text> wait karo</Text>
+                  : <Text style={{ color: '#94A3B8', fontSize: 12 }}>{tp('login_resend_wait', { sec: String(loginResendTimer) })}</Text>
                 }
               </View>
               <TouchableOpacity onPress={() => { setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setResult(''); }} style={{ alignItems: 'center', paddingVertical: 4 }}>
-                <Text style={{ color: '#64748B', fontSize: 12 }}>← Number change karo</Text>
+                <Text style={{ color: '#64748B', fontSize: 12 }}>{t('login_change_number')}</Text>
               </TouchableOpacity>
             </ScrollView>
           )}
@@ -4240,7 +4436,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         )}
         {activeRide?.status === 'started' && (
           <Bouncy style={[s.tripBtn, { backgroundColor:C.green, shadowColor:C.green }]} onPress={() => { setInNavMode(false); completeTrip(); }} disabled={loading}>
-            <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+            <Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_complete')}</Text>
           </Bouncy>
         )}
         {activeRide?.status === 'arrived' && (
@@ -4918,14 +5114,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     placeholderTextColor="#D4A520"
                     autoFocus
                   />
-                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading || otpInput.length < 4}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                  <Bouncy style={s.tripBtn} onPress={startTrip} disabled={loading || otpInput.length < 4}><Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_verify_start')}</Text></Bouncy>
                 </KeyboardAvoidingView>
               )}
 
               {activeRide.status === 'started' && (
                 <View>
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                    <Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_complete')}</Text>
                   </Bouncy>
                 </View>
               )}
@@ -5023,7 +5219,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <TouchableOpacity style={{ flex: 2, backgroundColor: '#22C55E', borderRadius: 16, padding: 18, alignItems: 'center', elevation: 6, shadowColor: '#22C55E', shadowOpacity: 0.45, shadowRadius: 12 }} onPress={acceptRide} disabled={loading}>
                     <Text style={{ fontSize: 22 }}>✓</Text>
                     <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 15, marginTop: 2 }}>
-                      {loading ? 'Accept ho raha...' : 'ACCEPT KARO'}
+                      {loading ? t('live_accept_loading') : t('live_accept')}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -5114,7 +5310,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <View style={{ marginTop: 10 }}>
                   <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 8, textAlign: 'center' }}>🔐 Customer se OTP poocho (woh app mein dekh rahe hain)</Text>
                   <TextInput style={{ borderWidth: 2, borderColor: C.green, borderRadius: 12, padding: 14, fontSize: 28, textAlign: 'center', letterSpacing: 10, marginBottom: 10, fontWeight: 'bold', backgroundColor: '#FFFFFF', color: '#0F172A' }} placeholder="0000" placeholderTextColor="#475569" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput} />
-                  <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text></Bouncy>
+                  <Bouncy style={s.tripBtn} onPress={startHourlyTrip} disabled={loading}><Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_verify_start')}</Text></Bouncy>
                   <TouchableOpacity style={[s.navBtn, { flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6 }]} onPress={() => setInNavMode(true)}>
                     <Ionicons name="navigate" size={15} color="#fff" />
                     <Text style={{ color: '#fff', fontWeight: '600' }}>Pickup Navigate Karo</Text>
@@ -5288,7 +5484,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     // State 4: Time complete — show complete button
                     return (
                       <Bouncy style={[s.tripBtn, { backgroundColor: C.green, marginBottom: 10 }]} onPress={completeHourlyTrip} disabled={loading}>
-                        <Text style={s.tripBtnTxt}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                        <Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_complete')}</Text>
                       </Bouncy>
                     );
                   })()}
@@ -5395,18 +5591,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ fontSize: 44 }}>🚗</Text>
                   </View>
                 </PulseView>
-                <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>Rides Ka Intezaar...</Text>
-                <Text style={{ fontSize: 14, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>Nayi ride aate hi yahan dikhegi{'\n'}aur phone vibrate karega</Text>
+                <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>{t('live_waiting_title')}</Text>
+                <Text style={{ fontSize: 14, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{t('live_waiting_sub')}</Text>
               </>
             ) : (
               <>
                 <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(239,68,68,0.1)', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'rgba(239,68,68,0.25)' }}>
                   <Text style={{ fontSize: 44 }}>💤</Text>
                 </View>
-                <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>Abhi Offline Hain</Text>
-                <Text style={{ fontSize: 14, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>Home tab pe jaake online ho{'\n'}phir rides milne lagengi</Text>
+                <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>{t('live_offline_title')}</Text>
+                <Text style={{ fontSize: 14, color: '#64748B', marginTop: 8, textAlign: 'center', lineHeight: 20 }}>{t('live_offline_sub')}</Text>
                 <TouchableOpacity onPress={() => setActiveTab('home')} style={{ backgroundColor: C.pink, borderRadius: 16, paddingHorizontal: 28, paddingVertical: 14, marginTop: 24, elevation: 4 }}>
-                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>Home Tab Pe Jao</Text>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{t('live_go_home')}</Text>
                 </TouchableOpacity>
               </>
             )}
@@ -5414,7 +5610,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         )}
 
         {/* ── INCOMING STANDARD RIDE REQUEST ── */}
-        {rideReq && !activeRide && (
+        {rideReq && !activeRide && !activeHourlyRide && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
             {/* Dark plum header — premium, urgent */}
             <View style={{ backgroundColor: C.bgDark, paddingTop: 20, paddingHorizontal: SP.md, paddingBottom: SP.lg, alignItems: 'center', overflow: 'hidden' }}>
@@ -5755,7 +5951,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       autoFocus={false}
                     />
                     <Bouncy style={[s.tripBtn, { paddingVertical: 20, opacity: otpInput.length < 4 ? 0.5 : 1 }]} onPress={startTrip} disabled={loading || otpInput.length < 4}>
-                      <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
+                      <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : t('trip_verify_start')}</Text>
                     </Bouncy>
                   </View>
                 </View>
@@ -5765,7 +5961,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {activeRide.status === 'started' && (
                 <View>
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0 }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : t('trip_complete')}</Text>
                   </Bouncy>
                   {/* Extra large gap so cancel is NOT accidentally hit after tapping Complete */}
                   <View style={{ height: 24 }} />
@@ -5884,7 +6080,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     placeholder="0000" placeholderTextColor="#94A3B8" keyboardType="number-pad" maxLength={4} value={hourlyOtpInput} onChangeText={setHourlyOtpInput}
                   />
                   <Bouncy style={[s.tripBtn, { paddingVertical: 18 }]} onPress={startHourlyTrip} disabled={loading}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : '🚀 OTP Verify & Trip Shuru'}</Text>
+                    <Text style={[s.tripBtnTxt, { fontSize: 17 }]}>{loading ? '...' : t('trip_verify_start')}</Text>
                   </Bouncy>
                 </View>
               </View>
@@ -5927,7 +6123,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     );
                     return (
                       <Bouncy style={[s.tripBtn, { backgroundColor: C.green, paddingVertical: 20, marginBottom: 0 }]} onPress={completeHourlyTrip} disabled={loading}>
-                        <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : '✅ Trip Complete Karo'}</Text>
+                        <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : t('trip_complete')}</Text>
                       </Bouncy>
                     );
                   })()}
@@ -6102,7 +6298,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
       </View>
     );
 
@@ -6191,7 +6387,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
         </ScrollView>
-        <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
       </View>
       );
     }
@@ -6237,7 +6433,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           ))}
         </ScrollView>
-        <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
       </View>
     );
 
@@ -6269,7 +6465,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </TouchableOpacity>
             </View>
           </View>
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
       return (
@@ -6326,7 +6522,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
     }
@@ -6427,7 +6623,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 )
               }
             </KeyboardAvoidingView>
-            <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+            <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
           </View>
         );
       }
@@ -6513,7 +6709,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </ScrollView>
               )
           }
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
     }
@@ -6894,7 +7090,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               })}
             </ScrollView>
           )}
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
     }
@@ -6905,25 +7101,48 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={s.screen}>
           <SubHeader title="⚙️ Settings" />
           <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+
+            {/* ── Language ── */}
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>🔔 Notifications</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 14 }}>{t('settings_lang')}</Text>
+              <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 12 }}>{t('settings_lang_sub')}</Text>
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={() => changeLang('hi')}
+                  style={{ flex: 1, borderRadius: 14, borderWidth: 2, borderColor: lang === 'hi' ? C.pink : '#E2E8F0', backgroundColor: lang === 'hi' ? 'rgba(233,30,99,0.07)' : '#fff', paddingVertical: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, marginBottom: 4 }}>🇮🇳</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: lang === 'hi' ? C.pink : '#64748B' }}>{t('lang_hi_label')}</Text>
+                  {lang === 'hi' && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.pink, marginTop: 6 }} />}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => changeLang('en')}
+                  style={{ flex: 1, borderRadius: 14, borderWidth: 2, borderColor: lang === 'en' ? C.pink : '#E2E8F0', backgroundColor: lang === 'en' ? 'rgba(233,30,99,0.07)' : '#fff', paddingVertical: 12, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 20, marginBottom: 4 }}>🇬🇧</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: lang === 'en' ? C.pink : '#64748B' }}>{t('lang_en_label')}</Text>
+                  {lang === 'en' && <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: C.pink, marginTop: 6 }} />}
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>{t('settings_notif_section')}</Text>
               {[
-                { label: 'Ride Requests', sub: 'Nayi ride ki notification', key: 'notif_rides', def: true },
-                { label: 'Wallet Updates', sub: 'Payment credit/debit alerts', key: 'notif_wallet', def: true },
-                { label: 'Promotional Offers', sub: 'Bonus aur offers', key: 'notif_promo', def: true },
+                { label: t('settings_ride_notif'), sub: t('settings_ride_nsub'), key: 'notif_rides' },
+                { label: t('settings_wallet_notif'), sub: t('settings_wallet_nsub'), key: 'notif_wallet' },
+                { label: t('settings_promo_notif'), sub: t('settings_promo_nsub'), key: 'notif_promo' },
               ].map((item, i) => (
                 <View key={item.key} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 12, borderBottomWidth: i < 2 ? 1 : 0, borderBottomColor: '#334155' }}>
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>{item.label}</Text>
                     <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{item.sub}</Text>
                   </View>
-                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Notifications settings OS settings se manage karo:\nSettings → Apps → Sppero Buddy → Notifications')} trackColor={{ false: '#334155', true: C.green }} thumbColor="#fff" />
+                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', t('settings_notif_msg'))} trackColor={{ false: '#334155', true: C.green }} thumbColor="#fff" />
                 </View>
               ))}
             </View>
 
             <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, elevation: 2, marginBottom: 14, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>📱 App Info</Text>
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 16 }}>{t('settings_app_section')}</Text>
               {[
                 ['App Version', '1.0.0'],
                 ['Driver ID', phone ? `DRV-${phone.slice(-4)}` : '—'],
@@ -6937,17 +7156,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
 
             <TouchableOpacity
-              onPress={() => Alert.alert('Cache Clear', 'App cache clear ho gaya!')}
+              onPress={() => Alert.alert('Cache', t('settings_cache_msg'))}
               style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ fontSize: 18, marginRight: 12 }}>🗑️</Text>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>Clear Cache</Text>
-                <Text style={{ fontSize: 11, color: '#64748B' }}>App data clear karo</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>{t('settings_cache')}</Text>
+                <Text style={{ fontSize: 11, color: '#64748B' }}>{t('settings_cache_sub')}</Text>
               </View>
               <Text style={{ fontSize: 18, color: '#475569' }}>›</Text>
             </TouchableOpacity>
           </ScrollView>
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
     }
@@ -7073,7 +7292,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               })}
             </ScrollView>
           )}
-          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+          <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
     }
@@ -7853,7 +8072,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   return (
     <View style={s.screen}>
       <View style={[s.topBar, { paddingBottom: 16 }]}><Text style={s.greeting}>👤 Profile</Text></View>
-      {rideReq && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('live')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
+      {rideReq && !activeHourlyRide && <TouchableOpacity style={s.notifBanner} onPress={() => setActiveTab('live')}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 14 }}>🔔 Nayi Ride! ₹{rideReq.fare}</Text><Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text></TouchableOpacity>}
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         <View style={s.profileHero}>
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || 'D')[0].toUpperCase()}</Text></View>
@@ -8091,11 +8310,12 @@ const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number) => 
 };
 
 function BottomNav({ activeTab, setActiveTab, rideReq, hourlyRideReq, activeRide, activeHourlyRide }: any) {
+  const bnTR = TR[_appLang] ?? TR.hi;
   const tabs = [
     { t: 'home',     ion: 'home',       lbl: 'Home'   },
     { t: 'live',     ion: 'radio',      lbl: 'Live'   },
-    { t: 'earnings', ion: 'wallet',      lbl: 'Kamai'  },
-    { t: 'bonus',    ion: 'gift',        lbl: 'Bonus'  },
+    { t: 'earnings', ion: 'wallet',      lbl: bnTR.nav_earnings ?? 'Kamai'  },
+    { t: 'bonus',    ion: 'gift',        lbl: bnTR.nav_bonus    ?? 'Bonus'  },
     { t: 'profile',  ion: 'person',      lbl: 'Profile'},
   ];
   const hasLiveBadge = rideReq || hourlyRideReq || activeRide || activeHourlyRide;
@@ -8218,6 +8438,9 @@ const rs = StyleSheet.create({
   adviceBox:   { backgroundColor:'rgba(233,30,99,0.06)', borderRadius:12, padding:14, marginTop:14, marginBottom:6, borderWidth:1, borderColor:'rgba(233,30,99,0.2)' },
   adviceTitle: { fontSize:14, fontWeight:'bold', color:C.pink, marginBottom:6 },
   adviceText:  { fontSize:13, color:'#64748B', marginTop:2 },
+  photoBoxDone:  { borderStyle:'solid', borderColor:'rgba(16,185,129,0.4)', backgroundColor:'rgba(16,185,129,0.04)' },
+  scanCorner:    { position:'absolute', width:22, height:22, borderColor:C.pink, borderTopWidth:3, borderLeftWidth:3, borderBottomWidth:0, borderRightWidth:0 },
+  reuploadBtn:   { flex:1, backgroundColor:'#F1F5F9', borderWidth:1, borderColor:'#E2E8F0' },
 });
 
 export default App;
