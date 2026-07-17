@@ -782,6 +782,7 @@ function App() {
   const [hourlyRideReq, setHourlyRideReq]       = useState<any>(null);
   const [activeHourlyRide, setActiveHourlyRide] = useState<any>(null);
   const activeHourlyRideRef = useRef<any>(null);
+  const triggerHourlyPollRef = useRef<(() => void) | null>(null);
   const [hourlyOtpInput, setHourlyOtpInput]     = useState('');
   const [hourlyArrived, setHourlyArrived]       = useState(false);
 const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
@@ -1029,6 +1030,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (data?.type === 'ride_cancelled') {
         setCancelPopup({ msg: 'Customer ne Ride Cancel Kar Di', sub: 'Aapke liye agli ride dhundh rahe hain...' });
         useDriverStore.getState().triggerPoll?.();
+      }
+      if (data?.type === 'hourly_available') {
+        Vibration.vibrate([0, 600, 150, 600, 150, 600]);
+        triggerHourlyPollRef.current?.();
       }
       if (data?.type === 'hourly_extend') {
         Vibration.vibrate([0, 400, 200, 400]);
@@ -1667,7 +1672,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!isOnline || !phone) return;
     let stopped = false;
     let busy = false;
-    const iv = setInterval(async () => {
+    const doPoll = async () => {
       if (stopped || busy) return;
       busy = true;
       try {
@@ -1685,8 +1690,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
       } catch (_e) {}
       busy = false;
-    }, 4000);
-    return () => { stopped = true; clearInterval(iv); };
+    };
+    triggerHourlyPollRef.current = doPoll;
+    const iv = setInterval(doPoll, 4000);
+    return () => { stopped = true; triggerHourlyPollRef.current = null; clearInterval(iv); };
   }, [isOnline, phone, activeRide?.id]);
 
   // Extension request polling — active for 15 min after trip summary shown
@@ -2068,6 +2075,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         // Broadcast system: newRideRequest sent to ALL drivers in radius simultaneously
         s.on('newRideRequest', () => { useDriverStore.getState().triggerPoll?.(); });
         s.on('newRideAssigned', () => { useDriverStore.getState().triggerPoll?.(); }); // backward compat
+        s.on('newHourlyRideRequest', () => {
+          Vibration.vibrate([0, 600, 150, 600, 150, 600]);
+          triggerHourlyPollRef.current?.();
+        });
 
         // Another driver accepted first — clear the pending ride immediately
         s.on('rideTaken', () => {
@@ -5512,32 +5523,65 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {/* ── INCOMING HOURLY RIDE REQUEST ── */}
         {hourlyRideReq && !activeRide && !activeHourlyRide && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-            <View style={{ backgroundColor: C.pink, borderRadius: 16, padding: 14, marginBottom: 16, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>⏱️ HOURLY</Text></View>
-              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 18, flex: 1 }}>
+            {/* Header */}
+            <View style={{ backgroundColor: '#0F172A', borderRadius: 16, padding: 16, marginBottom: 14, overflow: 'hidden' }}>
+              <View style={{ position: 'absolute', width: 160, height: 160, borderRadius: 80, backgroundColor: 'rgba(255,45,120,0.08)', top: -40, right: -40 }} />
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <View style={{ backgroundColor: C.pink, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: '#fff', fontSize: 11, fontWeight: 'bold' }}>⏱️ HOURLY BOOKING</Text></View>
+                {hourlyRideReq.scheduled_at && (
+                  <View style={{ backgroundColor: 'rgba(245,158,11,0.2)', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
+                    <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: '800' }}>📅 SCHEDULED</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={{ color: '#fff', fontWeight: '900', fontSize: 24, marginBottom: 4 }}>
                 {hourlyRideReq.package_hours >= 24 ? `${hourlyRideReq.package_hours / 24} Day${hourlyRideReq.package_hours > 24 ? 's' : ''}` : hourlyRideReq.package_hours === 8 ? 'Full Day (8h)' : `${hourlyRideReq.package_hours} Hours`}
               </Text>
-              <Text style={{ color: '#fff', fontSize: 24, fontWeight: '900' }}>₹{hourlyRideReq.base_fare}</Text>
-            </View>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 3, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-                <View style={{ flex: 1, backgroundColor: '#EFF6FF', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: '#2563EB', fontSize: 11, fontWeight: '800' }}>📦 Included KM</Text>
-                  <Text style={{ color: '#1D4ED8', fontSize: 22, fontWeight: '900', marginTop: 2 }}>{hourlyRideReq.km_included} km</Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
+                <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(0,200,83,0.3)', alignItems: 'center', flex: 1 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>AAPKI KAMAI</Text>
+                  <Text style={{ color: C.online, fontSize: 28, fontWeight: '900', lineHeight: 34 }}>₹{driverSub?.active ? Math.round(parseFloat(hourlyRideReq.base_fare || 0)) : Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
+                  {driverSub?.active
+                    ? <Text style={{ color: '#86EFAC', fontSize: 9, fontWeight: '700' }}>✅ ₹0 Commission</Text>
+                    : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>12% commission kata ke</Text>}
                 </View>
-                <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 12, padding: 12, alignItems: 'center' }}>
-                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '800' }}>💰 Aapki Kamai</Text>
-                  <Text style={{ color: '#15803D', fontSize: 22, fontWeight: '900', marginTop: 2 }}>₹{driverSub?.active ? Math.round(parseFloat(hourlyRideReq.base_fare || 0)) : Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
-                  {driverSub?.active && <Text style={{ color: '#22C55E', fontSize: 10, fontWeight: '700' }}>✅ ₹0 Commission</Text>}
+                <View style={{ backgroundColor: 'rgba(37,99,235,0.12)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(37,99,235,0.3)', alignItems: 'center', flex: 1 }}>
+                  <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>INCLUDED KM</Text>
+                  <Text style={{ color: '#93C5FD', fontSize: 28, fontWeight: '900', lineHeight: 34 }}>{hourlyRideReq.km_included}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>km guaranteed</Text>
                 </View>
               </View>
+            </View>
+
+            {/* Guaranteed payment badge */}
+            <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 12, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: 'rgba(16,185,129,0.28)' }}>
+              <Text style={{ fontSize: 20 }}>✅</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={{ color: '#059669', fontWeight: '800', fontSize: 13 }}>₹{hourlyRideReq.base_fare} Already Paid — Wallet Se Guaranteed</Text>
+                <Text style={{ color: '#64748B', fontSize: 11, marginTop: 2 }}>Customer ne pehle se wallet se pay kar diya hai. Trip complete hone par turant wallet mein aayega.</Text>
+              </View>
+            </View>
+
+            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, marginBottom: 14, elevation: 3, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              {/* Pickup distance */}
+              {driverGps && hourlyRideReq.pickup_lat && hourlyRideReq.pickup_lng && (() => {
+                const distKm = haversineKm(driverGps.lat, driverGps.lng, parseFloat(hourlyRideReq.pickup_lat), parseFloat(hourlyRideReq.pickup_lng));
+                const distStr = distKm < 1 ? `${Math.round(distKm * 1000)} m` : `${distKm.toFixed(1)} km`;
+                return (
+                  <View style={{ backgroundColor: 'rgba(233,30,99,0.06)', borderRadius: 10, padding: 10, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(233,30,99,0.2)' }}>
+                    <Text style={{ fontSize: 16 }}>🗺️</Text>
+                    <Text style={{ color: C.pink, fontWeight: '700', fontSize: 13 }}>Aapse {distStr} door — pickup point pe jao</Text>
+                  </View>
+                );
+              })()}
+
               <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 }}>PICKUP</Text>
               <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A', marginBottom: 10 }}>{hourlyRideReq.pickup}</Text>
               {hourlyRideReq.drop_location && (
-                <><Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 }}>DROP</Text>
+                <><Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8, marginBottom: 4 }}>FIRST STOP</Text>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#0F172A' }}>{hourlyRideReq.drop_location}</Text></>
               )}
-              {!hourlyRideReq.drop_location && <Text style={{ color: '#94A3B8', fontSize: 13 }}>Drop: Flexible</Text>}
+              {!hourlyRideReq.drop_location && <Text style={{ color: '#94A3B8', fontSize: 13 }}>Drop: Flexible — driver ke saath jao</Text>}
             </View>
             {hourlyRideReq.scheduled_at && (
               <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, flexDirection: 'row', alignItems: 'center', gap: 6, borderWidth: 1, borderColor: 'rgba(233,30,99,0.3)' }}>
@@ -5748,7 +5792,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <View style={{ backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}><Text style={{ color: '#fff', fontWeight: 'bold', fontSize: 11 }}>⏱️ HOURLY</Text></View>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 16 }}>
-                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : '🛣️ Trip chal rahi hai'}
+                  {activeHourlyRide.status === 'matched' ? '🚗 Pickup pe jao' : activeHourlyRide.status === 'arrived' ? '📍 Pahunch Gaye — OTP Lo' : '🛣️ Trip chal rahi hai'}
                 </Text>
               </View>
               {activeHourlyRide.status === 'active' && (
@@ -5792,16 +5836,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {activeHourlyRide.drop_location && <Text style={{ fontSize: 13, color: C.pink, fontWeight: '700', marginTop: 4 }}>🎯 {activeHourlyRide.drop_location}</Text>}
             </View>
 
-            {/* OTP section (matched) */}
-            {activeHourlyRide.status === 'matched' && (
+            {/* OTP section (matched or arrived) */}
+            {(activeHourlyRide.status === 'matched' || activeHourlyRide.status === 'arrived') && (
               <View>
-                {!hourlyArrived ? (
+                {!hourlyArrived && activeHourlyRide.status !== 'arrived' ? (
                   <Bouncy
                     style={{ backgroundColor: C.green, borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginBottom: 12, elevation: 4, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 10 }}
                     onPress={async () => {
                       try {
                         await fetch(`${API}/api/hourly/arrived`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
                         setHourlyArrived(true);
+                        setActiveHourlyRide((prev: any) => prev ? { ...prev, status: 'arrived' } : prev);
                       } catch (_e) { Alert.alert('Error', 'Network error'); }
                     }}
                   >
