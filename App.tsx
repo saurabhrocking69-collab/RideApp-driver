@@ -592,7 +592,7 @@ function App() {
   const driverGpsRef                = useRef<any>(null);
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
-  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list' | 'subscription'>('');
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list' | 'subscription' | 'fare-rates'>('');
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -660,6 +660,10 @@ function App() {
   const [payoutInput, setPayoutInput] = useState('');
   const [payoutLoading, setPayoutLoading] = useState(false);
   const [walletLoaded, setWalletLoaded] = useState(false);
+
+  // Fare rates data
+  const [drFares, setDrFares] = useState<any[]>([]);
+  const [drFaresLoading, setDrFaresLoading] = useState(false);
 
   // Subscription data
   const [driverSub, setDriverSub] = useState<any>(null);   // { active, queued, total_savings, vehicle_category }
@@ -822,6 +826,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   useEffect(() => {
     if (driverSubScreen === 'orders' && phone) loadOrders(ordersPeriod, ordersDate);
+    if (driverSubScreen === 'fare-rates') {
+      setDrFaresLoading(true);
+      fetch(`${API}/api/fare-settings`)
+        .then(r => r.json())
+        .then(d => { if (d.fares) setDrFares(d.fares); })
+        .catch(() => {})
+        .finally(() => setDrFaresLoading(false));
+    }
   }, [driverSubScreen]);
 
   // ── Splash + Auto login ────────────────────────
@@ -1425,7 +1437,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const d = await r.json();
       setDriverWallet(d.wallet || { balance: 0, total_earned: 0, total_withdrawn: 0 });
       setDriverRideHistory(d.rides || []);
-      setDriverHourlyHistory(d.hourly_rides || []);
+      setDriverHourlyHistory(d.hourly || []);
       setWalletLoaded(true);
     } catch (_e) {}
   };
@@ -2113,6 +2125,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         s.on('zoneAlertSent', ({ count }: { count: number }) => {
           setZoneAlertSentCount(count);
           setTimeout(() => setZoneAlertSentCount(null), 3000);
+        });
+        s.on('fareSettingsUpdated', () => {
+          // Refresh fare rates if user is currently viewing the fare-rates sub-screen
+          setDrFares([]);
+          fetch(`${API}/api/fare-settings`)
+            .then(r => r.json())
+            .then(d => { if (d.fares) setDrFares(d.fares); })
+            .catch(() => {});
         });
         socketRef.current = s;
         (globalThis as any).__driverSocket = s;
@@ -6887,6 +6907,132 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       );
     }
 
+    if (driverSubScreen === 'fare-rates') {
+      const VEHICLE_META: Record<string, { icon: string; label: string }> = {
+        bike:          { icon: '🏍️', label: 'Bike' },
+        auto:          { icon: '🛺',  label: 'Auto' },
+        car:           { icon: '🚕',  label: 'Car' },
+        eriksha:       { icon: '🛵',  label: 'E-Riksha' },
+        green_bike:    { icon: '⚡',  label: 'Green Bike' },
+        electric_auto: { icon: '🌿',  label: 'Electric Auto' },
+        luxury:        { icon: '🚙',  label: 'Ultra Luxury' },
+      };
+      const VEHICLE_ORDER = ['bike', 'auto', 'car', 'eriksha', 'green_bike', 'electric_auto', 'luxury'];
+      const faresMap: Record<string, any> = {};
+      for (const row of drFares) faresMap[row.vehicle_type] = row;
+
+      return (
+        <View style={s.screen}>
+          <SubHeader title="💰 Fare Rates" />
+          {drFaresLoading && drFares.length === 0 ? (
+            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+              <ActivityIndicator color={C.pink} size="large" />
+            </View>
+          ) : (
+            <ScrollView style={{ flex: 1, padding: 16 }} contentContainerStyle={{ paddingBottom: 40 }}>
+              <View style={{ backgroundColor: 'rgba(16,185,129,0.10)', borderRadius: 10, padding: 10, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+                <Text style={{ fontSize: 14 }}>✅</Text>
+                <Text style={{ flex: 1, fontSize: 11, color: C.green }}>Live rates — updates automatically when admin makes changes</Text>
+              </View>
+
+              {VEHICLE_ORDER.map(vt => {
+                const f = faresMap[vt];
+                const meta = VEHICLE_META[vt];
+                if (!f || !meta) return null;
+                const r1 = parseFloat(f.per_km_rate || 0).toFixed(1);
+                const r2 = f.per_km_rate_t2 != null ? parseFloat(f.per_km_rate_t2).toFixed(1) : r1;
+                const r3 = f.per_km_rate_t3 != null ? parseFloat(f.per_km_rate_t3).toFixed(1) : r2;
+                const tiered = r2 !== r1 || r3 !== r2;
+                const cr  = parseFloat(f.commission_rate || 15);
+                const hcr = f.hourly_commission_rate != null ? parseFloat(f.hourly_commission_rate) : null;
+                return (
+                  <View key={vt} style={{ backgroundColor: '#F8FAFC', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', marginBottom: 14, overflow: 'hidden', elevation: 2 }}>
+                    {/* Header */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, paddingBottom: 12, backgroundColor: '#0F172A' }}>
+                      <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: 'rgba(255,255,255,0.1)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' }}>
+                        <Text style={{ fontSize: 24 }}>{meta.icon}</Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 16, fontWeight: '800', color: '#fff' }}>{meta.label}</Text>
+                        <Text style={{ fontSize: 11, color: '#94A3B8', marginTop: 1 }}>Min fare: ₹{parseFloat(f.min_fare || 0).toFixed(0)}</Text>
+                      </View>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 20, fontWeight: '900', color: C.green }}>₹{parseFloat(f.base_fare).toFixed(0)}</Text>
+                        <Text style={{ fontSize: 10, color: '#94A3B8' }}>base fare</Text>
+                      </View>
+                    </View>
+
+                    {/* Body */}
+                    <View style={{ padding: 14, paddingTop: 12 }}>
+                      {/* Per KM */}
+                      <View style={{ backgroundColor: '#EFF6FF', borderRadius: 10, padding: 10, marginBottom: 10, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 1, marginBottom: 8 }}>PER KM RATE</Text>
+                        {tiered ? (
+                          <>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <Text style={{ fontSize: 12, color: '#64748B' }}>0 – 8 km</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>₹{r1}/km</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                              <Text style={{ fontSize: 12, color: '#64748B' }}>8 – 20 km</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>₹{r2}/km</Text>
+                            </View>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                              <Text style={{ fontSize: 12, color: '#64748B' }}>20 km +</Text>
+                              <Text style={{ fontSize: 13, fontWeight: '800', color: '#0F172A' }}>₹{r3}/km</Text>
+                            </View>
+                          </>
+                        ) : (
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={{ fontSize: 12, color: '#64748B' }}>All distances</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '900', color: '#0F172A' }}>₹{r1}/km</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Quick stats row */}
+                      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 10 }}>
+                        <View style={{ flex: 1, backgroundColor: '#F0FDF4', borderRadius: 8, padding: 8, alignItems: 'center', borderWidth: 1, borderColor: '#BBF7D0' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: C.green }}>₹{parseFloat(f.time_rate || 0).toFixed(1)}</Text>
+                          <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>per min</Text>
+                        </View>
+                        <View style={{ flex: 1, backgroundColor: '#FFF7ED', borderRadius: 8, padding: 8, alignItems: 'center', borderWidth: 1, borderColor: '#FED7AA' }}>
+                          <Text style={{ fontSize: 14, fontWeight: '800', color: '#EA580C' }}>₹{parseFloat(f.platform_fee || 2).toFixed(0)}</Text>
+                          <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>booking fee</Text>
+                        </View>
+                        {f.night_multiplier > 1 && (
+                          <View style={{ flex: 1, backgroundColor: '#EDE9FE', borderRadius: 8, padding: 8, alignItems: 'center', borderWidth: 1, borderColor: '#DDD6FE' }}>
+                            <Text style={{ fontSize: 14, fontWeight: '800', color: '#7C3AED' }}>{parseFloat(f.night_multiplier).toFixed(1)}×</Text>
+                            <Text style={{ fontSize: 10, color: '#64748B', marginTop: 2 }}>🌙 night</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      {/* Commission */}
+                      <View style={{ backgroundColor: 'rgba(255,45,120,0.06)', borderRadius: 10, padding: 10, borderWidth: 1, borderColor: 'rgba(255,45,120,0.18)' }}>
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#64748B', letterSpacing: 1, marginBottom: 8 }}>PLATFORM COMMISSION (deducted from your earnings)</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: hcr != null ? 6 : 0 }}>
+                          <Text style={{ fontSize: 12, color: '#64748B' }}>Standard rides</Text>
+                          <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>{cr}%</Text>
+                        </View>
+                        {hcr != null && (
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={{ fontSize: 12, color: '#64748B' }}>Hourly bookings</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '900', color: C.pink }}>{hcr}%</Text>
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          )}
+          <BottomNav activeTab={activeTab} setActiveTab={(t: string) => { back(); setActiveTab(t); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
+        </View>
+      );
+    }
+
     return null;
   }
 
@@ -6959,14 +7105,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <ScrollView style={{ flex: 1, paddingHorizontal: 14 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 110 }}>
 
         {walletEarningsTab === 'summary' && (<>
-          <View style={s.earningsCard}>
-            <Row k="Total Rides (All Time)" v={driverRideHistory.length.toString()} />
-            <Row k="Hourly Rides" v={driverHourlyHistory.length.toString()} />
-            <Row k="Aaj Ke Rides" v={rides.toString()} />
-            <Row k="Avg Per Ride" v={'₹' + (rides ? (earnings/rides).toFixed(0) : 0)} />
-            <Row k="Platform Fee (15%)" v={'₹' + (earnings * 0.15).toFixed(0)} />
-            <Row k="Aaj Ki Net Kamai" v={'₹' + (earnings * 0.85).toFixed(0)} bold last />
-          </View>
+          {!walletLoaded ? (
+            <View style={[s.earningsCard, { gap: 14 }]}>
+              {[1,2,3,4,5].map(i => (
+                <View key={i} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 }}>
+                  <SkeletonBox width={140} height={13} radius={6} />
+                  <SkeletonBox width={60} height={13} radius={6} />
+                </View>
+              ))}
+            </View>
+          ) : (() => {
+            const todayStr = new Date(Date.now() + 5.5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+            const todayRides = driverRideHistory.filter((r: any) => {
+              try { return new Date(r.created_at).toISOString().slice(0, 10) === todayStr; } catch { return false; }
+            });
+            const todayHourly = driverHourlyHistory.filter((h: any) => {
+              try { return new Date(h.created_at).toISOString().slice(0, 10) === todayStr; } catch { return false; }
+            });
+            const todayCount = todayRides.length + todayHourly.length;
+            const todayNet = todayRides.reduce((s: number, r: any) => s + (parseFloat(r.fare || 0) - parseFloat(r.commission_amount || 0)), 0)
+              + todayHourly.reduce((s: number, h: any) => s + parseFloat(h.driver_earning || h.base_fare || 0), 0);
+            const avgNet = todayCount ? (todayNet / todayCount) : 0;
+            return (
+              <View style={s.earningsCard}>
+                <Row k="Total Rides (All Time)" v={(driverRideHistory.length + driverHourlyHistory.length).toString()} />
+                <Row k="Aaj Ke Rides" v={todayCount.toString()} />
+                <Row k="Avg Per Ride (Aaj)" v={'₹' + avgNet.toFixed(0)} />
+                <Row k="Aaj Ki Net Kamai" v={'₹' + todayNet.toFixed(0)} bold last />
+              </View>
+            );
+          })()}
           {/* ── 7-Day Earnings Chart ── */}
           {earningsAnalytics?.days7 && (() => {
             const days = earningsAnalytics.days7 || [];
@@ -7204,7 +7372,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
                   <Text style={{ color: C.green, fontSize: 16, fontWeight: '800' }}>₹{parseFloat(r.fare || 0).toFixed(0)}</Text>
-                  <Text style={{ color: '#475569', fontSize: 10 }}>Net: ₹{(parseFloat(r.fare || 0) * 0.85).toFixed(0)}</Text>
+                  <Text style={{ color: '#475569', fontSize: 10 }}>Net: ₹{(parseFloat(r.fare || 0) - parseFloat(r.commission_amount || 0)).toFixed(0)}</Text>
                 </View>
               </View>
             </View>
@@ -7835,6 +8003,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {([
           ['🎯', 'Subscription', 'Zero commission ride packs', 'subscription'],
           ['📦', 'All Orders', 'Rides history, completed & cancelled', 'orders'],
+          ['💰', 'Fare Rates', 'Base fare, commission & per km rates', 'fare-rates'],
           ['📋', 'Documents', 'License, RC verification', 'documents'],
           ['🏦', 'Bank Details', 'Payout account', 'bank'],
           ['📞', 'Support', '24x7 help', 'support'],
