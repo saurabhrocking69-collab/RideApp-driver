@@ -5159,6 +5159,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {/* White bottom sheet */}
               <View style={{ flex: 1, backgroundColor: '#F0F4FF', borderTopLeftRadius: 32, borderTopRightRadius: 32, paddingHorizontal: 18, paddingTop: 22, paddingBottom: 16 }}>
+
+                {/* Scheduled ride banner — shown only for scheduled rides */}
+                {rideReq?.isScheduled && (
+                  <View style={{
+                    backgroundColor: '#FFFBEB', borderRadius: 14, padding: 12,
+                    marginBottom: 12, borderWidth: 1.5, borderColor: '#F59E0B',
+                    flexDirection: 'row', alignItems: 'center', gap: 10,
+                  }}>
+                    <Text style={{ fontSize: 22 }}>📅</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '900', color: '#92400E' }}>SCHEDULED RIDE</Text>
+                      {rideReq.scheduledAt && (
+                        <Text style={{ fontSize: 12, color: '#D97706', fontWeight: '700', marginTop: 2 }}>
+                          Pickup: {new Date(rideReq.scheduledAt).toLocaleString('en-IN', {
+                            weekday: 'short', day: 'numeric', month: 'short',
+                            hour: '2-digit', minute: '2-digit', hour12: true,
+                            timeZone: 'Asia/Kolkata',
+                          })}
+                        </Text>
+                      )}
+                      <Text style={{ fontSize: 10, color: '#B45309', marginTop: 2 }}>
+                        Accept now — customer is counting on you!
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
                 {/* Big fare card */}
                 <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, alignItems: 'center', elevation: 4, shadowColor: '#22C55E', shadowOpacity: 0.18, shadowRadius: 10 }}>
                   <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 4, fontWeight: '700', letterSpacing: 1.5 }}>AAPKI KAMAI</Text>
@@ -5618,8 +5645,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.08)', top: -60, right: -40 }} />
               <View style={{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(0,200,83,0.06)', bottom: -40, left: -30 }} />
 
+              {/* Scheduled ride banner */}
+              {rideReq?.isScheduled && (
+                <View style={{ backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.55)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 13 }}>📅</Text>
+                  <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>
+                    SCHEDULED · {rideReq.scheduledAt ? new Date(rideReq.scheduledAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'Asia/Kolkata' }) : ''}
+                  </Text>
+                </View>
+              )}
+
               {/* Favourite / new ride label */}
-              {rideReq?.is_favourite_request ? (
+              {!rideReq?.isScheduled && (rideReq?.is_favourite_request ? (
                 <View style={{ backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                   <Text style={{ fontSize: 13 }}>⭐</Text>
                   <Text style={{ color: '#F59E0B', fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>REGULAR CUSTOMER</Text>
@@ -5628,7 +5665,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <View style={{ backgroundColor: C.pinkGlass, borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: C.pinkBorder }}>
                   <Text style={{ color: C.pink, fontSize: 11, fontWeight: '900', letterSpacing: 1.5 }}>NAYI RIDE AAYI!</Text>
                 </View>
-              )}
+              ))}
 
               {/* Vehicle emoji */}
               <Text style={{ fontSize: 60, marginBottom: SP.sm }}>
