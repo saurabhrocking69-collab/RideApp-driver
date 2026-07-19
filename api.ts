@@ -3,7 +3,7 @@
 //  File: api.ts (App.tsx ke saath same folder mein)
 // ═══════════════════════════════════════════════
 
-export const API = 'https://sppero.com';
+export const API = 'https://api.sppero.com';
 
 // ─── Fetch with timeout (10 sec default) ───
 const fetchWithTimeout = async (url: string, options: any = {}, timeout = 10000): Promise<Response> => {
