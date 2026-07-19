@@ -5667,6 +5667,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               )}
 
+              {/* Intercity banner — big-earning long trip */}
+              {(rideReq?.is_intercity || rideReq?.isIntercity) && (
+                <View style={{ backgroundColor: 'rgba(37,99,235,0.20)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(96,165,250,0.60)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 13 }}>🛣️</Text>
+                  <Text style={{ color: '#60A5FA', fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>
+                    INTERCITY · {(rideReq?.is_roundtrip || rideReq?.isRoundtrip) ? 'ROUND TRIP' : 'ONE WAY'}
+                  </Text>
+                </View>
+              )}
+
               {/* Favourite / new ride label */}
               {!rideReq?.isScheduled && (rideReq?.is_favourite_request ? (
                 <View style={{ backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -5698,10 +5708,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Big earn number — the hero moment */}
               <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.xl, paddingVertical: SP.md, marginTop: SP.md, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
-                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * (rideReq?.is_intercity ? 0.90 : 0.88))}</Text>
                 {driverSub?.active
                   ? <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
-                  : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>}
+                  : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · {rideReq?.is_intercity ? '10%' : '12%'} commission</Text>}
               </View>
             </View>
 
