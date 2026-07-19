@@ -3,7 +3,7 @@
 //  File: api.ts (App.tsx ke saath same folder mein)
 // ═══════════════════════════════════════════════
 
-export const API = 'https://rideapp-backend-production-5e1c.up.railway.app';
+export const API = 'https://sppero.com';
 
 // ─── Fetch with timeout (10 sec default) ───
 const fetchWithTimeout = async (url: string, options: any = {}, timeout = 10000): Promise<Response> => {

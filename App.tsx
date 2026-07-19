@@ -32,7 +32,7 @@ import { C, T, R, SP, SHADOW, DS } from './theme';
 let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
 
-const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
+const API      = 'https://sppero.com';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
 const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, height = 220 }: any) => {
@@ -411,7 +411,7 @@ const SkeletonBonusCard = () => (
 // MUST be defined at module level, before any component mounts.
 // When app is minimized/screen locked, this task fires every ~5s and pings backend.
 const DRIVER_LOCATION_TASK = 'sppero-driver-bg-location';
-const _BG_API = 'https://rideapp-backend-production-5e1c.up.railway.app';
+const _BG_API = 'https://sppero.com';
 
 // Fetch with timeout + 1 retry — handles Jio's packet-drop and slow-DNS issues
 async function _bgFetch(url: string, opts?: RequestInit, timeoutMs = 8000): Promise<Response | null> {
