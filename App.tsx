@@ -1934,15 +1934,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (loginPhone.length !== 10) { setResult('❌ 10 digit number daalo'); return; }
     setLoading(true);
     try {
-      // Pehle OTP bhejo
-      const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 15000);
+      const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }), signal: ctrl.signal });
+      clearTimeout(timer);
       const otpData = await otpRes.json();
       if (otpData.error) { setResult('❌ ' + otpData.error); setLoading(false); return; }
       if (otpData.otp) setDevOtp(otpData.otp);
       setLoginOtpSent(true);
       setLoginResendTimer(60); setLoginCanResend(false);
       setResult('');
-    } catch (_e) { setResult('❌ Server error'); }
+    } catch (_e: any) {
+      const isTimeout = _e?.name === 'AbortError';
+      const errMsg = isTimeout ? 'Connection timeout' : (_e?.message || 'Network error');
+      setResult(`❌ ${errMsg}\nWi-Fi use karo ya doosra network try karo`);
+    }
     setLoading(false);
   };
 
@@ -2901,11 +2907,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               onPress={async () => {
                 setLoading(true); setResult('');
                 try {
-                  const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) });
+                  const ctrl2 = new AbortController();
+                  const t2 = setTimeout(() => ctrl2.abort(), 15000);
+                  const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }), signal: ctrl2.signal });
+                  clearTimeout(t2);
                   const data = await res.json();
                   if (data.error) { setResult('❌ ' + data.error); }
                   else { if (data.otp) setDevOtp(data.otp); setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
-                } catch (_e) { setResult('❌ Server error'); }
+                } catch (_e: any) {
+                  const isTo = _e?.name === 'AbortError';
+                  setResult(`❌ ${isTo ? 'Connection timeout' : (_e?.message || 'Network error')} — Wi-Fi use karo`);
+                }
                 setLoading(false);
               }}>
               <Text style={s.btnTxt}>{loading ? '⏳ OTP bhej raha hai...' : 'OTP Bhejo 📱'}</Text>
