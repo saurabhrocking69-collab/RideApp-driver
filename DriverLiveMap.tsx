@@ -499,7 +499,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           external-Maps route, which would be longer). */}
       {rideStatus === 'started' && chosenRoutePolyline && chosenRouteType === 'shortest' && (
         <View style={styles.chosenRouteBadge} pointerEvents="none">
-          <Text style={{ fontSize: 12 }}>🛵</Text>
+          <Text style={{ fontSize: 12 }}>🛣️</Text>
           <Text style={styles.chosenRouteTxt}>Shortest route — follow this line</Text>
         </View>
       )}
