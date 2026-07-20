@@ -2337,8 +2337,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const netFare = data.fare != null
           ? Math.round(data.fare)
           : Math.max(0, Math.round(parseFloat(rideFare)) - Math.round(discountAmt));
+        // Advance rides: the customer already prepaid 1/3 online — collect only
+        // the REMAINING at drop, never the full fare (that would double-charge).
+        const advanceAmt = parseFloat(String(activeRide?.advance_amount || '0')) || 0;
+        const collectFare = Math.max(0, netFare - advanceAmt);
         setPaymentRideId(rideId);
-        setPaymentFare(String(netFare));
+        setPaymentFare(String(collectFare));
         setPaymentMethod(ridePMethod);
         setPaymentWaiting(true);
         setEarnings(e => e + netFare);
@@ -5734,6 +5738,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   ? <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
                   : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · {rideReq?.is_intercity ? '10%' : '12%'} commission</Text>}
               </View>
+
+              {/* Advance-paid info — customer prepaid 1/3, driver collects the rest */}
+              {parseFloat(rideReq?.advance_amount || 0) > 0 && (
+                <View style={{ backgroundColor: 'rgba(37,99,235,0.15)', borderRadius: R.md, paddingHorizontal: 14, paddingVertical: 10, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(96,165,250,0.5)', width: '100%' }}>
+                  <Text style={{ color: '#93C5FD', fontSize: 11, fontWeight: '800', letterSpacing: 0.5, textAlign: 'center' }}>💳 ADVANCE PREPAID ONLINE</Text>
+                  <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900', textAlign: 'center', marginTop: 3 }}>
+                    ₹{Math.round(parseFloat(rideReq.advance_amount))} paid · Collect ₹{Math.max(0, Math.round((rideReq?.fare || 0) - parseFloat(rideReq.advance_amount)))} at drop
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 10, textAlign: 'center', marginTop: 2 }}>Commission already covered — nothing due from you</Text>
+                </View>
+              )}
             </View>
 
             <View style={{ padding: SP.md }}>
