@@ -1384,6 +1384,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (d.code) { setReferralInfo(d); setReferralLoaded(true); }
     } catch (_e) {}
   };
+  const openZoneNavigation = (zone: { lat: number; lng: number }) => {
+    const url = `google.navigation:q=${zone.lat},${zone.lng}&mode=driving`;
+    Linking.openURL(url).catch(() =>
+      Linking.openURL(`https://maps.google.com/?daddr=${zone.lat},${zone.lng}`)
+    );
+  };
+
   const fetchDemandZones = async () => {
     setZonesLoading(true);
     try {
@@ -4867,22 +4874,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   ? { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)', dot: '#F59E0B', label: 'Medium', labelBg: '#F59E0B' }
                   : { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)', dot: C.green, label: 'Low', labelBg: C.green };
                 const vehicleEmoji = zone.top_vehicle === 'bike' ? '🏍️' : zone.top_vehicle === 'auto' ? '🛺' : zone.top_vehicle === 'car' ? '🚕' : zone.top_vehicle === 'eriksha' ? '🛵' : '🚗';
+                const nearLabel = zone.dist_km < 0.5 ? 'Aapke paas' : `${zone.dist_km} km door`;
                 return (
-                  <View key={i} style={{ backgroundColor: heatConfig.bg, borderRadius: 12, padding: 12, marginBottom: i < 4 ? 8 : 0, borderWidth: 1, borderColor: heatConfig.border, flexDirection: 'row', alignItems: 'center' }}>
+                  <TouchableOpacity
+                    key={i}
+                    activeOpacity={0.8}
+                    onPress={() => openZoneNavigation(zone)}
+                    style={{ backgroundColor: heatConfig.bg, borderRadius: 12, padding: 12, marginBottom: i < 4 ? 8 : 0, borderWidth: 1, borderColor: heatConfig.border, flexDirection: 'row', alignItems: 'center' }}
+                  >
                     <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: heatConfig.dot, marginRight: 10 }} />
                     <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>
-                        {vehicleEmoji} {zone.dist_km < 0.5 ? 'Aapke paas' : `${zone.dist_km} km door`}
-                        {zone.avg_fare > 0 ? ` · avg ₹${zone.avg_fare}` : ''}
+                      <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A' }} numberOfLines={1}>
+                        {vehicleEmoji} {zone.area_name || nearLabel}
                       </Text>
                       <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>
-                        {zone.ride_count} ride{zone.ride_count > 1 ? 's' : ''} is area mein
+                        {zone.area_name ? `${nearLabel} · ` : ''}
+                        {zone.ride_count} ride{zone.ride_count > 1 ? 's' : ''}
+                        {zone.avg_fare > 0 ? ` · avg ₹${zone.avg_fare}` : ''}
                       </Text>
                     </View>
-                    <View style={{ backgroundColor: heatConfig.labelBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
-                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{heatConfig.label}</Text>
+                    <View style={{ alignItems: 'flex-end', gap: 4 }}>
+                      <View style={{ backgroundColor: heatConfig.labelBg, borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                        <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>{heatConfig.label}</Text>
+                      </View>
+                      <Text style={{ fontSize: 9, color: '#94A3B8', fontWeight: '700' }}>🧭 Navigate</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
               <TouchableOpacity onPress={fetchDemandZones} style={{ marginTop: 10, alignItems: 'center', paddingVertical: 6 }}>

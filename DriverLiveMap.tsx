@@ -11,7 +11,7 @@ const NAV_WHITE = '#FFFFFF';
 
 import { C } from './theme';
 
-type DemandZone = { lat: number; lng: number; heat: 'high' | 'medium' | 'low'; ride_count: number; avg_fare: number };
+type DemandZone = { lat: number; lng: number; heat: 'high' | 'medium' | 'low'; ride_count: number; avg_fare: number; area_name?: string | null };
 type RideStatus = 'matched' | 'arrived' | 'started' | null;
 
 const HEAT_FILL:   Record<string, string> = { high: 'rgba(255,45,120,0.25)', medium: 'rgba(245,158,11,0.18)', low: 'rgba(5,150,105,0.14)' };
@@ -120,6 +120,25 @@ function RecenterBtn({ onPress }: { onPress: () => void }) {
     <TouchableOpacity style={styles.recenterBtn} onPress={onPress} activeOpacity={0.8}>
       <Text style={{ fontSize: 18 }}>🎯</Text>
     </TouchableOpacity>
+  );
+}
+
+// ── Hot-zone colour legend — explains what the shaded areas mean ──────────────
+function ZoneLegend() {
+  const items: { label: string; color: string }[] = [
+    { label: 'High',   color: 'rgba(255,45,120,0.85)' },
+    { label: 'Medium', color: 'rgba(245,158,11,0.85)' },
+    { label: 'Low',    color: 'rgba(5,150,105,0.75)'  },
+  ];
+  return (
+    <View style={styles.legend}>
+      {items.map(it => (
+        <View key={it.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: it.color }} />
+          <Text style={styles.legendTxt}>{it.label}</Text>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -376,10 +395,20 @@ export const DriverLiveMap = memo(function DriverLiveMap({
             strokeWidth={1.5}
           />
         ))}
-        {demandZones.filter(z => z.heat === 'high').map((z, i) => (
+        {/* Named labels on high + medium zones only — low-demand zones stay unlabeled to avoid clutter */}
+        {demandZones.filter(z => z.heat === 'high' || z.heat === 'medium').map((z, i) => (
           <Marker key={`zone-lbl-${i}`} coordinate={{ latitude: z.lat, longitude: z.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <View style={{ backgroundColor: C.pink, borderRadius: 12, paddingHorizontal: 7, paddingVertical: 3, borderWidth: 1.5, borderColor: '#fff', elevation: 4 }}>
-              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }}>🔥 {z.ride_count}</Text>
+            <View style={{
+              backgroundColor: z.heat === 'high' ? C.pink : '#F59E0B',
+              borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4,
+              borderWidth: 1.5, borderColor: '#fff', elevation: 4,
+              flexDirection: 'row', alignItems: 'center', gap: 4,
+              maxWidth: 140,
+            }}>
+              <Text style={{ fontSize: 11 }}>{z.heat === 'high' ? '🔥' : '📍'}</Text>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: '900' }} numberOfLines={1}>
+                {z.area_name ? `${z.area_name} · ${z.ride_count}` : z.ride_count}
+              </Text>
             </View>
           </Marker>
         ))}
@@ -445,6 +474,9 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           </Marker.Animated>
         )}
       </MapView>
+
+      {/* Hot-zone legend — only meaningful when zones are actually shown */}
+      {demandZones.length > 0 && !rideStatus && <ZoneLegend />}
 
       {/* ETA chip — top-left */}
       {etaText ? <EtaChip eta={etaText} distance={distText} /> : null}
@@ -544,6 +576,16 @@ const styles = StyleSheet.create({
     elevation: 4, borderWidth: 2.5, borderColor: NAV_BLUE,
     shadowColor: NAV_BLUE, shadowOpacity: 0.25, shadowRadius: 6,
   },
+
+  legend: {
+    position: 'absolute', top: 12, right: 12,
+    flexDirection: 'row', gap: 10,
+    backgroundColor: '#fff', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 6,
+    elevation: 6, shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 8,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.05)',
+  },
+  legendTxt: { fontSize: 10, fontWeight: '700', color: '#374151' },
 
   etaChip: {
     position: 'absolute', top: 12, left: 12,
