@@ -904,9 +904,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               if (data.driver.status === 'approved') {
               const pd = await AsyncStorage.getItem('_permsDone').catch(() => null);
               navTo = pd ? 'home' : 'permissions'; loadUpiId(savedPhone); registerFCM(savedPhone); fetchDriverLevel(savedPhone); fetchDriverNotifs(savedPhone); loadDriverSub(savedPhone, data.driver.vehicle_type);
+              // CRITICAL: if the driver was Online, restore that on cold start —
+              // otherwise tapping a ride notification cold-starts the app, leaves
+              // isOnline=false (default), stops polling, and the offer expires
+              // unseen while the driver appears offline. Restore online + polling
+              // + background location whenever the backend says they're online.
+              if (data.driver.is_online) {
+                setIsOnline(true);
+                startPolling(savedPhone);
+                startBgLocation().catch(() => {});
+              }
               // Restore active ride into store so home screen shows it immediately.
-              // If a ride is active, also restore isOnline=true and restart polling so
-              // the header shows "Online" and ride events keep flowing.
               try {
                 const ar = await fetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
                 if (ar.ride) {
