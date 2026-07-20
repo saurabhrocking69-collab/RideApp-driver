@@ -399,6 +399,18 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   const centerLat = driverLat || pickupCoords?.lat || 26.8467;
   const centerLng = driverLng || pickupCoords?.lng || 80.9462;
 
+  // The next upcoming turn = the turn point nearest to the driver right now.
+  // Highlighted in pink so the driver instantly sees which turn is coming.
+  const nextTurnIdx = (() => {
+    if (driverLat == null || driverLng == null || turnPoints.length === 0) return -1;
+    let best = -1, bestD = Infinity;
+    turnPoints.forEach((t, i) => {
+      const d = Math.hypot(t.lat - driverLat, t.lng - driverLng);
+      if (d < bestD) { bestD = d; best = i; }
+    });
+    return best;
+  })();
+
   return (
     <View style={{ height, width: '100%', overflow: 'hidden' }}>
       <MapView
@@ -466,14 +478,18 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           </>
         )}
 
-        {/* Turn arrows — a small directional badge on the road at each turn */}
-        {routeCoords.length > 1 && turnPoints.slice(0, 14).map((t, i) => (
-          <Marker key={`turn-${i}`} coordinate={{ latitude: t.lat, longitude: t.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <View style={styles.turnBadge}>
-              <Ionicons name={turnIconName(t.maneuver)} size={13} color={NAV_BLUE} />
-            </View>
-          </Marker>
-        ))}
+        {/* Turn arrows — directional badge on the road at each turn. The NEXT
+            upcoming turn is highlighted (bigger + pink) so it stands out. */}
+        {routeCoords.length > 1 && turnPoints.slice(0, 14).map((t, i) => {
+          const isNext = i === nextTurnIdx;
+          return (
+            <Marker key={`turn-${i}`} coordinate={{ latitude: t.lat, longitude: t.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={isNext ? 999 : 1} tracksViewChanges={isNext}>
+              <View style={isNext ? styles.turnBadgeNext : styles.turnBadge}>
+                <Ionicons name={turnIconName(t.maneuver)} size={isNext ? 18 : 13} color={isNext ? '#fff' : NAV_BLUE} />
+              </View>
+            </Marker>
+          );
+        })}
 
         {/* Driver GPS accuracy circle */}
         {driverLat != null && driverLng != null && driverAccuracy != null && driverAccuracy > 5 && (
@@ -644,6 +660,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: NAV_BLUE,
     elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3,
+  },
+  turnBadgeNext: {
+    width: 34, height: 34, borderRadius: 17,
+    backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: '#fff',
+    elevation: 10, shadowColor: C.pink, shadowOpacity: 0.6, shadowRadius: 8,
   },
 
   legend: {
