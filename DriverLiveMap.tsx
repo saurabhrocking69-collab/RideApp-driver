@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState, memo } from 'react';
 import { Animated, Linking, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
@@ -30,6 +31,14 @@ function zonePolygon(lat: number, lng: number) {
     { latitude: lat + CELL, longitude: lng + CELL },
     { latitude: lat + CELL, longitude: lng - CELL },
   ];
+}
+
+// Map a Google maneuver string to a directional arrow icon.
+function turnIconName(m: string): any {
+  if (/uturn/.test(m)) return 'arrow-undo';
+  if (/left/.test(m))  return 'arrow-back';
+  if (/right/.test(m)) return 'arrow-forward';
+  return 'arrow-up';
 }
 
 // ── Polyline decoder ──────────────────────────────────────────────────────────
@@ -229,6 +238,8 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   const [etaText, setEtaText]   = useState('');
   const [distText, setDistText] = useState('');
   const [demandZones, setDemandZones] = useState<DemandZone[]>([]);
+  // Turn points along the route — a small arrow drawn on the road at each turn.
+  const [turnPoints, setTurnPoints] = useState<{ lat: number; lng: number; maneuver: string }[]>([]);
 
   // Demand zones when idle
   useEffect(() => {
@@ -325,7 +336,14 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         if (!route) return;
         if (!drawChosen) setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
         const leg = route.legs?.[0];
-        if (leg) { setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || ''); }
+        if (leg) {
+          setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || '');
+          // Pull turn points from the step maneuvers → arrows on the road.
+          const turns = (leg.steps || [])
+            .filter((s: any) => s.maneuver && /turn|roundabout|ramp|fork|merge|uturn/.test(s.maneuver) && s.start_location)
+            .map((s: any) => ({ lat: s.start_location.lat, lng: s.start_location.lng, maneuver: s.maneuver }));
+          setTurnPoints(turns);
+        }
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -448,6 +466,15 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           </>
         )}
 
+        {/* Turn arrows — a small directional badge on the road at each turn */}
+        {routeCoords.length > 1 && turnPoints.slice(0, 14).map((t, i) => (
+          <Marker key={`turn-${i}`} coordinate={{ latitude: t.lat, longitude: t.lng }} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
+            <View style={styles.turnBadge}>
+              <Ionicons name={turnIconName(t.maneuver)} size={13} color={NAV_BLUE} />
+            </View>
+          </Marker>
+        ))}
+
         {/* Driver GPS accuracy circle */}
         {driverLat != null && driverLng != null && driverAccuracy != null && driverAccuracy > 5 && (
           <Circle
@@ -491,8 +518,10 @@ export const DriverLiveMap = memo(function DriverLiveMap({
       {/* Hot-zone legend — only meaningful when zones are actually shown */}
       {demandZones.length > 0 && !rideStatus && <ZoneLegend />}
 
-      {/* ETA chip — top-left */}
-      {etaText ? <EtaChip eta={etaText} distance={distText} /> : null}
+      {/* ETA chip — top-left. Hidden in nav mode (it overlaps the back pill and
+          the VoiceNavBar already shows turn distance); kept for the small
+          preview map. */}
+      {etaText && !navMode ? <EtaChip eta={etaText} distance={distText} /> : null}
 
       {/* Chosen-route nudge — the customer picked the SHORTEST route and paid
           for it, so tell the driver to follow the drawn line (not their own /
@@ -609,6 +638,13 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: '#fff',
   },
   chosenRouteTxt: { color: '#fff', fontSize: 11.5, fontWeight: '900' },
+
+  turnBadge: {
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: NAV_BLUE,
+    elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3,
+  },
 
   legend: {
     position: 'absolute', top: 12, right: 12,

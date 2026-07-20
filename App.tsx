@@ -17,6 +17,11 @@ import { FuelLogScreen } from './FuelLogScreen';
 import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
 import { Audio } from 'expo-av';
 import { apiGet, apiPost } from './api';
+// Keep the screen on during navigation. Guarded so the app never crashes if the
+// native module isn't in the build yet (activates in dev builds immediately; in
+// the production APK after the next native rebuild).
+let KeepAwake: any = null;
+try { KeepAwake = require('expo-keep-awake'); } catch (_e) {}
 import { useDriverStore } from './store';
 import { TR, Lang } from './translations';
 import { io, Socket } from 'socket.io-client';
@@ -1265,6 +1270,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   useEffect(() => {
     const backAction = () => {
       if (screen === 'splash' || screen === 'permissions') return true;
+      // Full-screen navigation: back exits nav and returns to the Live tab.
+      if (inNavMode) { setInNavMode(false); setActiveTab('live'); return true; }
       if (screen === 'login' && regStep === 0) return false; // App exit
       if (screen === 'login' && regStep > 0) {
         if (regStep === 99) { setRegStep(0); return true; }
@@ -1279,7 +1286,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen]);
+  }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen, inNavMode]);
 
   // Refresh driver notifications when center is opened
   useEffect(() => {
@@ -1548,6 +1555,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Auto-exit in-app nav mode when ride ends ──
   useEffect(() => { if (!activeRide) setInNavMode(false); }, [activeRide]);
+
+  // Keep screen awake while navigating (never let it sleep mid-route).
+  useEffect(() => {
+    if (!KeepAwake) return;
+    try {
+      if (inNavMode) (KeepAwake.activateKeepAwakeAsync || KeepAwake.activateKeepAwake)?.('sppero-nav');
+      else (KeepAwake.deactivateKeepAwake)?.('sppero-nav');
+    } catch (_e) {}
+    return () => { try { KeepAwake.deactivateKeepAwake?.('sppero-nav'); } catch (_e) {} };
+  }, [inNavMode]);
 
   // ── Live location posting to backend during active ride (every 4s) ──
   useEffect(() => {
@@ -1845,7 +1862,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           if (latest?.sender === 'customer') {
             setChatToast(latest.message);
             if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
-            chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+            chatToastTimer.current = setTimeout(() => setChatToast(null), 3000);
           }
         }
       } catch (_e) {}
@@ -1867,7 +1884,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           if (latest?.sender === 'customer') {
             setChatToast(latest.message);
             if (chatToastTimer.current) clearTimeout(chatToastTimer.current);
-            chatToastTimer.current = setTimeout(() => setChatToast(null), 4500);
+            chatToastTimer.current = setTimeout(() => setChatToast(null), 3000);
           }
           lastCount = msgs.length;
         }
@@ -4366,6 +4383,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
       )}
 
+      {/* Customer message toast — shown right on the nav screen, auto-hides in 3s */}
+      {chatToast && (
+        <View style={{ position:'absolute', top: navActive ? NAV_PT+120 : NAV_PT+52, left:14, right:14, zIndex:10002 }}>
+          <View style={{ backgroundColor:'rgba(37,99,235,0.96)', borderRadius:14, paddingHorizontal:14, paddingVertical:10, flexDirection:'row', alignItems:'center', gap:9, borderWidth:1, borderColor:'rgba(255,255,255,0.18)', elevation:10 }}>
+            <Text style={{ fontSize:15 }}>💬</Text>
+            <View style={{ flex:1 }}>
+              <Text style={{ color:'rgba(255,255,255,0.7)', fontSize:9, fontWeight:'800', letterSpacing:0.5 }}>CUSTOMER</Text>
+              <Text style={{ color:'#fff', fontSize:13, fontWeight:'700' }} numberOfLines={2}>{chatToast}</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* Bottom action strip */}
       <View style={{
         position:'absolute', bottom:0, left:0, right:0,
@@ -4422,6 +4452,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             ) : null}
           </View>
         ) : null}
+
+        {/* Quick-reply chips — driver taps to message the customer without leaving nav */}
+        {(activeRide?.status === 'matched' || activeRide?.status === 'arrived') && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap:8, paddingVertical:2 }}>
+            {['🚗 Aa raha hoon', '⚡ Jaldi pahunch raha hoon', '📍 Bas pahunchne wala hoon', '🙏 Cancel mat karo', '🚦 Traffic mein hoon'].map((m) => (
+              <TouchableOpacity
+                key={m}
+                activeOpacity={0.8}
+                onPress={() => { sendChat(m); setChatToast(null); Vibration.vibrate(15); setResult('✅ Bhej diya'); setTimeout(() => setResult(''), 1500); }}
+                style={{ backgroundColor:'rgba(255,255,255,0.10)', borderRadius:18, paddingHorizontal:13, paddingVertical:8, borderWidth:1, borderColor:'rgba(255,255,255,0.18)' }}>
+                <Text style={{ color:'#fff', fontSize:12, fontWeight:'700' }}>{m}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Navigation app options */}
         {(activeRide?.status === 'matched' || activeRide?.status === 'started') && (() => {
