@@ -173,6 +173,7 @@ export interface DriverLiveMapProps {
   followDriver?:  boolean;
   navMode?:       boolean;   // full-screen turn-by-turn nav — enables heading-up camera + blue route
   driverAccuracy?: number | null;
+  chosenRoutePolyline?: string | null; // customer-selected route (encoded) — driver navigates THIS path during the trip
   height?:        number;
 }
 
@@ -195,6 +196,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   followDriver  = false,
   navMode       = false,
   driverAccuracy,
+  chosenRoutePolyline = null,
   height        = 260,
 }: DriverLiveMapProps) {
   // Sanitize all incoming coordinates
@@ -303,6 +305,15 @@ export const DriverLiveMap = memo(function DriverLiveMap({
     }
     if (!origin || !destination) return;
 
+    // During the trip, if the customer chose a specific route (e.g. bike
+    // shortest), draw THAT committed path so the driver navigates exactly what
+    // the fare was priced on — not a fresh "fastest" route that could be longer.
+    // We still fetch the live leg below, but only for the ETA/distance numbers.
+    const drawChosen = rideStatus === 'started' && !!chosenRoutePolyline;
+    if (drawChosen) {
+      try { setRouteCoords(decodePolyline(chosenRoutePolyline as string)); } catch (_e) {}
+    }
+
     let cancelled = false;
     fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving&key=${MAPS_KEY}`)
       .then(r => r.json())
@@ -310,14 +321,14 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         if (cancelled) return;
         const route = data.routes?.[0];
         if (!route) return;
-        setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
+        if (!drawChosen) setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
         const leg = route.legs?.[0];
         if (leg) { setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || ''); }
       })
       .catch(() => {});
     return () => { cancelled = true; };
   }, [
-    rideStatus,
+    rideStatus, chosenRoutePolyline,
     pickupCoords?.lat, pickupCoords?.lng,
     dropCoords?.lat,  dropCoords?.lng,
     // Re-fetch every ~500m of driver movement during active ride
