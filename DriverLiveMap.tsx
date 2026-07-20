@@ -174,6 +174,7 @@ export interface DriverLiveMapProps {
   navMode?:       boolean;   // full-screen turn-by-turn nav — enables heading-up camera + blue route
   driverAccuracy?: number | null;
   chosenRoutePolyline?: string | null; // customer-selected route (encoded) — driver navigates THIS path during the trip
+  chosenRouteType?: string | null;      // 'shortest' | 'fastest' — badge nudges the driver to follow a chosen SHORTEST route
   height?:        number;
 }
 
@@ -197,6 +198,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   navMode       = false,
   driverAccuracy,
   chosenRoutePolyline = null,
+  chosenRouteType = null,
   height        = 260,
 }: DriverLiveMapProps) {
   // Sanitize all incoming coordinates
@@ -492,6 +494,16 @@ export const DriverLiveMap = memo(function DriverLiveMap({
       {/* ETA chip — top-left */}
       {etaText ? <EtaChip eta={etaText} distance={distText} /> : null}
 
+      {/* Chosen-route nudge — the customer picked the SHORTEST route and paid
+          for it, so tell the driver to follow the drawn line (not their own /
+          external-Maps route, which would be longer). */}
+      {rideStatus === 'started' && chosenRoutePolyline && chosenRouteType === 'shortest' && (
+        <View style={styles.chosenRouteBadge} pointerEvents="none">
+          <Text style={{ fontSize: 12 }}>🛵</Text>
+          <Text style={styles.chosenRouteTxt}>Shortest route — follow this line</Text>
+        </View>
+      )}
+
       {/* Status badge */}
       <StatusBadge status={rideStatus} />
 
@@ -587,6 +599,16 @@ const styles = StyleSheet.create({
     elevation: 4, borderWidth: 2.5, borderColor: NAV_BLUE,
     shadowColor: NAV_BLUE, shadowOpacity: 0.25, shadowRadius: 6,
   },
+
+  chosenRouteBadge: {
+    position: 'absolute', top: 54, alignSelf: 'center',
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: 'rgba(37,99,235,0.95)', borderRadius: 20,
+    paddingHorizontal: 12, paddingVertical: 7,
+    elevation: 8, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 8,
+    borderWidth: 1.5, borderColor: '#fff',
+  },
+  chosenRouteTxt: { color: '#fff', fontSize: 11.5, fontWeight: '900' },
 
   legend: {
     position: 'absolute', top: 12, right: 12,

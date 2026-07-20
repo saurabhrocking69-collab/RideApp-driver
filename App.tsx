@@ -4328,6 +4328,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         followDriver={true}
         navMode={true}
         chosenRoutePolyline={activeRide?.route_polyline || null}
+        chosenRouteType={activeRide?.route_type || null}
         height={SCREEN_H}
       />
 
@@ -4496,6 +4497,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           showTraffic={!!activeRide && activeRide.status === 'started'}
           followDriver={true}
           chosenRoutePolyline={activeRide?.route_polyline || null}
+          chosenRouteType={activeRide?.route_type || null}
           height={260}
         />
         <MapOverlay hasRoute={!!activeRide} pickup={activeRide?.pickup} drop={activeRide?.drop_location} live={activeRide?.status === 'started'} />
