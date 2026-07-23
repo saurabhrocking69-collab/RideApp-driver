@@ -464,7 +464,7 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     const drop      = (rd.ride.drop_location || 'Drop').slice(0, 45);
     await Notifications.scheduleNotificationAsync({
       content: {
-        title: `${rideEmoji} Nayi Ride Request! ${fareStr}`,
+        title: `${rideEmoji} New Ride Request! ${fareStr}`,
         body: `${pickup} → ${drop}`,
         sound: 'ride_alert',
         categoryIdentifier: 'ride_request',
@@ -1255,12 +1255,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (shown) return;
     await AsyncStorage.setItem('batteryOptPromptShown', '1').catch(() => {});
     Alert.alert(
-      '⚡ Notifications Enable Karo',
-      'Nai ride requests theek se paane ke liye:\n\n1. "Band Karo" tap karo\n2. "Allow" select karo\n\nIsse app background mein bhi notifications milenge.',
+      '⚡ Enable Notifications',
+      'To reliably get new ride requests:\n\n1. Tap "Turn Off"\n2. Select "Allow"\n\nThis lets the app send notifications even in the background.',
       [
-        { text: 'Baad Mein', style: 'cancel' },
+        { text: 'Later', style: 'cancel' },
         {
-          text: '✅ Band Karo',
+          text: '✅ Turn Off',
           onPress: async () => {
             try {
               await Linking.sendIntent('android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', [
@@ -1324,8 +1324,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setActiveTab('live');
       Notifications.scheduleNotificationAsync({
         content: {
-          title: '🚖 Nayi Ride Request!',
-          body: 'Passenger aapka intezaar kar raha hai — jaldi dekho!',
+          title: '🚖 New Ride Request!',
+          body: 'A passenger is waiting — check it now!',
           sound: 'default',
           data: { type: 'new_ride' },
           ...(Platform.OS === 'android' ? { channelId: 'ride_requests_v2' } : {}),
@@ -1351,7 +1351,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await fetch(`${API}/api/driver/upi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, upi_id: upiInput.trim() }) });
       const d = await res.json();
-      if (d.success) { setDriverUpiId(d.upi_id); setResult('✅ UPI ID save ho gaya!'); }
+      if (d.success) { setDriverUpiId(d.upi_id); setResult('✅ UPI ID saved!'); }
       else setResult('❌ ' + (d.error || 'Error'));
     } catch (_e) { setResult('❌ Server error'); }
     setUpiSaving(false);
@@ -1465,7 +1465,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
   const redeemBonus = async () => {
     const amt = parseFloat(bonusRedeemAmt);
-    if (isNaN(amt) || amt < 50) { setBonusMsg('❌ Minimum ₹50 redeem karo'); return; }
+    if (isNaN(amt) || amt < 50) { setBonusMsg('❌ Minimum ₹50 required to redeem'); return; }
     setBonusRedeemLoading(true); setBonusMsg('');
     try {
       const res = await fetch(`${API}/api/bonus/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
@@ -1502,14 +1502,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
   const requestPayout = async () => {
     const amt = parseFloat(payoutInput);
-    if (!amt || amt < 100) { setResult('❌ Min ₹100 chahiye payout ke liye'); return; }
-    if (amt > driverWallet.balance) { setResult('❌ Wallet mein itna balance nahi hai'); return; }
+    if (!amt || amt < 100) { setResult('❌ Minimum ₹100 required for payout'); return; }
+    if (amt > driverWallet.balance) { setResult('❌ Insufficient wallet balance'); return; }
     setPayoutLoading(true);
     try {
       const res = await fetch(`${API}/api/driver/payout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
       if (d.success) {
-        setResult('✅ ' + (d.message || 'Payout request submit ho gaya — admin 24-48 ghante mein process karega'));
+        setResult('✅ ' + (d.message || 'Payout request submitted — admin will process within 24-48 hours'));
         setPayoutInput('');
       } else setResult('❌ ' + (d.message || d.error || 'Error'));
     } catch (_e) { setResult('❌ Server error'); }
@@ -1809,8 +1809,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extDrop, fare: extFare, status: 'matched', payment_method: 'wallet' };
         setActiveRide({ ...newRide, id: data.new_ride_id });
         setExtRequest(null); setTripSummary(null);
-      } else { Alert.alert('Extension Accept Failed', data.error || 'Accept nahi hua — dobara try karo'); }
-    } catch (_e) { Alert.alert('Network Error', _e instanceof Error && _e.name === 'AbortError' ? 'Request timeout — retry karo' : 'Server se connect nahi hua'); }
+      } else { Alert.alert('Extension Accept Failed', data.error || 'Accept failed — please try again'); }
+    } catch (_e) { Alert.alert('Network Error', _e instanceof Error && _e.name === 'AbortError' ? 'Request timeout — please retry' : 'Could not connect to server'); }
     clearTimeout(timeout);
     setExtAccLoading(false);
   };
@@ -1963,7 +1963,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Login ──────────────────────────────────────
   const doLogin = async () => {
-    if (loginPhone.length !== 10) { setResult('❌ 10 digit number daalo'); return; }
+    if (loginPhone.length !== 10) { setResult('❌ Enter a 10 digit number'); return; }
     setLoading(true);
     try {
       const ctrl = new AbortController();
@@ -1979,20 +1979,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch (_e: any) {
       const isTimeout = _e?.name === 'AbortError';
       const errMsg = isTimeout ? 'Connection timeout' : (_e?.message || 'Network error');
-      setResult(`❌ ${errMsg}\nWi-Fi use karo ya doosra network try karo`);
+      setResult(`❌ ${errMsg}\nTry using Wi-Fi or a different network`);
     }
     setLoading(false);
   };
 
   const verifyLoginOtp = async (otpOverride?: string) => {
     const otpToUse = otpOverride || loginOtp;
-    if (!otpToUse || otpToUse.length !== 6) { setResult('❌ 6 digit OTP daalo'); return; }
+    if (!otpToUse || otpToUse.length !== 6) { setResult('❌ Enter a 6 digit OTP'); return; }
     setLoading(true);
     try {
       // OTP verify karo
       const verRes = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, otp: otpToUse, name: '' }) });
       const verData = await verRes.json();
-      if (!verData.token) { setResult('❌ ' + (verData.error || 'Galat OTP')); setLoading(false); return; }
+      if (!verData.token) { setResult('❌ ' + (verData.error || 'Incorrect OTP')); setLoading(false); return; }
 
       // Driver info lo
       const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
@@ -2062,21 +2062,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const up   = await fetch(`${API}/api/upload`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: `data:image/jpeg;base64,${base64}` }) });
       const data = await up.json();
       if (data.success) setRegData((p: any) => ({ ...p, [field]: data.url }));
-      else setResult('❌ Upload fail');
+      else setResult('❌ Upload failed');
     } catch (_e) { setResult('❌ Upload error'); }
     setUploading('');
   };
 
   const fromCamera = async (field: string) => {
     const p = await ImagePicker.requestCameraPermissionsAsync();
-    if (!p.granted) { setResult('❌ Camera permission do'); return; }
+    if (!p.granted) { setResult('❌ Please grant camera permission'); return; }
     const r = await ImagePicker.launchCameraAsync({ quality: 0.5, base64: true, cameraType: field === 'face_photo' ? ImagePicker.CameraType.front : ImagePicker.CameraType.back });
     if (!r.canceled && r.assets?.[0]?.base64) doUpload(field, r.assets[0].base64);
   };
 
   const fromGallery = async (field: string) => {
     const p = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!p.granted) { setResult('❌ Gallery permission do'); return; }
+    if (!p.granted) { setResult('❌ Please grant gallery permission'); return; }
     const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.5, base64: true });
     if (!r.canceled && r.assets?.[0]?.base64) doUpload(field, r.assets[0].base64);
   };
@@ -2088,7 +2088,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res  = await fetch(`${API}/api/driver/register-buddy`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...regData, name: regData.dl_name }) });
       const data = await res.json();
       if (data.success) setRegStep(99);
-      else setResult('❌ ' + (data.error || 'Registration fail'));
+      else setResult('❌ ' + (data.error || 'Registration failed'));
     } catch (_e) { setResult('❌ Server error'); }
     setLoading(false);
   };
@@ -2107,7 +2107,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           identifier: 'driver_online_status',
           content: {
             title: '🟢 Sppero Buddy — Online',
-            body: 'Ride requests receive ho rahi hain. Screen lock karo — notification aayegi.',
+            body: "You'll receive ride requests. You can lock your screen — notifications will still come through.",
             sticky: true,
             autoDismiss: false,
             data: { type: 'driver_status' },
@@ -2122,7 +2122,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       registerFCM(phone).catch(() => {});
 
       // Start polling + socket IMMEDIATELY — don't wait for server roundtrip
-      setResult('🟢 Online hain — rides aayengi!');
+      setResult('🟢 Online — rides will start coming!');
       (globalThis as any).__driverPhone = phone; // for AppState wallet refresh
       startPolling(phone);
       fetchDemandZones();
@@ -2166,7 +2166,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         s.on('rideTaken', () => {
           useDriverStore.setState({ pendingRide: null });
           setRideReq(null);
-          setResult('❌ Ride kisi aur driver ne le li');
+          setResult('❌ Another driver took the ride');
           setTimeout(() => setResult(''), 3000);
         });
         s.on('paymentConfirmed', async (data: any) => {
@@ -2239,7 +2239,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
       })();
     } else {
-      setResult('🔴 Offline hain');
+      setResult('🔴 Offline');
       // Stop background location task (also removes foreground service notification)
       stopBgLocation().catch(() => {});
       // Dismiss fallback notification if it was showing (permission-denied path)
@@ -2272,7 +2272,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (data._error) {
       setResult('❌ ' + data.message);
     } else if (data.success) {
-      setResult('✅ Ride accept ki!');
+      setResult('✅ Ride accepted!');
       socketRef.current?.emit('joinRide', { rideId: rideReq.id });
       // Clear store + React state immediately so subscription can't restore stale rideReq
       useDriverStore.setState({ pendingRide: null });
@@ -2281,7 +2281,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       // Trigger an immediate poll so activeRide populates in <1s instead of waiting 2s
       useDriverStore.getState().triggerPoll();
     } else {
-      setResult('❌ ' + (data.message || 'Ride kisi aur ko mil gayi'));
+      setResult('❌ ' + (data.message || 'The ride went to another driver'));
       useDriverStore.setState({ pendingRide: null });
       setRideReq(null);
     }
@@ -2293,7 +2293,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setRideReq(null);
     useDriverStore.getState().clearAll();
     if (isOnline) startPolling(phone);
-    setResult('❌ Ride reject ki');
+    setResult('❌ Ride rejected');
     if (req?.id) {
       // apiPost has 10s timeout — raw fetch can hang indefinitely and block queue advancement
       apiPost('/api/rides/reject-offer', { ride_id: req.id, driver_phone: phone }).catch(() => {});
@@ -2309,12 +2309,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const startTrip = async () => {
-    if (otpInput.length !== 4) { setResult('❌ 4 digit OTP daalo'); return; }
+    if (otpInput.length !== 4) { setResult('❌ Enter a 4 digit OTP'); return; }
     setLoading(true);
     const data = await apiPost('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
-    else setResult('❌ ' + (data.message || 'Galat OTP!'));
+    else setResult('❌ ' + (data.message || 'Incorrect OTP!'));
     setLoading(false);
   };
 
@@ -2376,10 +2376,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setActiveRide(null);
         setOtpInput(''); setShowChat(false); setUnreadChat(0); setChatMsgs([]);
       } else {
-        setResult('❌ ' + (data.message || data.error || 'Complete nahi hua, retry karo'));
+        setResult('❌ ' + (data.message || data.error || 'Could not complete — please retry'));
       }
     } catch (_e) {
-      setResult('❌ Network error — check internet aur retry karo');
+      setResult('❌ Network error — check your internet and retry');
     }
     setLoading(false);
   };
@@ -2413,7 +2413,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const saveBank = async () => {
-    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('❌ Account number aur IFSC dono chahiye'); return; }
+    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('❌ Both account number and IFSC are required'); return; }
     setBankSaving(true); setBankMsg('');
     try {
       const res = await fetch(`${API}/api/driver/bank`, {
@@ -2421,7 +2421,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         body: JSON.stringify({ phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder }),
       });
       const d = await res.json();
-      if (d.success) { setBankMsg('✅ Bank details save ho gayi!'); setBankEditing(false); }
+      if (d.success) { setBankMsg('✅ Bank details saved!'); setBankEditing(false); }
       else setBankMsg('❌ ' + (d.error || 'Error'));
     } catch (_e) { setBankMsg('❌ Network error'); }
     setBankSaving(false);
@@ -2457,7 +2457,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const res = await apiPost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
       if (res?._error || (!res?.success && res?.error)) {
-        setResult('❌ ' + (res?.error || res?.message || 'Payment confirm nahi hua — retry karo'));
+        setResult('❌ ' + (res?.error || res?.message || 'Payment could not be confirmed — please retry'));
         setLoading(false);
         return;
       }
@@ -2469,7 +2469,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         earned: '₹' + (fare * 0.85).toFixed(0),
         fee: '₹' + (fare * 0.15).toFixed(0),
       });
-    } catch (_e) { setResult('❌ Error — retry karo'); }
+    } catch (_e) { setResult('❌ Error — please retry'); }
     setLoading(false);
   };
 
@@ -2478,15 +2478,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const cd = await apiPost('/api/rides/cancel-smart', { ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
       if (cd.success) {
-        setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancel ki');
+        setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancelled');
         setActiveRide(null);
         useDriverStore.setState({ activeRide: null });
         setShowDriverCancelModal(false);
       } else {
-        setResult('❌ Cancel nahi hua — retry karo');
+        setResult('❌ Cancel failed — please retry');
       }
     } catch (_e) {
-      setResult('❌ Network error — retry karo');
+      setResult('❌ Network error — please retry');
       setActiveRide(null);
       useDriverStore.setState({ activeRide: null });
     }
@@ -2508,9 +2508,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await r.json();
-      if (!data.success) { Alert.alert('Call', data.error || 'Call nahi ho saki'); return; }
+      if (!data.success) { Alert.alert('Call', data.error || 'Could not place the call'); return; }
       if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
-      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Customer ko call aa rahi hai...');
+      else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Calling the customer...');
     } catch (_e) { Alert.alert('Error', 'Network error'); }
   };
 
@@ -2522,7 +2522,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res = await fetch(`${API}/api/hourly/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: hourlyRideReq.id, driver_phone: phone }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide({ ...hourlyRideReq, driver_phone: phone, status: 'matched' }); setHourlyRideReq(null); }
-      else { setResult('❌ ' + (data.message || 'Accept nahi hua')); setHourlyRideReq(null); }
+      else { setResult('❌ ' + (data.message || 'Accept failed')); setHourlyRideReq(null); }
     } catch (_e) { setResult('❌ Network error'); }
     setLoading(false);
   };
@@ -2534,7 +2534,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const res = await fetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput, driver_phone: phone }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide((p: any) => ({ ...p, status: 'active', started_at: new Date().toISOString() })); setHourlyOtpInput(''); setResult(''); }
-      else setResult('❌ ' + (data.message || 'Galat OTP!'));
+      else setResult('❌ ' + (data.message || 'Incorrect OTP!'));
     } catch (_e) { setResult('❌ Network error'); }
     setLoading(false);
   };
@@ -2557,7 +2557,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
       } else if (data.too_early || data.time_locked) {
         setResult(`🔒 ${data.message}`);
-      } else setResult('❌ ' + (data.message || 'Complete nahi hua'));
+      } else setResult('❌ ' + (data.message || 'Could not complete'));
     } catch (_e) { setResult('❌ Network error'); }
     setLoading(false);
   };
@@ -2571,7 +2571,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: 'driver' }));
       } else {
-        setResult(data.message || 'Request nahi ho saki');
+        setResult(data.message || 'Request could not be sent');
       }
     } catch (_e) {}
     setHEarlyEndLoading(false);
@@ -2610,11 +2610,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
-        Alert.alert('✅ Extension Accept!', `Trip extend ho gaya — naye package: ${data.new_hours >= 24 ? (data.new_hours/24)+'d' : data.new_hours+'h'}, ${data.new_km} km`);
+        Alert.alert('✅ Extension Accepted!', `Trip extended — new package: ${data.new_hours >= 24 ? (data.new_hours/24)+'d' : data.new_hours+'h'}, ${data.new_km} km`);
       } else {
-        Alert.alert('❌ Accept Nahi Hua', data.message || data.error || 'Dobara try karo');
+        Alert.alert('❌ Accept Failed', data.message || data.error || 'Please try again');
       }
-    } catch (_e) { Alert.alert('Network Error', 'Internet check karo aur dobara try karo'); }
+    } catch (_e) { Alert.alert('Network Error', 'Check your internet and try again'); }
     setHExtendLoading(false);
   };
 
@@ -2627,9 +2627,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
       } else {
-        Alert.alert('❌ Reject Nahi Hua', data.message || data.error || 'Dobara try karo');
+        Alert.alert('❌ Reject Failed', data.message || data.error || 'Please try again');
       }
-    } catch (_e) { Alert.alert('Network Error', 'Internet check karo aur dobara try karo'); }
+    } catch (_e) { Alert.alert('Network Error', 'Check your internet and try again'); }
     setHExtendLoading(false);
   };
 
@@ -2952,7 +2952,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   else { if (data.otp) setDevOtp(data.otp); setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
                 } catch (_e: any) {
                   const isTo = _e?.name === 'AbortError';
-                  setResult(`❌ ${isTo ? 'Connection timeout' : (_e?.message || 'Network error')} — Wi-Fi use karo`);
+                  setResult(`❌ ${isTo ? 'Connection timeout' : (_e?.message || 'Network error')} — try using Wi-Fi`);
                 }
                 setLoading(false);
               }}>
@@ -3006,7 +3006,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
                   const data = await res.json();
                   if (data.token) { setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
-                  else setResult('❌ ' + (data.error || 'Galat OTP'));
+                  else setResult('❌ ' + (data.error || 'Incorrect OTP'));
                 } catch (_e) { setResult('❌ Server error'); }
                 setLoading(false);
               }}>
@@ -3466,10 +3466,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ═══ VERIFICATION STATUS ═══
   if (screen === 'login' && driverInfo && driverInfo.status !== 'approved') {
     const statusConfig: any = {
-      pending:   { icon: '⏳', title: 'Verification Pending',    bg: '#fff3e0', col: '#ef6c00', msg: 'Aapke documents admin verify kar raha hai. Thodi der mein status update hoga.' },
-      rejected:  { icon: '❌', title: 'Documents Reject Ho Gaye', bg: '#ffebee', col: '#c62828', msg: 'Aapke documents mein problem hai — neeche admin message padho aur resubmit karo.' },
-      resubmit:  { icon: '📋', title: 'Documents Resubmit Karein', bg: '#e3f2fd', col: '#1565c0', msg: 'Admin ne kuch documents dobara maange hain — neeche message padho aur upload karo.' },
-      suspended: { icon: '🚫', title: 'Account Suspended',        bg: '#ffebee', col: '#c62828', msg: 'Aapka account suspend kar diya gaya hai. Support se contact karo.' },
+      pending:   { icon: '⏳', title: 'Verification Pending',    bg: '#fff3e0', col: '#ef6c00', msg: 'Admin is verifying your documents. Status will update shortly.' },
+      rejected:  { icon: '❌', title: 'Documents Rejected', bg: '#ffebee', col: '#c62828', msg: "There's an issue with your documents — read the admin message below and resubmit." },
+      resubmit:  { icon: '📋', title: 'Resubmit Documents', bg: '#e3f2fd', col: '#1565c0', msg: 'Admin has requested some documents again — read the message below and upload them.' },
+      suspended: { icon: '🚫', title: 'Account Suspended',        bg: '#ffebee', col: '#c62828', msg: 'Your account has been suspended. Please contact support.' },
     };
     const cfg = statusConfig[driverInfo.status] || statusConfig.pending;
     return (
@@ -3823,7 +3823,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           onAccept={() => {
             fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
               .then(r => r.json())
-              .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+              .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
               .catch(() => setResult('❌ Network error'));
           }}
           onDecline={() => {
@@ -3950,11 +3950,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {/* ── Payment not received ── */}
         <TouchableOpacity
           onPress={() => Alert.alert(
-            '⚠️ Payment Nahi Mili?',
-            `Customer ne ₹${paymentFare} cash payment nahi ki?\n\nYeh report 10 minute ke andar hi ki ja sakti hai. Customer ka account flag hoga aur Sppero team investigate karegi.`,
+            '⚠️ Payment Not Received?',
+            `Customer didn't pay you ₹${paymentFare} cash?\n\nThis can only be reported within 10 minutes. The customer's account will be flagged and the Sppero team will investigate.`,
             [
               { text: 'Cancel', style: 'cancel' },
-              { text: 'Haan, Report Karo', style: 'destructive', onPress: async () => {
+              { text: 'Yes, Report It', style: 'destructive', onPress: async () => {
                 try {
                   const res = await fetch(`${API}/api/rides/payment-not-received`, {
                     method: 'POST',
@@ -3963,15 +3963,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   });
                   const d = await res.json();
                   if (d.success) {
-                    Alert.alert('✅ Report Ho Gayi',
-                      'Customer ko flag kar diya gaya. Sppero team 24 ghante mein review karegi.\n\nYeh record customer ke account pe jayega.',
+                    Alert.alert('✅ Report Filed',
+                      "The customer's account has been flagged. The Sppero team will review within 24 hours.\n\nThis will be recorded on the customer's account.",
                       [{ text: 'OK', onPress: () => setPaymentWaiting(false) }]
                     );
                   } else {
-                    Alert.alert('❌ Error', d.error || 'Report nahi ho saki');
+                    Alert.alert('❌ Error', d.error || 'Could not file the report');
                   }
                 } catch {
-                  Alert.alert('❌ Network Error', 'Dobara try karo');
+                  Alert.alert('❌ Network Error', 'Please try again');
                 }
               }},
             ]
@@ -4432,7 +4432,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               onPress={() => {
                 fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
                   .then(r => r.json())
-                  .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+                  .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
                   .catch(() => setResult('❌ Network error'));
               }}
               style={{ backgroundColor: '#7C3AED', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
@@ -4468,7 +4468,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <TouchableOpacity
                 key={m}
                 activeOpacity={0.8}
-                onPress={() => { sendChat(m); setChatToast(null); Vibration.vibrate(15); setResult('✅ Bhej diya'); setTimeout(() => setResult(''), 1500); }}
+                onPress={() => { sendChat(m); setChatToast(null); Vibration.vibrate(15); setResult('✅ Sent'); setTimeout(() => setResult(''), 1500); }}
                 style={{ backgroundColor:'rgba(255,255,255,0.10)', borderRadius:18, paddingHorizontal:13, paddingVertical:8, borderWidth:1, borderColor:'rgba(255,255,255,0.18)' }}>
                 <Text style={{ color:'#fff', fontSize:12, fontWeight:'700' }}>{m}</Text>
               </TouchableOpacity>
@@ -4618,7 +4618,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           onAccept={() => {
             fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
               .then(r => r.json())
-              .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+              .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
               .catch(() => setResult('❌ Network error'));
           }}
           onDecline={() => {
@@ -5435,14 +5435,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <TouchableOpacity
                     style={{ marginTop: 10, borderWidth: 1.5, borderColor: C.pink, borderRadius: 12, padding: 12, alignItems: 'center' }}
                     onPress={() => {
-                      Alert.alert('Ride Cancel?', 'Pickup nahi pahunch sakte? Isse customer ko naya driver milega.', [
-                        { text: 'Nahi', style: 'cancel' },
-                        { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
+                      Alert.alert('Cancel Ride?', "Can't reach the pickup point? The customer will get a new driver.", [
+                        { text: 'No', style: 'cancel' },
+                        { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
                           try {
                             const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
                             const d = await r.json();
-                            if (d.success) { setActiveHourlyRide(null); setResult('Ride cancel ho gayi.'); }
-                            else Alert.alert('Error', d.error || 'Cancel nahi hua');
+                            if (d.success) { setActiveHourlyRide(null); setResult('Ride cancelled.'); }
+                            else Alert.alert('Error', d.error || 'Cancel failed');
                           } catch (_e) { Alert.alert('Error', 'Network error'); }
                         }},
                       ]);
@@ -6211,10 +6211,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </TouchableOpacity>
                 <View style={{ height: 1, backgroundColor: '#E2E8F0', marginVertical: 20, marginHorizontal: 4 }} />
                 <TouchableOpacity
-                  onPress={() => Alert.alert('Ride Cancel?', 'Pickup nahi pahunch sakte?', [
-                    { text: 'Nahi', style: 'cancel' },
-                    { text: 'Haan, Cancel Karo', style: 'destructive', onPress: async () => {
-                      try { const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) }); const d = await r.json(); if (d.success) { setActiveHourlyRide(null); setResult('Ride cancel ho gayi.'); } else Alert.alert('Error', d.error || 'Cancel nahi hua'); } catch (_e) { Alert.alert('Error', 'Network error'); }
+                  onPress={() => Alert.alert('Cancel Ride?', "Can't reach the pickup point?", [
+                    { text: 'No', style: 'cancel' },
+                    { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
+                      try { const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) }); const d = await r.json(); if (d.success) { setActiveHourlyRide(null); setResult('Ride cancelled.'); } else Alert.alert('Error', d.error || 'Cancel failed'); } catch (_e) { Alert.alert('Error', 'Network error'); }
                     }},
                   ])}
                   style={{ borderWidth: 1.5, borderColor: C.pink, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', marginBottom: 20 }}
@@ -6311,7 +6311,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             onAccept={() => {
               fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
                 .then(r => r.json())
-                .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept nahi hua')); })
+                .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
                 .catch(() => setResult('❌ Network error'));
             }}
             onDecline={() => {
@@ -6378,7 +6378,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const d = await r.json();
         if (d.error) { Alert.alert('Error', d.error); return; }
         setDriverTicketSuccess(d);
-      } catch { Alert.alert('Error', 'Submit nahi ho saka.'); }
+      } catch { Alert.alert('Error', 'Could not submit.'); }
       finally { setDriverTicketSubmitting(false); }
     };
 
@@ -6688,7 +6688,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           const r = await fetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`);
           const d = await r.json();
           setDriverTicketDetail(d);
-        } catch { Alert.alert('Error', 'Reply nahi gaya.'); }
+        } catch { Alert.alert('Error', 'Could not send reply.'); }
         finally { setDriverTicketReplying(false); }
       };
 
@@ -6907,8 +6907,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
           if (verRes.success) {
             setSubResult(verRes.status === 'queued'
-              ? '✅ Plan queued! Current plan khatam hone ke baad start hoga.'
-              : '🎉 Subscription active! Ab 0% commission milega.');
+              ? '✅ Plan queued! It will start once your current plan ends.'
+              : '🎉 Subscription active! You now get 0% commission.');
             setSubSelectedPlan(null);
             loadDriverSub(phone, driverInfo?.vehicle_type);
           } else { setSubResult('❌ ' + (verRes.error || 'Verification failed')); }
@@ -6919,10 +6919,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             const rzp = e?.error || e;
             const desc = typeof rzp?.description === 'string' && rzp.description !== 'undefined' ? rzp.description : null;
             const reason = rzp?.reason || rzp?.code;
-            let msg = 'Payment nahi ho payi. Dobara try karo.';
+            let msg = 'Payment could not be completed. Please try again.';
             if (desc) msg = desc;
-            else if (reason === 'payment_error') msg = 'Bank ya card se payment fail ho gayi. Dusra card ya UPI try karo.';
-            else if (reason === 'BAD_REQUEST_ERROR') msg = 'Payment request mein kuch gadbad. Support se contact karo.';
+            else if (reason === 'payment_error') msg = 'Payment failed from your bank or card. Try a different card or UPI.';
+            else if (reason === 'BAD_REQUEST_ERROR') msg = 'Something went wrong with the payment request. Please contact support.';
             setSubResult('❌ ' + msg);
           }
         }
@@ -7284,7 +7284,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ fontSize: 14, fontWeight: '600', color: '#CBD5E1' }}>{item.label}</Text>
                     <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{item.sub}</Text>
                   </View>
-                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', t('settings_notif_msg'))} trackColor={{ false: '#334155', true: C.green }} thumbColor="#fff" />
+                  <Switch value={true} onValueChange={() => Alert.alert('Notifications', 'Manage notification settings from OS:\nSettings → Apps → Sppero Buddy → Notifications')} trackColor={{ false: '#334155', true: C.green }} thumbColor="#fff" />
                 </View>
               ))}
             </View>
@@ -7304,7 +7304,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
 
             <TouchableOpacity
-              onPress={() => Alert.alert('Cache', t('settings_cache_msg'))}
+              onPress={() => Alert.alert('Cache', 'App cache cleared!')}
               style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <Text style={{ fontSize: 18, marginRight: 12 }}>🗑️</Text>
               <View style={{ flex: 1 }}>
@@ -7669,7 +7669,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                       const d = await r.json();
                       if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
-                      if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
+                      if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); setCommPayLoading(false); return; }
                       RazorpayCheckout.open({
                         key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
                         name: 'Sppero', description: 'Platform Commission Payment', prefill: { contact: phone }, theme: { color: C.pink },
@@ -7679,16 +7679,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                           body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                         });
                         const vd = await vr.json();
-                        if (vd.success) { setCommResult('✅ Commission clear! Nayi rides available hain.'); loadCommissionHistory(phone); }
-                        else setCommResult('❌ Payment verify nahi hua — support se contact karo');
+                        if (vd.success) { setCommResult('✅ Commission cleared! New rides are now available.'); loadCommissionHistory(phone); }
+                        else setCommResult('❌ Payment verification failed — please contact support');
                         setCommPayLoading(false);
                       }).catch((e: any) => {
                         const desc = String(e?.description || e?.error?.description || '').toLowerCase();
                         const cancelled = e?.code === 0 || e?.code === 'PAYMENT_CANCELLED' || desc.includes('cancel');
-                        setCommResult(cancelled ? '🚫 Payment cancel kiya — dobara try kar sakte ho' : '❌ Payment fail ho gayi — dobara try karo');
+                        setCommResult(cancelled ? '🚫 Payment cancelled — you can try again' : '❌ Payment failed — please try again');
                         setCommPayLoading(false);
                       });
-                    } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
+                    } catch (_e) { Alert.alert('Error', 'Could not connect to server'); setCommPayLoading(false); }
                   }}
                   style={{
                     backgroundColor: commPayLoading ? '#94A3B8' : C.pink,
@@ -7845,7 +7845,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                   const d = await r.json();
                   if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
-                  if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module load nahi hua. App restart karein.'); setCommPayLoading(false); return; }
+                  if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); setCommPayLoading(false); return; }
                   RazorpayCheckout.open({
                     key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
                     name: 'Sppero', description: 'Platform Commission Payment', prefill: { contact: phone }, theme: { color: '#e65100' },
@@ -7855,16 +7855,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                     });
                     const vd = await vr.json();
-                    if (vd.success) { setCommResult('✅ Commission paid! Rides available hain.'); loadCommissionHistory(phone); }
-                    else setCommResult('❌ Payment verify nahi hua — support se contact karo');
+                    if (vd.success) { setCommResult('✅ Commission paid! Rides are now available.'); loadCommissionHistory(phone); }
+                    else setCommResult('❌ Payment verification failed — please contact support');
                     setCommPayLoading(false);
                   }).catch((e: any) => {
                     const desc = String(e?.description || e?.error?.description || '').toLowerCase();
                     const cancelled = e?.code === 0 || e?.code === 'PAYMENT_CANCELLED' || desc.includes('cancel');
-                    setCommResult(cancelled ? '🚫 Payment cancel kiya — dobara try kar sakte ho' : '❌ Payment fail ho gayi — dobara try karo');
+                    setCommResult(cancelled ? '🚫 Payment cancelled — you can try again' : '❌ Payment failed — please try again');
                     setCommPayLoading(false);
                   });
-                } catch (_e) { Alert.alert('Error', 'Server se connect nahi hua'); setCommPayLoading(false); }
+                } catch (_e) { Alert.alert('Error', 'Could not connect to server'); setCommPayLoading(false); }
               }}
               style={{ backgroundColor: commPayLoading ? '#334155' : C.pink, borderRadius: 12, paddingVertical: 13, alignItems: 'center', marginBottom: 4 }}>
               <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{commPayLoading ? 'Opening...' : `💳 Pay ₹${commissionData.pending_commission.toFixed(0)} Now`}</Text>
