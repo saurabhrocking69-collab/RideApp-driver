@@ -1552,7 +1552,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const navActive = !!activeRide && (activeRide.status === 'matched' || activeRide.status === 'started') && !navMuted;
   const navDestLat = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lat) || null : parseFloat(activeRide?.drop_lat) || null;
   const navDestLng = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lng) || null : parseFloat(activeRide?.drop_lng) || null;
-  const { currentInstruction: navInstruction, nextDistM: navDist } = useVoiceNav({
+  const { currentInstruction: navInstruction, currentManeuver: navManeuver, nextDistM: navDist } = useVoiceNav({
     driverLat: driverGps?.lat ?? null,
     driverLng: driverGps?.lng ?? null,
     destLat: navActive ? navDestLat : null,
@@ -4382,6 +4382,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ position:'absolute', top:NAV_PT+52, left:0, right:0, zIndex:10000 }}>
           <VoiceNavBar
             instruction={navInstruction}
+            maneuver={navManeuver}
             nextDistM={navDist}
             phase={navPhase}
             muted={navMuted}
@@ -4564,6 +4565,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <View style={{ position: 'absolute', top: 266, left: 0, right: 0, zIndex: 100 }}>
           <VoiceNavBar
             instruction={navInstruction}
+            maneuver={navManeuver}
             nextDistM={navDist}
             phase={navPhase}
             muted={navMuted}

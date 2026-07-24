@@ -6,6 +6,7 @@ const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 type NavStep = {
   html: string;
   text: string;
+  maneuver: string;
   endLat: number;
   endLng: number;
   distanceM: number;
@@ -79,6 +80,7 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
         const parsed: NavStep[] = rawSteps.map((s: any, idx: number) => ({
           html: s.html_instructions,
           text: htmlToSpeak(s.html_instructions),
+          maneuver: s.maneuver || '',
           // Fallback chain: step end → next step start → destination → 0 (never NaN)
           endLat: s.end_location?.lat ?? rawSteps[idx + 1]?.start_location?.lat ?? destLat ?? 0,
           endLng: s.end_location?.lng ?? rawSteps[idx + 1]?.start_location?.lng ?? destLng ?? 0,
@@ -130,6 +132,7 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
   }, [driverLat, driverLng]);
 
   const currentInstruction = steps[currentIdx]?.text ?? '';
+  const currentManeuver    = steps[currentIdx]?.maneuver ?? '';
 
-  return { currentInstruction, nextDistM, stepCount: steps.length, currentStep: currentIdx };
+  return { currentInstruction, currentManeuver, nextDistM, stepCount: steps.length, currentStep: currentIdx };
 }

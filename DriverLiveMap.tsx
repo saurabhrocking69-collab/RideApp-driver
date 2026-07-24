@@ -1,7 +1,8 @@
 import { useRef, useEffect, useState, memo } from 'react';
 import { Animated, Linking, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { maneuverIcon } from './maneuverIcon';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
@@ -20,8 +21,14 @@ const HEAT_STROKE: Record<string, string> = { high: 'rgba(255,45,120,0.60)', med
 const CELL = 0.009;
 
 const VEHICLE_ICONS: Record<string, string> = {
-  bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
-  eriksha: '🛵', car: '🚕', luxury: '🚙',
+  bike: '🏍️', green_bike: '🛵', auto: '🛺', electric_auto: '🛺',
+  eriksha: '🛺', car: '🚕', luxury: '🚙',
+};
+// eriksha/electric_auto share a base emoji with auto (Unicode has no dedicated
+// e-rickshaw glyph) — this small badge is what actually tells them apart.
+const VEHICLE_BADGE: Record<string, string | null> = {
+  bike: null, car: null, luxury: null, auto: null,
+  green_bike: '⚡', electric_auto: '⚡', eriksha: '🌿',
 };
 
 function zonePolygon(lat: number, lng: number) {
@@ -31,14 +38,6 @@ function zonePolygon(lat: number, lng: number) {
     { latitude: lat + CELL, longitude: lng + CELL },
     { latitude: lat + CELL, longitude: lng - CELL },
   ];
-}
-
-// Map a Google maneuver string to a directional arrow icon.
-function turnIconName(m: string): any {
-  if (/uturn/.test(m)) return 'arrow-undo';
-  if (/left/.test(m))  return 'arrow-back';
-  if (/right/.test(m)) return 'arrow-forward';
-  return 'arrow-up';
 }
 
 // ── Polyline decoder ──────────────────────────────────────────────────────────
@@ -69,7 +68,8 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
 
 // ── Driver self-marker — large circle with bearing arrow ──────────────────────
 function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: number }) {
-  const icon = VEHICLE_ICONS[vehicleType] || '🛺';
+  const icon  = VEHICLE_ICONS[vehicleType] || '🛺';
+  const badge = VEHICLE_BADGE[vehicleType];
   return (
     <View style={styles.driverOuter}>
       <View style={[styles.bearingArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
@@ -77,6 +77,11 @@ function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: 
       </View>
       <View style={styles.driverInner}>
         <Text style={{ fontSize: 20 }}>{icon}</Text>
+        {badge ? (
+          <View style={styles.vehicleBadge}>
+            <Text style={{ fontSize: 9 }}>{badge}</Text>
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -485,7 +490,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           return (
             <Marker key={`turn-${i}`} coordinate={{ latitude: t.lat, longitude: t.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={isNext ? 999 : 1} tracksViewChanges={isNext}>
               <View style={isNext ? styles.turnBadgeNext : styles.turnBadge}>
-                <Ionicons name={turnIconName(t.maneuver)} size={isNext ? 18 : 13} color={isNext ? '#fff' : NAV_BLUE} />
+                <MaterialIcons name={maneuverIcon(t.maneuver) as any} size={isNext ? 32 : 20} color={isNext ? '#fff' : NAV_BLUE} />
               </View>
             </Marker>
           );
@@ -614,6 +619,12 @@ const styles = StyleSheet.create({
     elevation: 8, shadowColor: NAV_BLUE, shadowOpacity: 0.5, shadowRadius: 10,
     borderWidth: 3, borderColor: '#fff',
   },
+  vehicleBadge: {
+    position: 'absolute', bottom: -2, right: -2,
+    width: 16, height: 16, borderRadius: 8,
+    backgroundColor: '#fff', borderWidth: 1.5, borderColor: C.green,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   pickupRing: {
     width: 22, height: 22, borderRadius: 11,
@@ -656,15 +667,15 @@ const styles = StyleSheet.create({
   chosenRouteTxt: { color: '#fff', fontSize: 11.5, fontWeight: '900' },
 
   turnBadge: {
-    width: 22, height: 22, borderRadius: 11,
+    width: 34, height: 34, borderRadius: 17,
     backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: NAV_BLUE,
     elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 3,
   },
   turnBadgeNext: {
-    width: 34, height: 34, borderRadius: 17,
+    width: 54, height: 54, borderRadius: 27,
     backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: '#fff',
+    borderWidth: 4, borderColor: '#fff',
     elevation: 10, shadowColor: C.pink, shadowOpacity: 0.6, shadowRadius: 8,
   },
 

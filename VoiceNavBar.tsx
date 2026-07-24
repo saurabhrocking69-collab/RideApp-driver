@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Animated, Text, TouchableOpacity, View } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons, Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
+import { maneuverIcon, maneuverIconFromText } from './maneuverIcon';
 
 const NAV_BLUE = '#1A73E8';
 
@@ -12,19 +13,9 @@ function fmtDist(m: number): string {
   return `${Math.round(m / 50) * 50 || 50} m`;
 }
 
-function turnIconName(text: string): string {
-  const t = text.toLowerCase();
-  if (t.includes('left'))       return 'arrow-back';
-  if (t.includes('right'))      return 'arrow-forward';
-  if (t.includes('u-turn'))     return 'return-up-back';
-  if (t.includes('straight') || t.includes('continue')) return 'arrow-up';
-  if (t.includes('arrive') || t.includes('destination')) return 'location';
-  if (t.includes('roundabout') || t.includes('circle')) return 'refresh';
-  return 'arrow-up';
-}
-
 interface Props {
   instruction: string;
+  maneuver?:   string;
   nextDistM:   number;
   phase:       'to_pickup' | 'to_drop';
   onMute:      () => void;
@@ -32,7 +23,7 @@ interface Props {
   visible:     boolean;
 }
 
-export function VoiceNavBar({ instruction, nextDistM, phase, onMute, muted, visible }: Props) {
+export function VoiceNavBar({ instruction, maneuver, nextDistM, phase, onMute, muted, visible }: Props) {
   const slideAnim = useRef(new Animated.Value(-160)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -57,7 +48,7 @@ export function VoiceNavBar({ instruction, nextDistM, phase, onMute, muted, visi
 
   const dist    = fmtDist(nextDistM);
   const urgent  = nextDistM > 0 && nextDistM < 100;   // < 100m = turn imminent → red
-  const icon    = turnIconName(instruction);
+  const icon    = maneuver ? maneuverIcon(maneuver) : maneuverIconFromText(instruction);
   const isPickup = phase === 'to_pickup';
   const phaseLabel = isPickup ? 'PICKUP KI TARAF' : 'DROP KI TARAF';
 
@@ -78,12 +69,12 @@ export function VoiceNavBar({ instruction, nextDistM, phase, onMute, muted, visi
 
           {/* ── Turn direction icon ── */}
           <View style={{
-            width: 64, height: 64, borderRadius: 18,
+            width: 72, height: 72, borderRadius: 20,
             backgroundColor: `${NAV_BLUE}18`,
             alignItems: 'center', justifyContent: 'center',
             borderWidth: 2, borderColor: `${NAV_BLUE}45`,
           }}>
-            <Ionicons name={icon as any} size={34} color={NAV_BLUE} />
+            <MaterialIcons name={icon as any} size={42} color={NAV_BLUE} />
           </View>
 
           {/* ── Main content ── */}
