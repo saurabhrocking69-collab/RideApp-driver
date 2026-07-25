@@ -223,8 +223,8 @@ export const TR: Record<Lang, Record<string, string>> = {
 
     // Favourites / referral
     no_favourites_yet:    'Abhi tak kisi ne favourite nahi banaya — achhi rides do!',
-    refer_friends_hint:   'Dosto ko refer karo — dost ki 3 rides complete hone pe dono ko ₹50 bonus milega',
-    referral_share_msg2:  'Sppero Buddy pe join karo! Mera referral code use karo: {code}\nDono ko ₹50 wallet bonus milega! 🎁',
+    refer_friends_hint:   'Dosto ko refer karo — dost ki 3 rides complete hone pe dono ko ₹10 bonus milega',
+    referral_share_msg2:  'Sppero Buddy pe join karo! Mera referral code use karo: {code}\nDono ko ₹10 wallet bonus milega! 🎁',
 
     // Registration steps 3-5
     reg_vehicle_what:     'Aap kya chalate hain?',
@@ -653,8 +653,8 @@ export const TR: Record<Lang, Record<string, string>> = {
 
     // Favourites / referral
     no_favourites_yet:    'No one has favourited you yet — give great rides!',
-    refer_friends_hint:   "Refer friends — when your friend completes 3 rides, you both get a ₹50 bonus",
-    referral_share_msg2:  'Join Sppero Buddy! Use my referral code: {code}\nWe both get a ₹50 wallet bonus! 🎁',
+    refer_friends_hint:   "Refer friends — when your friend completes 3 rides, you both get a ₹10 bonus",
+    referral_share_msg2:  'Join Sppero Buddy! Use my referral code: {code}\nWe both get a ₹10 wallet bonus! 🎁',
 
     // Registration steps 3-5
     reg_vehicle_what:     'What do you drive?',
