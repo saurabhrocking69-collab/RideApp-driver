@@ -30,6 +30,7 @@ import { io, Socket } from 'socket.io-client';
 // so sub-components (BottomNav) can read it without prop-drilling.
 let _appLang: Lang = 'hi';
 import { C, T, R, SP, SHADOW, DS } from './theme';
+import { shortRideId } from './rideId';
 
 // Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
 // evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
@@ -7903,7 +7904,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         {rec.payment_method === 'cash' ? '💵 Cash' : rec.payment_method === 'wallet' ? '👛 Wallet' : '💳 Online'}
                       </Text>
                     </View>
-                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Ride #{rec.ride_id?.slice(-6)} · {fmtDate(rec.created_at)}</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Ride {shortRideId(rec.ride_id)} · {fmtDate(rec.created_at)}</Text>
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A' }}>₹{parseFloat(rec.commission).toFixed(0)}</Text>
