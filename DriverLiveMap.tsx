@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, memo } from 'react';
+import { useRef, useEffect, useState, useMemo, memo } from 'react';
 import { Animated, Linking, View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
@@ -406,7 +406,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
 
   // The next upcoming turn = the turn point nearest to the driver right now.
   // Highlighted in pink so the driver instantly sees which turn is coming.
-  const nextTurnIdx = (() => {
+  const nextTurnIdx = useMemo(() => {
     if (driverLat == null || driverLng == null || turnPoints.length === 0) return -1;
     let best = -1, bestD = Infinity;
     turnPoints.forEach((t, i) => {
@@ -414,7 +414,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
       if (d < bestD) { bestD = d; best = i; }
     });
     return best;
-  })();
+  }, [driverLat, driverLng, turnPoints]);
 
   return (
     <View style={{ height, width: '100%', overflow: 'hidden' }}>

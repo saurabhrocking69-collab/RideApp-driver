@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, Image, Alert,
   ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules, Dimensions
@@ -587,6 +587,18 @@ function App() {
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
+
+  // Memoized so DriverLiveMap's React.memo isn't defeated by fresh object refs every render
+  const activePickupCoords = useMemo(() => {
+    if (!activeRide) return null;
+    const lat = parseFloat(activeRide.pickup_lat), lng = parseFloat(activeRide.pickup_lng);
+    return isNaN(lat) || isNaN(lng) ? null : { lat, lng };
+  }, [activeRide?.pickup_lat, activeRide?.pickup_lng]);
+  const activeDropCoords = useMemo(() => {
+    if (!activeRide) return null;
+    const lat = parseFloat(activeRide.drop_lat), lng = parseFloat(activeRide.drop_lng);
+    return isNaN(lat) || isNaN(lng) ? null : { lat, lng };
+  }, [activeRide?.drop_lat, activeRide?.drop_lng]);
 
   // ── Language ──────────────────────────────────
   const [lang, setLang] = useState<Lang>('hi');
@@ -4341,8 +4353,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── In-app navigation full-screen overlay ──────────────────────────────
   const NAV_PT = Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 8 : 44;
-  const _navPickup = activeRide ? (() => { const la = parseFloat(activeRide.pickup_lat), lo = parseFloat(activeRide.pickup_lng); return isNaN(la)||isNaN(lo) ? null : {lat:la,lng:lo}; })() : null;
-  const _navDrop   = activeRide ? (() => { const la = parseFloat(activeRide.drop_lat),   lo = parseFloat(activeRide.drop_lng);   return isNaN(la)||isNaN(lo) ? null : {lat:la,lng:lo}; })() : null;
+  const _navPickup = activePickupCoords;
+  const _navDrop   = activeDropCoords;
   const NavOverlay = inNavMode ? (
     <View style={{ position:'absolute', top:0, left:0, right:0, bottom:0, zIndex:9999 }}>
       <DriverLiveMap
@@ -4537,16 +4549,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       {/* Full map background */}
       <View style={s.mapFit}>
         <DriverLiveMap
-          pickupCoords={(() => {
-            if (!activeRide) return null;
-            const lat = parseFloat(activeRide.pickup_lat), lng = parseFloat(activeRide.pickup_lng);
-            return isNaN(lat) || isNaN(lng) ? null : { lat, lng };
-          })()}
-          dropCoords={(() => {
-            if (!activeRide) return null;
-            const lat = parseFloat(activeRide.drop_lat), lng = parseFloat(activeRide.drop_lng);
-            return isNaN(lat) || isNaN(lng) ? null : { lat, lng };
-          })()}
+          pickupCoords={activePickupCoords}
+          dropCoords={activeDropCoords}
           driverLat={driverGps?.lat}
           driverLng={driverGps?.lng}
           customerLat={activeRide ? parseFloat(activeRide.pickup_lat) || null : null}
