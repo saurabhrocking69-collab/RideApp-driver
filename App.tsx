@@ -16,7 +16,7 @@ import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
 import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
 import { Audio } from 'expo-av';
-import { apiGet, apiPost } from './api';
+import { apiGet, apiPost, apiAuthPost } from './api';
 // Keep the screen on during navigation. Guarded so the app never crashes if the
 // native module isn't in the build yet (activates in dev builds immediately; in
 // the production APK after the next native rebuild).
@@ -40,6 +40,16 @@ try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.defaul
 
 const API      = 'https://api.sppero.com';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
+
+// Ride-mutation endpoints (accept/arrived/start/complete/cancel/etc.) now
+// verify the caller's identity server-side against this token, not just
+// whatever phone is typed into the request body — see
+// rideapp-backend/middleware/userAuth.js. Every driver-initiated ride call
+// needs to go through this instead of a bare apiPost/fetch, or it 401s.
+async function authRidePost(path: string, body: any) {
+  const token = await AsyncStorage.getItem('driverToken').catch(() => null);
+  return apiAuthPost(path, body, token || '');
+}
 
 const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, height = 220 }: any) => {
   const centerLat = pickupCoords?.lat || driverLat || 26.8467;
@@ -1126,7 +1136,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         useDriverStore.getState().triggerPoll?.();
         const driverPhone = (globalThis as any).__driverPhone;
         if (driverPhone) {
-          apiPost('/api/rides/accept', { ride_id: rideId, driver_phone: driverPhone })
+          authRidePost('/api/rides/accept', { ride_id: rideId, driver_phone: driverPhone })
             .catch(() => {});
         }
         return;
@@ -1136,7 +1146,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (action === 'notif_decline' && data?.ride_id) {
         const driverPhone = (globalThis as any).__driverPhone;
         if (driverPhone) {
-          apiPost('/api/rides/reject-offer', { ride_id: data.ride_id, driver_phone: driverPhone })
+          authRidePost('/api/rides/reject-offer', { ride_id: data.ride_id, driver_phone: driverPhone })
             .catch(() => {});
         }
         useDriverStore.setState({ pendingRide: null });
@@ -2010,6 +2020,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const verRes = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, otp: otpToUse, name: '' }) });
       const verData = await verRes.json();
       if (!verData.token) { setResult('❌ ' + (verData.error || 'Incorrect OTP')); setLoading(false); return; }
+      await AsyncStorage.setItem('driverToken', verData.token);
 
       // Driver info lo
       const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
@@ -2293,7 +2304,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const acceptRide = async () => {
     if (!rideReq) return;
     setLoading(true);
-    const data = await apiPost('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
+    const data = await authRidePost('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
     if (data._error) {
       setResult('❌ ' + data.message);
     } else if (data.success) {
@@ -2321,13 +2332,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setResult('❌ Ride rejected');
     if (req?.id) {
       // apiPost has 10s timeout — raw fetch can hang indefinitely and block queue advancement
-      apiPost('/api/rides/reject-offer', { ride_id: req.id, driver_phone: phone }).catch(() => {});
+      authRidePost('/api/rides/reject-offer', { ride_id: req.id, driver_phone: phone }).catch(() => {});
     }
   };
 
   const markArrived = async () => {
     setLoading(true);
-    const data = await apiPost('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
+    const data = await authRidePost('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else setActiveRide({ ...activeRide, status: 'arrived' });
     setLoading(false);
@@ -2336,7 +2347,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const startTrip = async () => {
     if (otpInput.length !== 4) { setResult('❌ Enter a 4 digit OTP'); return; }
     setLoading(true);
-    const data = await apiPost('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
+    const data = await authRidePost('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
     else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
     else setResult('❌ ' + (data.message || 'Incorrect OTP!'));
@@ -2371,8 +2382,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
     setLoading(true);
     try {
+      const completeToken = await AsyncStorage.getItem('driverToken').catch(() => null);
       const res = await fetch(`${API}/api/rides/complete`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${completeToken || ''}` },
         body: JSON.stringify({ ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng }),
       });
       let data: any = {};
@@ -2501,7 +2513,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const cancelTrip = async () => {
     setLoading(true);
     try {
-      const cd = await apiPost('/api/rides/cancel-smart', { ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
+      const cd = await authRidePost('/api/rides/cancel-smart', { ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
       if (cd.success) {
         setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancelled');
         setActiveRide(null);
@@ -3030,7 +3042,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 try {
                   const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
                   const data = await res.json();
-                  if (data.token) { setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
+                  if (data.token) { await AsyncStorage.setItem('driverToken', data.token); setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
                   else setResult('❌ ' + (data.error || 'Incorrect OTP'));
                 } catch (_e) { setResult('❌ Server error'); }
                 setLoading(false);
@@ -3846,13 +3858,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           preQueued={preQueued}
           phone={phone}
           onAccept={() => {
-            fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
-              .then(r => r.json())
+            authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
               .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
               .catch(() => setResult('❌ Network error'));
           }}
           onDecline={() => {
-            fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+            authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
               .then(() => { setPreQueued(null); })
               .catch(() => setPreQueued(null));
           }}
@@ -4448,7 +4459,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
             <TouchableOpacity
               onPress={() => {
-                fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+                authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
                   .then(() => setPreQueued(null)).catch(() => setPreQueued(null));
               }}
               style={{ paddingHorizontal: 8, paddingVertical: 6 }}>
@@ -4456,8 +4467,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => {
-                fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
-                  .then(r => r.json())
+                authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
                   .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
                   .catch(() => setResult('❌ Network error'));
               }}
@@ -4635,13 +4645,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           preQueued={preQueued}
           phone={phone}
           onAccept={() => {
-            fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
-              .then(r => r.json())
+            authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
               .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
               .catch(() => setResult('❌ Network error'));
           }}
           onDecline={() => {
-            fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+            authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
               .then(() => { setPreQueued(null); })
               .catch(() => setPreQueued(null));
           }}
@@ -6333,13 +6342,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             preQueued={preQueued}
             phone={phone}
             onAccept={() => {
-              fetch(`${API}/api/rides/pre-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
-                .then(r => r.json())
+              authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
                 .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
                 .catch(() => setResult('❌ Network error'));
             }}
             onDecline={() => {
-              fetch(`${API}/api/rides/pre-decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: preQueued.rideId, phone }) })
+              authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
                 .then(() => { setPreQueued(null); })
                 .catch(() => setPreQueued(null));
             }}
@@ -8464,7 +8472,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
           </Bouncy>
         ))}
-        <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); setLoginPhone(''); setLoginOtpSent(false); setRegStep(0); setResult(''); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); await AsyncStorage.removeItem('driverToken'); setLoginPhone(''); setLoginOtpSent(false); setRegStep(0); setResult(''); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
           <Text style={{ color: C.pink, fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>

@@ -50,6 +50,25 @@ export const apiPost = async (path: string, body: any, retries = 1): Promise<any
   return { _error: true, message: 'Network error — dobara try karo' };
 };
 
+// ─── Auth-aware POST (includes Bearer token) — for endpoints that verify
+// the caller's identity server-side, like ride accept/arrived/start/etc. ───
+export const apiAuthPost = async (path: string, body: any, token: string, retries = 1): Promise<any> => {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      const res = await fetchWithTimeout(`${API}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body),
+      }, 10000);
+      return await res.json();
+    } catch (err) {
+      if (i === retries) return { _error: true, message: 'Network error — dobara try karo' };
+      await new Promise(r => setTimeout(r, 800));
+    }
+  }
+  return { _error: true, message: 'Network error — dobara try karo' };
+};
+
 // ─── External API (Google Maps etc) with timeout ───
 export const externalGet = async (url: string): Promise<any> => {
   try {
