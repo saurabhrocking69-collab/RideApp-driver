@@ -8427,8 +8427,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           ['🏦', 'Bank Details', 'Payout account', 'bank'],
           ['📞', 'Support', '24x7 help', 'support'],
           ['⚙️', 'Settings', 'Preferences', 'settings'],
+          ['🔒', 'Privacy Policy', 'How we handle your data', 'privacy-policy'],
+          ['📄', 'Terms & Conditions', 'Platform terms of use', 'terms-of-service'],
         ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
           <Bouncy key={key} style={s.menuItem} onPress={() => {
+            if (key === 'privacy-policy') { Linking.openURL('https://api.sppero.com/privacy'); return; }
+            if (key === 'terms-of-service') { Linking.openURL('https://api.sppero.com/terms'); return; }
             if (key === 'orders') { setOrdersData(null); setOrdersLoading(false); setOrdersPeriod('day'); setOrdersDate(new Date()); setOrdersFilter('all'); }
             if (key === 'subscription') { setSubResult(''); setSubSelectedPlan(null); loadDriverSub(phone, driverInfo?.vehicle_type); }
             setDrSubScreen(key as any); setBankMsg('');
