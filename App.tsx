@@ -668,6 +668,13 @@ function App() {
   const [pendingActivatedRide, setPendingActivatedRide] = useState<any>(null);
   const [earnings, setEarnings]     = useState(0);
   const [rides, setRides]           = useState(0);
+  // "Aaj Ki Kamai" is bumped by the full pre-commission fare at trip-complete
+  // time (real commission isn't known yet then) and corrected down to the
+  // true net figure once payment actually confirms — but confirmation can
+  // arrive via the socket event, the polling fallback, AND (for cash) the
+  // driver's own direct confirm response, so track which rides have already
+  // been corrected to avoid applying the same correction more than once.
+  const earningsCorrectedRef = useRef(new Set<string>());
   const [result, setResult]         = useState('');
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('home');
@@ -2247,14 +2254,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             const d = await res.json();
             if (d.payment_status === 'completed') {
               const fare = d.net_fare != null ? parseFloat(d.net_fare) : Math.max(0, parseFloat(d.fare || 0) - parseFloat(d.discount || 0));
+              // Real commission for this ride (varies: subscription drivers pay
+              // 0%, intercity is 10% not the standard 15%) — not a flat guess.
+              const commission = parseFloat(d.commission_amount || 0);
+              const earned = Math.max(0, fare - commission);
               setPaymentMethod(d.payment_method || '');
               setPaymentWaiting(false);
               setTripSummary({
                 fare: '₹' + fare.toFixed(0),
                 payment_method: d.payment_method,
-                earned: '₹' + (fare * 0.85).toFixed(0),
-                fee: '₹' + (fare * 0.15).toFixed(0),
+                earned: '₹' + earned.toFixed(0),
+                fee: '₹' + commission.toFixed(0),
               });
+              // The home-screen "Aaj Ki Kamai" total was bumped by the full
+              // (pre-commission) fare when the trip completed, since the real
+              // commission isn't known until payment confirms here — true it
+              // up now by subtracting what was over-added. Guarded so the
+              // polling fallback / direct cash-confirm response can't also
+              // apply this same correction a second time.
+              const rideKey = String(data.ride_id);
+              if (!earningsCorrectedRef.current.has(rideKey)) {
+                earningsCorrectedRef.current.add(rideKey);
+                setEarnings(e => Math.max(0, e - (fare - earned)));
+              }
             }
           } catch (_e) {}
         });
@@ -2510,11 +2532,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           setPaymentMethod(data.payment_method);
           setPaymentWaiting(false);
           const fare = parseFloat(data.fare || 0);
+          const commission = parseFloat(data.commission_amount || 0);
+          const earned = Math.max(0, fare - commission);
           setTripSummary({
             fare: data.fare, payment_method: data.payment_method,
-            earned: '₹' + (fare * 0.85).toFixed(0),
-            fee: '₹' + (fare * 0.15).toFixed(0),
+            earned: '₹' + earned.toFixed(0),
+            fee: '₹' + commission.toFixed(0),
           });
+          const rideKey = String(paymentRideId);
+          if (!earningsCorrectedRef.current.has(rideKey)) {
+            earningsCorrectedRef.current.add(rideKey);
+            setEarnings(e => Math.max(0, e - (fare - earned)));
+          }
           clearInterval(iv);
         } else if (data.payment_status === 'cash_pending') {
           setPaymentMethod('cash');
@@ -2534,13 +2563,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         return;
       }
       setPaymentWaiting(false);
-      const fare = parseFloat(paymentFare || '0');
+      // Prefer the backend's own fare/commission (computed off the full ride
+      // fare) over the local paymentFare, which can be less than the full
+      // fare for advance rides (advance already collected online separately).
+      const fare = res?.fare != null ? parseFloat(res.fare) : parseFloat(paymentFare || '0');
+      const commission = parseFloat(res?.commission_amount || 0);
+      const earned = Math.max(0, fare - commission);
       setTripSummary({
-        fare: paymentFare,
+        fare: String(Math.round(fare)),
         payment_method: method === 'upi_direct' ? 'upi' : 'cash',
-        earned: '₹' + (fare * 0.85).toFixed(0),
-        fee: '₹' + (fare * 0.15).toFixed(0),
+        earned: '₹' + earned.toFixed(0),
+        fee: '₹' + commission.toFixed(0),
       });
+      const rideKey = String(paymentRideId);
+      if (!earningsCorrectedRef.current.has(rideKey)) {
+        earningsCorrectedRef.current.add(rideKey);
+        setEarnings(e => Math.max(0, e - (fare - earned)));
+      }
     } catch (_e) { setResult('❌ Error — please retry'); }
     setLoading(false);
   };
@@ -3929,8 +3968,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <CountUp value={paymentFare} prefix="₹" style={{ ...T.earnings, color: '#FFFFFF', letterSpacing: -2.5, lineHeight: 56 }} />
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.full, paddingHorizontal: 18, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(0,200,83,0.3)' }}>
-          <Text style={{ fontSize: 13, color: C.online, fontWeight: '900' }}>Net Kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)}</Text>
-          <Text style={{ fontSize: 11, color: 'rgba(0,200,83,0.55)' }}>· 15% fee ke baad</Text>
+          <Text style={{ fontSize: 13, color: C.online, fontWeight: '900' }}>Est. Net Kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)}+</Text>
+          <Text style={{ fontSize: 11, color: 'rgba(0,200,83,0.55)' }}>· exact amount after payment confirms</Text>
         </View>
       </View>
 
