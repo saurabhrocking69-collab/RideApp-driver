@@ -51,6 +51,40 @@ async function authRidePost(path: string, body: any) {
   return apiAuthPost(path, body, token || '');
 }
 
+// Reads the `exp` claim out of a JWT without verifying it (verification is
+// the server's job) — just enough to know whether it's expired or getting
+// close, for the silent-refresh check below.
+function decodeJwtExp(token: string): number | null {
+  try {
+    const payload = token.split('.')[1];
+    const padded = payload + '==='.slice((payload.length + 3) % 4);
+    const json = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')));
+    return typeof json.exp === 'number' ? json.exp : null;
+  } catch { return null; }
+}
+
+// Tokens are issued for 30 days. Called once at cold start (mirrors the same
+// check in rideapp-mobile3/AppContext.tsx) so a driver who keeps the app
+// installed for weeks never hits a hard "session expired" wall mid-shift —
+// refreshed quietly in the background well before it'd actually expire.
+async function checkAndRefreshDriverToken() {
+  const token = await AsyncStorage.getItem('driverToken').catch(() => null);
+  if (!token) return;
+  const exp = decodeJwtExp(token);
+  const nowSec = Math.floor(Date.now() / 1000);
+  if (exp === null) return;
+  if (exp < nowSec) {
+    await AsyncStorage.removeItem('driverToken').catch(() => {});
+    return;
+  }
+  if (exp - nowSec < 7 * 86400) {
+    fetch(`${API}/api/auth/refresh`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(d => { if (d.token) AsyncStorage.setItem('driverToken', d.token).catch(() => {}); })
+      .catch(() => {});
+  }
+}
+
 const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, height = 220 }: any) => {
   const centerLat = pickupCoords?.lat || driverLat || 26.8467;
   const centerLng = pickupCoords?.lng || driverLng || 80.9462;
@@ -922,6 +956,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const savedInfo  = await AsyncStorage.getItem('driverInfo');
         if (savedPhone) {
           setPhone(savedPhone);
+          checkAndRefreshDriverToken().catch(() => {});
           try {
             const res  = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: savedPhone }) });
             const data = await res.json();
