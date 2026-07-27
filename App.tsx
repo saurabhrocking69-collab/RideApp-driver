@@ -587,6 +587,10 @@ function App() {
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
+  // Dedicated (not the generic `result` string, which several unrelated
+  // screens render their own way and would leak this onto) — cleared
+  // automatically, only ever set by the 'rideTaken' socket handler.
+  const [rideTakenMsg, setRideTakenMsg] = useState('');
 
   // Memoized so DriverLiveMap's React.memo isn't defeated by fresh object refs every render
   const activePickupCoords = useMemo(() => {
@@ -2153,7 +2157,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           timeout: 10000,
         });
         s.on('connect', () => {
-          s.emit('driverJoin', { phone });
+          // Tell the server which ride (if any) we're still showing an accept
+          // card for — if it's already been taken while we were disconnected,
+          // the server corrects us immediately via 'rideTaken' instead of
+          // leaving a stale offer + countdown on screen until it times out.
+          const pending = useDriverStore.getState().pendingRide;
+          s.emit('driverJoin', { phone, pendingRideId: pending?.id });
           // Re-join active ride/hourly room on reconnect so we don't miss payment/chat events
           const ar = useDriverStore.getState().activeRide;
           if (ar?.id) s.emit('joinRide', { rideId: ar.id });
@@ -2175,12 +2184,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           triggerHourlyPollRef.current?.();
         });
 
-        // Another driver accepted first — clear the pending ride immediately
+        // Another driver accepted first — clear the pending ride immediately.
+        // Also fires when a stale offer card is corrected right on reconnect
+        // (see driverJoin's pendingRideId) — same handling either way.
         s.on('rideTaken', () => {
           useDriverStore.setState({ pendingRide: null });
           setRideReq(null);
-          setResult('❌ Another driver took the ride');
-          setTimeout(() => setResult(''), 3000);
+          Vibration.vibrate(150);
+          setRideTakenMsg('❌ Ride taken by another driver');
+          setTimeout(() => setRideTakenMsg(''), 4000);
         });
         s.on('paymentConfirmed', async (data: any) => {
           if (data.status !== 'completed') return;
@@ -5708,6 +5720,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {/* ── IDLE STATE ── */}
         {isIdle && (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 32, paddingBottom: 80 }}>
+            {rideTakenMsg ? (
+              <View style={{ position: 'absolute', top: 16, left: 16, right: 16, backgroundColor: 'rgba(15,23,42,0.9)', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16 }}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>{rideTakenMsg}</Text>
+              </View>
+            ) : null}
             {isOnline ? (
               <>
                 <PulseView>
@@ -7491,6 +7508,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={{ color: '#fff', fontSize: 13 }}>Dekho →</Text>
         </TouchableOpacity>
       )}
+      {!rideReq && !hourlyRideReq && rideTakenMsg ? (
+        <View style={{ backgroundColor: 'rgba(15,23,42,0.9)', paddingVertical: 10, paddingHorizontal: 16 }}>
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13, textAlign: 'center' }}>{rideTakenMsg}</Text>
+        </View>
+      ) : null}
 
       {/* Fuel Log button */}
       <TouchableOpacity onPress={() => setShowFuelLog(true)} style={{
