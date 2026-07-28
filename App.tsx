@@ -680,6 +680,7 @@ function App() {
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
   const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
+  const [codCollected, setCodCollected] = useState(false);
   const [eta, setEta]               = useState('');
   const [distToPickup, setDistToPickup] = useState('');
   const [tripRemainingEta, setTripRemainingEta] = useState('');
@@ -2446,14 +2447,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${completeToken || ''}` },
         body: JSON.stringify({
           ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng,
-          ...(activeRide?.is_parcel ? { delivery_otp: deliveryOtpInput } : {}),
+          ...(activeRide?.is_parcel ? { delivery_otp: deliveryOtpInput, cod_collected: codCollected } : {}),
         }),
       });
       let data: any = {};
       try { data = await res.json(); } catch (_e) {}
       if (data.error && /delivery OTP/i.test(data.error)) { setResult('❌ ' + data.error); setLoading(false); return; }
       if (res.ok || data.success) {
-        setDeliveryOtpInput('');
+        setDeliveryOtpInput(''); setCodCollected(false);
         if (data.early_completion) {
           setEarlyFlagModal({ dist: data.dist_from_drop });
         }
@@ -5334,6 +5335,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       />
                     </KeyboardAvoidingView>
                   )}
+                  {activeRide.is_parcel && parseFloat(activeRide.cod_amount || 0) > 0 && (
+                    <TouchableOpacity onPress={() => setCodCollected(v => !v)} activeOpacity={0.8}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: codCollected ? 'rgba(245,158,11,0.15)' : '#F8FAFC', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1.5, borderColor: codCollected ? '#F59E0B' : '#E2E8F0' }}>
+                      <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: codCollected ? '#F59E0B' : '#CBD5E1', backgroundColor: codCollected ? '#F59E0B' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                        {codCollected && <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>✓</Text>}
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: '#0F172A' }}>
+                        I collected ₹{Math.round(parseFloat(activeRide.cod_amount))} cash from the receiver
+                      </Text>
+                    </TouchableOpacity>
+                  )}
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
                     <Text style={s.tripBtnTxt}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
                   </Bouncy>
@@ -5972,6 +5984,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ fontSize: 18 }}>📦</Text>
                     <Text style={{ color: C.plum, fontSize: 13, fontWeight: '900' }}>
                       {String(rideReq?.package_size || 'small').toUpperCase()} package
+                      <Text style={{ color: C.textDim, fontWeight: '600', fontSize: 11 }}>
+                        {' '}({({ small: 'up to 2kg', medium: 'up to 10kg', large: 'up to 25kg' } as any)[rideReq?.package_size || 'small']})
+                      </Text>
                     </Text>
                   </View>
                   {rideReq?.receiver_name && (
@@ -6289,6 +6304,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         placeholderTextColor="#D4A520"
                       />
                     </View>
+                  )}
+                  {activeRide.is_parcel && parseFloat(activeRide.cod_amount || 0) > 0 && (
+                    <TouchableOpacity onPress={() => setCodCollected(v => !v)} activeOpacity={0.8}
+                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: codCollected ? 'rgba(245,158,11,0.15)' : '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1.5, borderColor: codCollected ? '#F59E0B' : '#E2E8F0' }}>
+                      <View style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: codCollected ? '#F59E0B' : '#CBD5E1', backgroundColor: codCollected ? '#F59E0B' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
+                        {codCollected && <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>✓</Text>}
+                      </View>
+                      <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '700', color: '#0F172A' }}>
+                        I collected ₹{Math.round(parseFloat(activeRide.cod_amount))} cash from the receiver
+                      </Text>
+                    </TouchableOpacity>
                   )}
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0, opacity: (activeRide.is_parcel && deliveryOtpInput.length < 4) ? 0.5 : 1 }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
                     <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
