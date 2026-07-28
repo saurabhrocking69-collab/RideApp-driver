@@ -65,7 +65,7 @@ Answer **Yes** — this app collects or shares user data. Declare:
 | Device/other IDs (push token) | Yes | No | Ride request alerts, notifications |
 
 - Data encrypted in transit: **Yes**
-- Users can request data deletion: **Yes** — via `help@sppero.in`
+- Users can request data deletion: **Yes** — via `help@sppero.com`
 - Privacy Policy URL: **https://api.sppero.com/privacy**
 
 ## 4. Content Rating questionnaire
