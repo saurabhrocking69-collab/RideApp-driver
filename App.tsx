@@ -679,6 +679,7 @@ function App() {
   const [loading, setLoading]       = useState(false);
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
+  const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
   const [eta, setEta]               = useState('');
   const [distToPickup, setDistToPickup] = useState('');
   const [tripRemainingEta, setTripRemainingEta] = useState('');
@@ -2412,6 +2413,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const completeTrip = async () => {
+    if (activeRide?.is_parcel && deliveryOtpInput.length !== 4) { setResult('❌ Enter the receiver\'s 4 digit delivery OTP'); return; }
     const rideId = activeRide?.id;
     const rideFare = String(activeRide?.fare || '0');
     const ridePMethod = activeRide?.payment_method || '';
@@ -2442,11 +2444,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const completeToken = await AsyncStorage.getItem('driverToken').catch(() => null);
       const res = await fetch(`${API}/api/rides/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${completeToken || ''}` },
-        body: JSON.stringify({ ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng }),
+        body: JSON.stringify({
+          ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng,
+          ...(activeRide?.is_parcel ? { delivery_otp: deliveryOtpInput } : {}),
+        }),
       });
       let data: any = {};
       try { data = await res.json(); } catch (_e) {}
+      if (data.error && /delivery OTP/i.test(data.error)) { setResult('❌ ' + data.error); setLoading(false); return; }
       if (res.ok || data.success) {
+        setDeliveryOtpInput('');
         if (data.early_completion) {
           setEarlyFlagModal({ dist: data.dist_from_drop });
         }
@@ -5312,8 +5319,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {activeRide.status === 'started' && (
                 <View>
-                  <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_complete')}</Text>
+                  {activeRide.is_parcel && (
+                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                      <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>Ask the receiver for the delivery OTP</Text>
+                      <TextInput
+                        style={{ borderWidth: 2.5, borderColor: deliveryOtpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        value={deliveryOtpInput}
+                        onChangeText={setDeliveryOtpInput}
+                        placeholder="○ ○ ○ ○"
+                        placeholderTextColor="#D4A520"
+                        autoFocus
+                      />
+                    </KeyboardAvoidingView>
+                  )}
+                  <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
+                    <Text style={s.tripBtnTxt}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
                   </Bouncy>
                 </View>
               )}
@@ -5862,6 +5884,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               )}
 
+              {/* Parcel banner — no passenger, a package instead */}
+              {rideReq?.is_parcel && (
+                <View style={{ backgroundColor: 'rgba(46,20,97,0.35)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(196,181,253,0.60)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Text style={{ fontSize: 13 }}>📦</Text>
+                  <Text style={{ color: '#C4B5FD', fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>
+                    PARCEL DELIVERY · {String(rideReq?.package_size || 'SMALL').toUpperCase()}
+                  </Text>
+                </View>
+              )}
+
               {/* Favourite / new ride label */}
               {!rideReq?.isScheduled && (rideReq?.is_favourite_request ? (
                 <View style={{ backgroundColor: 'rgba(245,158,11,0.18)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 10, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -5879,7 +5911,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
               </Text>
 
-              {/* Passenger name */}
+              {/* Passenger name — "Sender:" for parcels, since there's no passenger to carry */}
+              {rideReq?.is_parcel && (
+                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 }}>SENDER</Text>
+              )}
               <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 0.3 }}>{rideReq?.passenger_name || 'Passenger'}</Text>
 
               {/* Surge badge */}
@@ -5929,6 +5964,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
                 )}
               </View>
+
+              {/* Package details — size, cash to collect, driver instructions */}
+              {rideReq?.is_parcel && (
+                <View style={{ backgroundColor: C.plumGlass, borderRadius: R.md, padding: SP.md, marginBottom: 14, borderWidth: 1.5, borderColor: C.plumBorder }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={{ fontSize: 18 }}>📦</Text>
+                    <Text style={{ color: C.plum, fontSize: 13, fontWeight: '900' }}>
+                      {String(rideReq?.package_size || 'small').toUpperCase()} package
+                    </Text>
+                  </View>
+                  {rideReq?.receiver_name && (
+                    <Text style={{ color: C.textDim, fontSize: 11.5, marginTop: 8 }}>
+                      Delivering to <Text style={{ fontWeight: '800', color: C.text }}>{rideReq.receiver_name}</Text>
+                    </Text>
+                  )}
+                  {parseFloat(rideReq?.cod_amount || 0) > 0 && (
+                    <View style={{ marginTop: 10, backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: R.sm, padding: 10, borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
+                      <Text style={{ color: '#F59E0B', fontSize: 12, fontWeight: '900' }}>💵 Collect ₹{Math.round(parseFloat(rideReq.cod_amount))} from receiver</Text>
+                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>This is separate from your delivery fee — settle it with the sender directly</Text>
+                    </View>
+                  )}
+                  {rideReq?.package_note ? (
+                    <Text style={{ color: C.textDim, fontSize: 11.5, marginTop: 10, lineHeight: 16 }}>📝 {rideReq.package_note}</Text>
+                  ) : null}
+                </View>
+              )}
 
               {/* Route card */}
               <View style={{ backgroundColor: C.bgCard, borderRadius: R.md, padding: SP.md, marginBottom: 14, borderWidth: 1, borderColor: C.glassBorder, ...SHADOW.sm }}>
@@ -6215,8 +6276,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* ── Complete trip + cancel (well spaced) ── */}
               {activeRide.status === 'started' && (
                 <View>
-                  <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0 }]} onPress={completeTrip} disabled={loading}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : t('trip_complete')}</Text>
+                  {activeRide.is_parcel && (
+                    <View style={{ marginBottom: 16 }}>
+                      <Text style={{ fontSize: 15, color: '#0F172A', marginBottom: 12, textAlign: 'center', fontWeight: '700' }}>Ask the receiver for the delivery OTP</Text>
+                      <TextInput
+                        style={{ borderWidth: 2.5, borderColor: deliveryOtpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 16, paddingVertical: 20, paddingHorizontal: 18, fontSize: 36, textAlign: 'center', letterSpacing: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
+                        keyboardType="number-pad"
+                        maxLength={4}
+                        value={deliveryOtpInput}
+                        onChangeText={setDeliveryOtpInput}
+                        placeholder="○ ○ ○ ○"
+                        placeholderTextColor="#D4A520"
+                      />
+                    </View>
+                  )}
+                  <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0, opacity: (activeRide.is_parcel && deliveryOtpInput.length < 4) ? 0.5 : 1 }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
+                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
                   </Bouncy>
                   {/* Extra large gap so cancel is NOT accidentally hit after tapping Complete */}
                   <View style={{ height: 24 }} />
