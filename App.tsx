@@ -716,6 +716,8 @@ function App() {
   const [paymentRideId, setPaymentRideId] = useState('');
   const [paymentFare, setPaymentFare]     = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('');
+  const paymentWaitingRef = useRef(false);
+  const paymentRideIdRef  = useRef('');
   const [driverGps, setDriverGps]   = useState<any>(null);
   const [navMuted, setNavMuted]     = useState(false);
   const [inNavMode, setInNavMode]   = useState(false);
@@ -1241,6 +1243,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         // Reconnect socket immediately
         const sock = (globalThis as any).__driverSocket;
         if (sock && !sock.connected) sock.connect();
+        // Was waiting on a payment when the app went to background — RN
+        // timers/sockets can sit stalled the whole time it was backgrounded,
+        // so re-check right away instead of waiting for the next 3s poll tick.
+        if (paymentWaitingRef.current && paymentRideIdRef.current) {
+          checkPaymentStatusNowRef.current(paymentRideIdRef.current);
+        }
         // Restart or trigger poll
         if (!storeState._pollTimer && (globalThis as any).__driverPhone) {
           startPolling((globalThis as any).__driverPhone);
@@ -2529,35 +2537,53 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setBankSaving(false);
   };
 
+  // Keep refs in sync so the AppState foreground handler (registered once,
+  // far above with an empty dep array) can see the latest values without
+  // going stale.
+  useEffect(() => {
+    paymentWaitingRef.current = paymentWaiting;
+    paymentRideIdRef.current  = paymentRideId;
+  }, [paymentWaiting, paymentRideId]);
+
+  // Single source of truth for "did this ride's payment complete?" — used by
+  // the 3s poll below AND by the app-foreground handler, so resuming from
+  // background (where RN timers/sockets can sit stalled for the whole time
+  // the app was backgrounded) re-checks immediately instead of waiting for
+  // the next tick.
+  const checkPaymentStatusNow = async (rideIdArg?: string) => {
+    const rideId = rideIdArg || paymentRideIdRef.current;
+    if (!rideId) return;
+    try {
+      const data = await apiGet(`/api/rides/payment-status/${rideId}`, 0, 5000);
+      if (data._error) return;
+      if (data.payment_status === 'completed') {
+        setPaymentMethod(data.payment_method);
+        setPaymentWaiting(false);
+        const fare = parseFloat(data.fare || 0);
+        const commission = parseFloat(data.commission_amount || 0);
+        const earned = Math.max(0, fare - commission);
+        setTripSummary({
+          fare: data.fare, payment_method: data.payment_method,
+          earned: '₹' + earned.toFixed(0),
+          fee: '₹' + commission.toFixed(0),
+        });
+        const rideKey = String(rideId);
+        if (!earningsCorrectedRef.current.has(rideKey)) {
+          earningsCorrectedRef.current.add(rideKey);
+          setEarnings(e => Math.max(0, e - (fare - earned)));
+        }
+      } else if (data.payment_status === 'cash_pending') {
+        setPaymentMethod('cash');
+      }
+    } catch (_e) {}
+  };
+  const checkPaymentStatusNowRef = useRef(checkPaymentStatusNow);
+  checkPaymentStatusNowRef.current = checkPaymentStatusNow;
+
   // Payment status polling (driver wait kare)
   useEffect(() => {
     if (!paymentWaiting || !paymentRideId) return;
-    const iv = setInterval(async () => {
-      try {
-        const data = await apiGet(`/api/rides/payment-status/${paymentRideId}`, 0, 5000);
-        if (data._error) return;
-        if (data.payment_status === 'completed') {
-          setPaymentMethod(data.payment_method);
-          setPaymentWaiting(false);
-          const fare = parseFloat(data.fare || 0);
-          const commission = parseFloat(data.commission_amount || 0);
-          const earned = Math.max(0, fare - commission);
-          setTripSummary({
-            fare: data.fare, payment_method: data.payment_method,
-            earned: '₹' + earned.toFixed(0),
-            fee: '₹' + commission.toFixed(0),
-          });
-          const rideKey = String(paymentRideId);
-          if (!earningsCorrectedRef.current.has(rideKey)) {
-            earningsCorrectedRef.current.add(rideKey);
-            setEarnings(e => Math.max(0, e - (fare - earned)));
-          }
-          clearInterval(iv);
-        } else if (data.payment_status === 'cash_pending') {
-          setPaymentMethod('cash');
-        }
-      } catch (_e) {}
-    }, 3000);
+    const iv = setInterval(() => { checkPaymentStatusNowRef.current(paymentRideId); }, 3000);
     return () => clearInterval(iv);
   }, [paymentWaiting, paymentRideId]);
 
