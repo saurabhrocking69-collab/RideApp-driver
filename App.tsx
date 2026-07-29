@@ -680,7 +680,6 @@ function App() {
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
   const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
-  const [codCollected, setCodCollected] = useState(false);
   const [eta, setEta]               = useState('');
   const [distToPickup, setDistToPickup] = useState('');
   const [tripRemainingEta, setTripRemainingEta] = useState('');
@@ -2455,14 +2454,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${completeToken || ''}` },
         body: JSON.stringify({
           ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng,
-          ...(activeRide?.is_parcel ? { delivery_otp: deliveryOtpInput, cod_collected: codCollected } : {}),
+          ...(activeRide?.is_parcel ? { delivery_otp: deliveryOtpInput } : {}),
         }),
       });
       let data: any = {};
       try { data = await res.json(); } catch (_e) {}
       if (data.error && /delivery OTP/i.test(data.error)) { setResult('❌ ' + data.error); setLoading(false); return; }
       if (res.ok || data.success) {
-        setDeliveryOtpInput(''); setCodCollected(false);
+        setDeliveryOtpInput('');
         if (data.early_completion) {
           setEarlyFlagModal({ dist: data.dist_from_drop });
         }
@@ -2472,15 +2471,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const netFare = data.fare != null
           ? Math.round(data.fare)
           : Math.max(0, Math.round(parseFloat(rideFare)) - Math.round(discountAmt));
-        // Advance rides: the customer already prepaid 1/3 online — collect only
-        // the REMAINING at drop, never the full fare (that would double-charge).
-        const advanceAmt = parseFloat(String(activeRide?.advance_amount || '0')) || 0;
-        const collectFare = Math.max(0, netFare - advanceAmt);
-        setPaymentRideId(rideId);
-        setPaymentFare(String(collectFare));
-        setPaymentMethod(ridePMethod);
-        setPaymentWaiting(true);
-        setEarnings(e => e + netFare);
+        if (activeRide?.is_parcel) {
+          // Already paid in full at booking (escrow) — /complete just
+          // released it, so there's nothing to wait on. Real commission is
+          // already known from the response, no optimistic-then-corrected
+          // earnings dance needed like the normal-ride path below.
+          const commission = parseFloat(data.commission_amount || 0);
+          const earned = data.earned != null ? parseFloat(data.earned) : Math.max(0, netFare - commission);
+          setPaymentMethod(ridePMethod || 'online');
+          setTripSummary({
+            fare: String(netFare), payment_method: ridePMethod || 'online',
+            earned: '₹' + earned.toFixed(0), fee: '₹' + commission.toFixed(0),
+          });
+          setEarnings(e => e + earned);
+        } else {
+          // Advance rides: the customer already prepaid 1/3 online — collect only
+          // the REMAINING at drop, never the full fare (that would double-charge).
+          const advanceAmt = parseFloat(String(activeRide?.advance_amount || '0')) || 0;
+          const collectFare = Math.max(0, netFare - advanceAmt);
+          setPaymentRideId(rideId);
+          setPaymentFare(String(collectFare));
+          setPaymentMethod(ridePMethod);
+          setPaymentWaiting(true);
+          setEarnings(e => e + netFare);
+        }
         setRides(r => r + 1);
         setLastRideId(rideId);
         setActiveRide(null);
@@ -5361,17 +5375,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       />
                     </KeyboardAvoidingView>
                   )}
-                  {activeRide.is_parcel && parseFloat(activeRide.cod_amount || 0) > 0 && (
-                    <TouchableOpacity onPress={() => setCodCollected(v => !v)} activeOpacity={0.8}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: codCollected ? 'rgba(245,158,11,0.15)' : '#F8FAFC', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1.5, borderColor: codCollected ? '#F59E0B' : '#E2E8F0' }}>
-                      <View style={{ width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: codCollected ? '#F59E0B' : '#CBD5E1', backgroundColor: codCollected ? '#F59E0B' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                        {codCollected && <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }}>✓</Text>}
-                      </View>
-                      <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: '#0F172A' }}>
-                        I collected ₹{Math.round(parseFloat(activeRide.cod_amount))} cash from the receiver
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
                     <Text style={s.tripBtnTxt}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
                   </Bouncy>
@@ -6020,12 +6023,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       Delivering to <Text style={{ fontWeight: '800', color: C.text }}>{rideReq.receiver_name}</Text>
                     </Text>
                   )}
-                  {parseFloat(rideReq?.cod_amount || 0) > 0 && (
-                    <View style={{ marginTop: 10, backgroundColor: 'rgba(245,158,11,0.15)', borderRadius: R.sm, padding: 10, borderWidth: 1, borderColor: 'rgba(245,158,11,0.4)' }}>
-                      <Text style={{ color: '#F59E0B', fontSize: 12, fontWeight: '900' }}>💵 Collect ₹{Math.round(parseFloat(rideReq.cod_amount))} from receiver</Text>
-                      <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>This is separate from your delivery fee — settle it with the sender directly</Text>
-                    </View>
-                  )}
+                  <View style={{ marginTop: 10, backgroundColor: 'rgba(16,185,129,0.15)', borderRadius: R.sm, padding: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.4)' }}>
+                    <Text style={{ color: '#10B981', fontSize: 12, fontWeight: '900' }}>✅ Payment already collected</Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, marginTop: 2 }}>Released to you the moment you confirm delivery</Text>
+                  </View>
                   {rideReq?.package_note ? (
                     <Text style={{ color: C.textDim, fontSize: 11.5, marginTop: 10, lineHeight: 16 }}>📝 {rideReq.package_note}</Text>
                   ) : null}
@@ -6331,16 +6332,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       />
                     </View>
                   )}
-                  {activeRide.is_parcel && parseFloat(activeRide.cod_amount || 0) > 0 && (
-                    <TouchableOpacity onPress={() => setCodCollected(v => !v)} activeOpacity={0.8}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: codCollected ? 'rgba(245,158,11,0.15)' : '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 16, borderWidth: 1.5, borderColor: codCollected ? '#F59E0B' : '#E2E8F0' }}>
-                      <View style={{ width: 24, height: 24, borderRadius: 7, borderWidth: 2, borderColor: codCollected ? '#F59E0B' : '#CBD5E1', backgroundColor: codCollected ? '#F59E0B' : 'transparent', alignItems: 'center', justifyContent: 'center' }}>
-                        {codCollected && <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>✓</Text>}
-                      </View>
-                      <Text style={{ flex: 1, fontSize: 13.5, fontWeight: '700', color: '#0F172A' }}>
-                        I collected ₹{Math.round(parseFloat(activeRide.cod_amount))} cash from the receiver
+                  {activeRide.is_parcel && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+                      <Text style={{ fontSize: 16 }}>✅</Text>
+                      <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: '#065F46' }}>
+                        Payment already collected — released to your wallet the moment you confirm delivery
                       </Text>
-                    </TouchableOpacity>
+                    </View>
                   )}
                   <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0, opacity: (activeRide.is_parcel && deliveryOtpInput.length < 4) ? 0.5 : 1 }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
                     <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
