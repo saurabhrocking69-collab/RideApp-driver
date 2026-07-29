@@ -681,6 +681,8 @@ function App() {
   const [otpInput, setOtpInput]     = useState('');
   const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
   const [returnOtpInput, setReturnOtpInput] = useState('');
+  const acceptInFlightRef = useRef(false);
+  const completeInFlightRef = useRef(false);
   const [eta, setEta]               = useState('');
   const [distToPickup, setDistToPickup] = useState('');
   const [tripRemainingEta, setTripRemainingEta] = useState('');
@@ -2382,8 +2384,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Ride actions ───────────────────────────────
   const acceptRide = async () => {
     if (!rideReq) return;
+    // Synchronous ref guard, not just `disabled={loading}` (which lags a
+    // render behind) — the auto-accept-surge timer (a raw setTimeout, bypasses
+    // the UI entirely) and a manual tap landing in the same ~800ms window
+    // could otherwise both pass the loading check before either request
+    // resolves, firing two concurrent accept calls for the same ride.
+    if (acceptInFlightRef.current) return;
+    acceptInFlightRef.current = true;
     setLoading(true);
     const data = await authRidePost('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
+    acceptInFlightRef.current = false;
     if (data._error) {
       setResult('❌ ' + data.message);
     } else if (data.success) {
@@ -2435,33 +2445,43 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const completeTrip = async () => {
     if (activeRide?.is_parcel && deliveryOtpInput.length !== 4) { setResult('❌ Enter the receiver\'s 4 digit delivery OTP'); return; }
-    const rideId = activeRide?.id;
-    const rideFare = String(activeRide?.fare || '0');
-    const ridePMethod = activeRide?.payment_method || '';
-    const dropLat = activeRide?.drop_lat ? parseFloat(activeRide.drop_lat) : null;
-    const dropLng = activeRide?.drop_lng ? parseFloat(activeRide.drop_lng) : null;
-    const curLat = driverGps?.lat;
-    const curLng = driverGps?.lng;
-
-    // GPS early-completion guard: warn if >800m from drop point
-    if (dropLat && dropLng && curLat && curLng) {
-      const R = 6371;
-      const dLat = (dropLat - curLat) * Math.PI / 180;
-      const dLon = (dropLng - curLng) * Math.PI / 180;
-      const a = Math.sin(dLat/2)**2 + Math.cos(curLat*Math.PI/180)*Math.cos(dropLat*Math.PI/180)*Math.sin(dLon/2)**2;
-      const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-
-      if (distKm > 0.8) {
-        const confirm = await new Promise<boolean>(resolve => {
-          distWarnResolveRef.current = resolve;
-          setDistWarnModal({ dist: distKm.toFixed(1) });
-        });
-        if (!confirm) return;
-      }
-    }
-
-    setLoading(true);
+    // Synchronous ref guard covering the WHOLE flow, including the distance-
+    // warning modal wait below — previously a fast double-tap before
+    // setLoading(true) committed (or before the modal even appeared) could
+    // re-enter this function, and since the modal's resolver lives in a
+    // single shared ref (distWarnResolveRef), the second call's resolver
+    // would silently overwrite the first's, leaving the first invocation's
+    // await hanging forever (setLoading never fires for it).
+    if (completeInFlightRef.current) return;
+    completeInFlightRef.current = true;
     try {
+      const rideId = activeRide?.id;
+      const rideFare = String(activeRide?.fare || '0');
+      const ridePMethod = activeRide?.payment_method || '';
+      const dropLat = activeRide?.drop_lat ? parseFloat(activeRide.drop_lat) : null;
+      const dropLng = activeRide?.drop_lng ? parseFloat(activeRide.drop_lng) : null;
+      const curLat = driverGps?.lat;
+      const curLng = driverGps?.lng;
+
+      // GPS early-completion guard: warn if >800m from drop point
+      if (dropLat && dropLng && curLat && curLng) {
+        const R = 6371;
+        const dLat = (dropLat - curLat) * Math.PI / 180;
+        const dLon = (dropLng - curLng) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(curLat*Math.PI/180)*Math.cos(dropLat*Math.PI/180)*Math.sin(dLon/2)**2;
+        const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+        if (distKm > 0.8) {
+          const confirm = await new Promise<boolean>(resolve => {
+            distWarnResolveRef.current = resolve;
+            setDistWarnModal({ dist: distKm.toFixed(1) });
+          });
+          if (!confirm) return;
+        }
+      }
+
+      setLoading(true);
+      try {
       const completeToken = await AsyncStorage.getItem('driverToken').catch(() => null);
       const res = await fetch(`${API}/api/rides/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${completeToken || ''}` },
@@ -2519,6 +2539,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult('❌ Network error — check your internet and retry');
     }
     setLoading(false);
+    } finally {
+      completeInFlightRef.current = false;
+    }
   };
 
   // Receiver isn't answering / refused the package — flag it so the sender
@@ -8756,7 +8779,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ fontSize: 20, color: '#475569' }}>›</Text>
           </Bouncy>
         ))}
-        <Bouncy style={s.logoutBtn} onPress={async () => { stopBgLocation().catch(() => {}); await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); await AsyncStorage.removeItem('driverToken'); setLoginPhone(''); setLoginOtpSent(false); setRegStep(0); setResult(''); setScreen('login'); setIsOnline(false); stopPolling(); setDriverInfo(null); setPhone(''); }}>
+        <Bouncy style={s.logoutBtn} onPress={async () => {
+          // toggleOnline(false) does everything logout needs on the
+          // connectivity side (stop bg location, stop polling, disconnect
+          // the socket, clear the global socket/phone refs, tell the backend
+          // is_online=false) — previously logout skipped all of this, so a
+          // driver who logged out without first flipping their online toggle
+          // off stayed marked online server-side and could still get
+          // dispatched real ride requests to a device showing the login screen.
+          await toggleOnline(false);
+          // toggleOnline(false) clears __driverSocket but not __driverPhone —
+          // without this the AppState foreground handler (which reads
+          // __driverPhone to decide whether to restart polling/reconnect the
+          // socket) can revive activity under the logged-out driver's identity
+          // if the app is merely backgrounded/foregrounded after logout.
+          (globalThis as any).__driverPhone = null;
+          await AsyncStorage.removeItem('driverPhone'); await AsyncStorage.removeItem('driverInfo'); await AsyncStorage.removeItem('driverToken'); setLoginPhone(''); setLoginOtpSent(false); setRegStep(0); setResult(''); setScreen('login'); setDriverInfo(null); setPhone('');
+        }}>
           <Text style={{ color: C.pink, fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
