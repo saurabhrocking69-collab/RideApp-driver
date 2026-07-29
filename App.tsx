@@ -680,6 +680,7 @@ function App() {
   const [activeTab, setActiveTab]   = useState('home');
   const [otpInput, setOtpInput]     = useState('');
   const [deliveryOtpInput, setDeliveryOtpInput] = useState('');
+  const [returnOtpInput, setReturnOtpInput] = useState('');
   const [eta, setEta]               = useState('');
   const [distToPickup, setDistToPickup] = useState('');
   const [tripRemainingEta, setTripRemainingEta] = useState('');
@@ -2289,6 +2290,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             }
           } catch (_e) {}
         });
+        // Sender decided what happens after a flagged non-delivery
+        s.on('returnDecisionMade', (data: any) => {
+          const ar = useDriverStore.getState().activeRide;
+          if (!ar || String(ar.id) !== String(data.ride_id)) return;
+          if (data.decision === 'retry') {
+            useDriverStore.setState({ activeRide: { ...ar, return_status: null, delivery_fail_reason: null } });
+            Vibration.vibrate(150);
+          } else if (data.decision === 'return') {
+            useDriverStore.setState({ activeRide: { ...ar, return_status: 'accepted' } });
+            Vibration.vibrate([0, 150, 100, 150]);
+          }
+        });
         // Pre-assignment: a new customer ride is offered while this driver is still active
         s.on('preRideQueued', (data: any) => {
           setPreQueued({ rideId: data.rideId, pickup: data.pickup, fare: data.fare, rideType: data.rideType, etaMin: data.etaMin ?? 8 });
@@ -2506,6 +2519,99 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult('❌ Network error — check your internet and retry');
     }
     setLoading(false);
+  };
+
+  // Receiver isn't answering / refused the package — flag it so the sender
+  // can decide whether they want it back. Ride stays 'started' either way.
+  const flagNonDelivery = async (reason: string) => {
+    if (!activeRide?.id || loading) return;
+    setLoading(true);
+    try {
+      const data = await authRidePost('/api/parcel/flag-non-delivery', { ride_id: activeRide.id, driver_phone: phone, reason });
+      if (data._error || data.error) setResult('❌ ' + (data.error || data.message || 'Could not send'));
+      else setActiveRide({ ...activeRide, return_status: 'pending_decision', delivery_fail_reason: reason });
+    } catch { setResult('❌ Network error'); }
+    setLoading(false);
+  };
+
+  // Sender confirmed they want the package back and this OTP proves it
+  // physically reached them — settles the return-fee/refund split server-side.
+  const confirmReturn = async () => {
+    if (!activeRide?.id || returnOtpInput.length < 4 || loading) return;
+    setLoading(true);
+    try {
+      const data = await authRidePost('/api/parcel/confirm-return', { ride_id: activeRide.id, driver_phone: phone, return_otp: returnOtpInput });
+      if (data._error || data.error) { setResult('❌ ' + (data.error || 'Incorrect return OTP')); setLoading(false); return; }
+      const earned = Math.round(parseFloat(data.earned || 0));
+      setReturnOtpInput('');
+      setTripSummary({ fare: '0', payment_method: activeRide.payment_method || 'online', earned: '₹' + earned, fee: '₹0' });
+      setEarnings(e => e + earned);
+      setRides(r => r + 1);
+      setLastRideId(activeRide.id);
+      setActiveRide(null);
+      setOtpInput(''); setShowChat(false); setUnreadChat(0); setChatMsgs([]);
+    } catch { setResult('❌ Network error'); }
+    setLoading(false);
+  };
+
+  const onFlagNonDelivery = () => {
+    Alert.alert("Can't deliver?", "What's the issue?", [
+      { text: 'Not answering call', onPress: () => flagNonDelivery('Receiver not answering the phone') },
+      { text: 'Refused the package', onPress: () => flagNonDelivery('Receiver refused the package') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  // Shared between the compact and full-screen active-ride views — branches
+  // on return_status so the "receiver unreachable → sender decides → driver
+  // returns it" sub-flow doesn't need to be built twice.
+  const renderParcelStartedControls = () => {
+    if (activeRide?.return_status === 'pending_decision') {
+      return (
+        <View style={{ backgroundColor: 'rgba(245,158,11,0.12)', borderRadius: 14, padding: 16, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.35)', alignItems: 'center' }}>
+          <Text style={{ fontSize: 24, marginBottom: 6 }}>⏳</Text>
+          <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E', textAlign: 'center' }}>Waiting for the sender's decision...</Text>
+          <Text style={{ fontSize: 11, color: '#B45309', textAlign: 'center', marginTop: 4 }}>We've asked whether they want the package returned.</Text>
+        </View>
+      );
+    }
+    if (activeRide?.return_status === 'accepted') {
+      return (
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <View style={{ backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)' }}>
+            <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#4338CA', textAlign: 'center' }}>🔄 Head back to the pickup location</Text>
+            <Text style={{ fontSize: 11, color: '#6366F1', textAlign: 'center', marginTop: 2 }}>The sender wants their package back</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>Ask the sender for the return OTP</Text>
+          <TextInput
+            style={{ borderWidth: 2.5, borderColor: returnOtpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
+            keyboardType="number-pad" maxLength={4} value={returnOtpInput} onChangeText={setReturnOtpInput}
+            placeholder="○ ○ ○ ○" placeholderTextColor="#D4A520" autoFocus
+          />
+          <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={confirmReturn} disabled={loading || returnOtpInput.length < 4}>
+            <Text style={s.tripBtnTxt}>{loading ? '...' : 'Confirm Return'}</Text>
+          </Bouncy>
+        </KeyboardAvoidingView>
+      );
+    }
+    return (
+      <View>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+          <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>Ask the receiver for the delivery OTP</Text>
+          <TextInput
+            style={{ borderWidth: 2.5, borderColor: deliveryOtpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
+            keyboardType="number-pad" maxLength={4} value={deliveryOtpInput} onChangeText={setDeliveryOtpInput}
+            placeholder="○ ○ ○ ○" placeholderTextColor="#D4A520" autoFocus
+          />
+        </KeyboardAvoidingView>
+        <TouchableOpacity onPress={onFlagNonDelivery} disabled={loading} style={{ alignSelf: 'center', marginBottom: 12, padding: 4 }}>
+          <Text style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: '700', textDecorationLine: 'underline' }}>Receiver not answering / refused?</Text>
+        </TouchableOpacity>
+        <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading || deliveryOtpInput.length < 4}>
+          <Text style={s.tripBtnTxt}>{loading ? '...' : 'Confirm Delivery'}</Text>
+        </Bouncy>
+      </View>
+    );
   };
 
   // Reset customer rating when tripSummary clears
@@ -5360,24 +5466,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               {activeRide.status === 'started' && (
                 <View>
-                  {activeRide.is_parcel && (
-                    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                      <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>Ask the receiver for the delivery OTP</Text>
-                      <TextInput
-                        style={{ borderWidth: 2.5, borderColor: deliveryOtpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 14, padding: 16, fontSize: 32, textAlign: 'center', letterSpacing: 12, marginBottom: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        value={deliveryOtpInput}
-                        onChangeText={setDeliveryOtpInput}
-                        placeholder="○ ○ ○ ○"
-                        placeholderTextColor="#D4A520"
-                        autoFocus
-                      />
-                    </KeyboardAvoidingView>
+                  {activeRide.is_parcel ? renderParcelStartedControls() : (
+                    <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading}>
+                      <Text style={s.tripBtnTxt}>{loading ? '...' : t('trip_complete')}</Text>
+                    </Bouncy>
                   )}
-                  <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
-                    <Text style={s.tripBtnTxt}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
-                  </Bouncy>
                 </View>
               )}
               <Bouncy style={s.cancelBtn} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
@@ -6318,31 +6411,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* ── Complete trip + cancel (well spaced) ── */}
               {activeRide.status === 'started' && (
                 <View>
-                  {activeRide.is_parcel && (
+                  {activeRide.is_parcel ? (
                     <View style={{ marginBottom: 16 }}>
-                      <Text style={{ fontSize: 15, color: '#0F172A', marginBottom: 12, textAlign: 'center', fontWeight: '700' }}>Ask the receiver for the delivery OTP</Text>
-                      <TextInput
-                        style={{ borderWidth: 2.5, borderColor: deliveryOtpInput.length === 4 ? C.green : '#E2E8F0', borderRadius: 16, paddingVertical: 20, paddingHorizontal: 18, fontSize: 36, textAlign: 'center', letterSpacing: 14, fontWeight: '900', backgroundColor: '#F8FAFC', color: '#0F172A' }}
-                        keyboardType="number-pad"
-                        maxLength={4}
-                        value={deliveryOtpInput}
-                        onChangeText={setDeliveryOtpInput}
-                        placeholder="○ ○ ○ ○"
-                        placeholderTextColor="#D4A520"
-                      />
+                      {!activeRide.return_status && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
+                          <Text style={{ fontSize: 16 }}>✅</Text>
+                          <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: '#065F46' }}>
+                            Payment already collected — released to your wallet the moment you confirm delivery
+                          </Text>
+                        </View>
+                      )}
+                      {renderParcelStartedControls()}
                     </View>
+                  ) : (
+                    <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0 }]} onPress={completeTrip} disabled={loading}>
+                      <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : t('trip_complete')}</Text>
+                    </Bouncy>
                   )}
-                  {activeRide.is_parcel && (
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-                      <Text style={{ fontSize: 16 }}>✅</Text>
-                      <Text style={{ flex: 1, fontSize: 12.5, fontWeight: '700', color: '#065F46' }}>
-                        Payment already collected — released to your wallet the moment you confirm delivery
-                      </Text>
-                    </View>
-                  )}
-                  <Bouncy style={[s.tripBtn, { backgroundColor: C.green, shadowColor: C.green, paddingVertical: 20, marginBottom: 0, opacity: (activeRide.is_parcel && deliveryOtpInput.length < 4) ? 0.5 : 1 }]} onPress={completeTrip} disabled={loading || (activeRide.is_parcel && deliveryOtpInput.length < 4)}>
-                    <Text style={[s.tripBtnTxt, { fontSize: 18 }]}>{loading ? '...' : (activeRide.is_parcel ? 'Confirm Delivery' : t('trip_complete'))}</Text>
-                  </Bouncy>
                   {/* Extra large gap so cancel is NOT accidentally hit after tapping Complete */}
                   <View style={{ height: 24 }} />
                   <Bouncy style={[s.cancelBtn, { borderWidth: 1.5, borderColor: C.pink, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, marginBottom: 16 }]} onPress={() => setShowDriverCancelModal(true)} disabled={loading}>
