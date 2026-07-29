@@ -1428,7 +1428,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try { const d = await authRideGet(`/api/driver/upi?phone=${ph}`); setDriverUpiId(d.upi_id || ''); setUpiInput(d.upi_id || ''); } catch (_e) {}
   };
   const loadDriverOffers = async () => {
-    try { const r = await fetch(`${API}/api/offers/active?role=driver`); const d = await r.json(); setDriverOffers(d.offers || []); } catch (_e) {}
+    try { const r = await fetch(`${API}/api/offers/active?role=driver&phone=${phone}`); const d = await r.json(); setDriverOffers(d.offers || []); } catch (_e) {}
   };
   const saveUpiId = async () => {
     if (!upiInput.trim()) return;
