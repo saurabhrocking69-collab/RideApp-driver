@@ -16,7 +16,7 @@ import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
 import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
 import { Audio } from 'expo-av';
-import { apiGet, apiPost, apiAuthPost } from './api';
+import { apiGet, apiPost, apiAuthPost, apiAuthGet } from './api';
 // Keep the screen on during navigation. Guarded so the app never crashes if the
 // native module isn't in the build yet (activates in dev builds immediately; in
 // the production APK after the next native rebuild).
@@ -49,6 +49,10 @@ const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 async function authRidePost(path: string, body: any) {
   const token = await AsyncStorage.getItem('driverToken').catch(() => null);
   return apiAuthPost(path, body, token || '');
+}
+async function authRideGet(path: string) {
+  const token = await AsyncStorage.getItem('driverToken').catch(() => null);
+  return apiAuthGet(path, token || '');
 }
 
 // Reads the `exp` claim out of a JWT without verifying it (verification is
@@ -1421,7 +1425,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const loadUpiId = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/driver/upi?phone=${ph}`); const d = await r.json(); setDriverUpiId(d.upi_id || ''); setUpiInput(d.upi_id || ''); } catch (_e) {}
+    try { const d = await authRideGet(`/api/driver/upi?phone=${ph}`); setDriverUpiId(d.upi_id || ''); setUpiInput(d.upi_id || ''); } catch (_e) {}
   };
   const loadDriverOffers = async () => {
     try { const r = await fetch(`${API}/api/offers/active?role=driver`); const d = await r.json(); setDriverOffers(d.offers || []); } catch (_e) {}
@@ -1430,8 +1434,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!upiInput.trim()) return;
     setUpiSaving(true);
     try {
-      const res = await fetch(`${API}/api/driver/upi`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, upi_id: upiInput.trim() }) });
-      const d = await res.json();
+      const d = await authRidePost('/api/driver/upi', { phone, upi_id: upiInput.trim() });
       if (d.success) { setDriverUpiId(d.upi_id); setResult('✅ UPI ID saved!'); }
       else setResult('❌ ' + (d.error || 'Error'));
     } catch (_e) { setResult('❌ Server error'); }
@@ -1573,8 +1576,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const loadDriverWallet = async (ph: string) => {
     try {
-      const r = await fetch(`${API}/api/wallet/driver/detail?phone=${ph}`);
-      const d = await r.json();
+      const d = await authRideGet(`/api/wallet/driver/detail?phone=${ph}`);
       setDriverWallet(d.wallet || { balance: 0, total_earned: 0, total_withdrawn: 0 });
       setDriverRideHistory(d.rides || []);
       setDriverHourlyHistory(d.hourly || []);
@@ -1587,8 +1589,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (amt > driverWallet.balance) { setResult('❌ Insufficient wallet balance'); return; }
     setPayoutLoading(true);
     try {
-      const res = await fetch(`${API}/api/driver/payout`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
-      const d = await res.json();
+      const d = await authRidePost('/api/driver/payout', { phone, amount: amt });
       if (d.success) {
         setResult('✅ ' + (d.message || 'Payout request submitted — admin will process within 24-48 hours'));
         setPayoutInput('');
@@ -2645,8 +2646,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (driverSubScreen === 'bank' && phone) {
       setBankMsg(''); setBankEditing(false);
       if (!bankLoaded) {
-        fetch(`${API}/api/driver/bank?phone=${phone}`)
-          .then(r => r.json()).then(d => {
+        authRideGet(`/api/driver/bank?phone=${phone}`)
+          .then(d => {
             setBankAccount(d.bank_account || ''); setBankIfsc(d.bank_ifsc || ''); setBankHolder(d.bank_holder || '');
             setBankLoaded(true);
           }).catch(() => {});
@@ -2669,11 +2670,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('❌ Both account number and IFSC are required'); return; }
     setBankSaving(true); setBankMsg('');
     try {
-      const res = await fetch(`${API}/api/driver/bank`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder }),
-      });
-      const d = await res.json();
+      const d = await authRidePost('/api/driver/bank', { phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder });
       if (d.success) { setBankMsg('✅ Bank details saved!'); setBankEditing(false); }
       else setBankMsg('❌ ' + (d.error || 'Error'));
     } catch (_e) { setBankMsg('❌ Network error'); }
