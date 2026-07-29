@@ -2545,6 +2545,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
   };
 
+  // Direct dial — unlike callCustomer() (sender/passenger), there's no masked-
+  // proxy call route for the receiver, so this opens the phone dialer with
+  // their raw number. Previously the driver had no way at all to reach the
+  // receiver in-app, even though "receiver not answering" is a real reason
+  // to flag a delivery — they'd have had to already have called before
+  // discovering that option existed.
+  const callReceiver = () => {
+    const num = activeRide?.receiver_phone;
+    if (!num) { Alert.alert('No number', "The receiver's phone number isn't available for this delivery."); return; }
+    Linking.openURL(`tel:${num}`).catch(() => {});
+  };
+
   // Receiver isn't answering / refused the package — flag it so the sender
   // can decide whether they want it back. Ride stays 'started' either way.
   const flagNonDelivery = async (reason: string) => {
@@ -2628,6 +2640,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             placeholder="○ ○ ○ ○" placeholderTextColor="#D4A520" autoFocus
           />
         </KeyboardAvoidingView>
+        {activeRide?.receiver_phone && (
+          <TouchableOpacity onPress={callReceiver} style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: '#EFF6FF', borderRadius: 12, paddingVertical: 10, marginBottom: 10, borderWidth: 1, borderColor: '#BFDBFE' }}>
+            <Ionicons name="call" size={15} color="#2563EB" />
+            <Text style={{ color: '#1D4ED8', fontWeight: '700', fontSize: 13 }}>Call Receiver{activeRide.receiver_name ? ` (${activeRide.receiver_name})` : ''}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity onPress={onFlagNonDelivery} disabled={loading} style={{ alignSelf: 'center', marginBottom: 12, padding: 4 }}>
           <Text style={{ fontSize: 11.5, color: '#94A3B8', fontWeight: '700', textDecorationLine: 'underline' }}>Receiver not answering / refused?</Text>
         </TouchableOpacity>
