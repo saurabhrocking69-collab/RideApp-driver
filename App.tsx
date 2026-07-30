@@ -623,6 +623,7 @@ function App() {
   useEffect(() => {
     const unsub = useDriverStore.subscribe((state) => {
       setActiveRide(state.activeRide);
+      setActiveBatch(state.activeBatch);
       setRideReq(state.pendingRide);
     });
     return unsub;
@@ -635,6 +636,8 @@ function App() {
   const [isOnline, setIsOnline]     = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
+  // { id, stops } when activeRide is currently a batch's stop — see store.ts
+  const [activeBatch, setActiveBatch] = useState<any>(null);
   // Dedicated (not the generic `result` string, which several unrelated
   // screens render their own way and would leak this onto) — cleared
   // automatically, only ever set by the 'rideTaken' socket handler.
@@ -670,6 +673,10 @@ function App() {
   const [preQueued, setPreQueued]          = useState<{ rideId: number; pickup: string; fare: string; rideType: string; etaMin: number } | null>(null);
   const [preQueueAccepted, setPreQueueAccepted] = useState(false);
   const [pendingActivatedRide, setPendingActivatedRide] = useState<any>(null);
+  // A combined 2-parcel offer — same pattern as preQueued but for
+  // routes/parcel.js POST /batch-accept instead of /accept.
+  const [batchOffer, setBatchOffer] = useState<{ batchId: number; stops: number; totalFare: number; packages: { pickup: string; drop: string; fare: number }[] } | null>(null);
+  const [batchAcceptLoading, setBatchAcceptLoading] = useState(false);
   const [earnings, setEarnings]     = useState(0);
   const [rides, setRides]           = useState(0);
   // "Aaj Ki Kamai" is bumped by the full pre-commission fare at trip-complete
@@ -1217,9 +1224,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
       if (data?.type === 'compensation_credited' || data?.type === 'earning_credited') {
         setScreen('home'); setActiveTab('earnings');
+        // This effect's closure is from mount ([] deps), so `phone` here would
+        // be stale — use the always-current global set on login, same as the
+        // notif_decline handler above.
+        const dp = (globalThis as any).__driverPhone;
+        if (dp) { loadDriverWallet(dp); loadCommissionHistory(dp); }
       }
       if (data?.type === 'hourly_extend') {
         setScreen('home'); setActiveTab('live');
+      }
+      // Sender responded to a flagged non-delivery (retry or return-it) —
+      // same "go look at your active ride" navigation as new_ride, since
+      // that's exactly where the retry banner / return-OTP input live.
+      if (data?.type === 'return_decision_made') {
+        setScreen('home'); setActiveTab('live');
+        useDriverStore.getState().triggerPoll?.();
       }
       if (data?.type === 'support_reply' || data?.type === 'support_resolved') {
         const dp = (globalThis as any).__driverPhone;
@@ -2290,6 +2309,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 earningsCorrectedRef.current.add(rideKey);
                 setEarnings(e => Math.max(0, e - (fare - earned)));
               }
+              // Wallet balance + commission owed just changed server-side —
+              // refresh both live instead of leaving the Earnings tab stale
+              // until the next manual refresh/app foreground.
+              loadDriverWallet(phone); loadCommissionHistory(phone);
             }
           } catch (_e) {}
         });
@@ -2325,6 +2348,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           // Driver's queued ride is now fully assigned — store it, show after trip summary dismissed
           setPendingActivatedRide({ id: data.rideId, pickup: data.pickup, drop_location: data.dropLocation, fare: data.fare, ride_type: data.rideType, status: 'matched' });
           setPreQueued(null);
+        });
+        s.on('batchOffer', (data: any) => {
+          setBatchOffer({ batchId: data.batchId, stops: data.stops, totalFare: data.totalFare, packages: data.packages });
+          // Auto-dismiss just before the server-side offer window closes
+          setTimeout(() => {
+            setBatchOffer(prev => (prev?.batchId === data.batchId ? null : prev));
+          }, (data.secondsToAccept - 2) * 1000);
         });
         s.on('chatMessage', (msg: any) => {
           setChatMsgs((prev: any[]) => [...prev, msg]);
@@ -2413,6 +2443,54 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
     setLoading(false);
   };
+  const acceptBatchOffer = async () => {
+    if (!batchOffer || batchAcceptLoading) return;
+    setBatchAcceptLoading(true);
+    const data = await authRidePost('/api/parcel/batch-accept', { batch_id: batchOffer.batchId, driver_phone: phone });
+    setBatchAcceptLoading(false);
+    if (data.success) {
+      setResult('✅ Batch accepted — 2 parcels, one trip!');
+      setBatchOffer(null);
+      for (const r of (data.rides || [])) socketRef.current?.emit('joinRide', { rideId: r.id });
+      useDriverStore.getState().triggerPoll();
+    } else {
+      setResult('❌ ' + (data.message || 'This batch is no longer available'));
+      setBatchOffer(null);
+    }
+  };
+  const declineBatchOffer = () => setBatchOffer(null); // no server call — offer just expires for this driver like any other timed-out offer
+
+  // Called after a stop-completing action (pickup start-OTP verified, or a
+  // delivery/return completed) succeeds via the real, UNCHANGED /start or
+  // /complete endpoints — advances activeRide to the batch's next undone
+  // stop. Deliberately re-fetches from the server rather than computing the
+  // next stop optimistically here, trusting the same `done` derivation
+  // /batch/active already uses (based on the ride statuses /start and
+  // /complete just updated) instead of risking a second, drifting copy of
+  // that logic on the client.
+  //
+  // Returns true if the batch has more work left (caller — completeTrip's
+  // parcel branch — uses this to skip the full "Trip Complete!" summary
+  // screen after just ONE of the two deliveries; that screen should only
+  // ever appear once the whole batch is actually done).
+  const advanceBatchIfNeeded = async (completedRideId: number): Promise<boolean> => {
+    if (!activeBatch) return false;
+    authRidePost('/api/parcel/batch-stop-complete', { ride_id: completedRideId }).catch(() => {});
+    try {
+      const bd = await apiGet(`/api/parcel/batch/active?phone=${phone}`, 0, 5000);
+      const nextStop = !bd._error && bd.batch ? (bd.stops || []).find((s: any) => !s.done) : null;
+      if (nextStop) {
+        useDriverStore.setState({ activeRide: nextStop, activeBatch: { id: bd.batch.id, stops: bd.stops } });
+        return true;
+      }
+    } catch (_e) {}
+    // Every stop done, batch already gone, or the fetch failed — the normal
+    // 6s poll reconciles either way, so it's safe to just drop the batch
+    // flag here rather than leave stale stop data lying around.
+    useDriverStore.setState({ activeBatch: null });
+    return false;
+  };
+
   const rejectRide = async () => {
     const req = rideReq;
     useDriverStore.setState({ pendingRide: null });
@@ -2437,9 +2515,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const startTrip = async () => {
     if (otpInput.length !== 4) { setResult('❌ Enter a 4 digit OTP'); return; }
     setLoading(true);
-    const data = await authRidePost('/api/rides/start', { ride_id: activeRide.id, otp: otpInput, driver_phone: phone });
+    const startedRideId = activeRide.id;
+    const data = await authRidePost('/api/rides/start', { ride_id: startedRideId, otp: otpInput, driver_phone: phone });
     if (data._error) setResult('❌ ' + data.message);
-    else if (data.success) { setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult(''); }
+    else if (data.success) {
+      setActiveRide({ ...activeRide, status: 'started' }); setOtpInput(''); setResult('');
+      // A pickup stop just completed (start-OTP verified) — if this was part
+      // of a batch, move on to the next undone stop (the other pickup, or a
+      // drop if both pickups are now done).
+      if (activeRide?.is_parcel && activeBatch) advanceBatchIfNeeded(startedRideId);
+    }
     else setResult('❌ ' + (data.message || 'Incorrect OTP!'));
     setLoading(false);
   };
@@ -2512,12 +2597,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           // earnings dance needed like the normal-ride path below.
           const commission = parseFloat(data.commission_amount || 0);
           const earned = data.earned != null ? parseFloat(data.earned) : Math.max(0, netFare - commission);
-          setPaymentMethod(ridePMethod || 'online');
-          setTripSummary({
-            fare: String(netFare), payment_method: ridePMethod || 'online',
-            earned: '₹' + earned.toFixed(0), fee: '₹' + commission.toFixed(0),
-          });
           setEarnings(e => e + earned);
+          // Money already moved (escrow released) — refresh wallet balance
+          // and commission history now instead of waiting for the driver to
+          // background/foreground the app or manually pull-to-refresh.
+          loadDriverWallet(phone); loadCommissionHistory(phone);
+
+          // If this delivery was one leg of a batch and the OTHER leg still
+          // has work left, don't show the full "Trip Complete!" summary
+          // screen yet — that would wrongly tell the driver they're done
+          // when they still have another stop. Advance to it instead, with
+          // a lightweight inline acknowledgment.
+          const batchContinues = activeBatch ? await advanceBatchIfNeeded(rideId) : false;
+          if (batchContinues) {
+            setResult(`✅ Delivered! ₹${earned.toFixed(0)} earned — heading to your next stop.`);
+          } else {
+            setPaymentMethod(ridePMethod || 'online');
+            setTripSummary({
+              fare: String(netFare), payment_method: ridePMethod || 'online',
+              earned: '₹' + earned.toFixed(0), fee: '₹' + commission.toFixed(0),
+            });
+          }
         } else {
           // Advance rides: the customer already prepaid 1/3 online — collect only
           // the REMAINING at drop, never the full fare (that would double-charge).
@@ -2575,17 +2675,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const confirmReturn = async () => {
     if (!activeRide?.id || returnOtpInput.length < 4 || loading) return;
     setLoading(true);
+    const returnedRideId = activeRide.id;
     try {
-      const data = await authRidePost('/api/parcel/confirm-return', { ride_id: activeRide.id, driver_phone: phone, return_otp: returnOtpInput });
+      const data = await authRidePost('/api/parcel/confirm-return', { ride_id: returnedRideId, driver_phone: phone, return_otp: returnOtpInput });
       if (data._error || data.error) { setResult('❌ ' + (data.error || 'Incorrect return OTP')); setLoading(false); return; }
       const earned = Math.round(parseFloat(data.earned || 0));
       setReturnOtpInput('');
-      setTripSummary({ fare: '0', payment_method: activeRide.payment_method || 'online', earned: '₹' + earned, fee: '₹0' });
       setEarnings(e => e + earned);
       setRides(r => r + 1);
-      setLastRideId(activeRide.id);
-      setActiveRide(null);
+      setLastRideId(returnedRideId);
       setOtpInput(''); setShowChat(false); setUnreadChat(0); setChatMsgs([]);
+
+      // Same reasoning as completeTrip's parcel branch: a return is also a
+      // stop completion, so if a batch-mate still has work left, move on to
+      // it instead of showing "Trip Complete!" and wiping activeRide.
+      const batchContinues = activeBatch ? await advanceBatchIfNeeded(returnedRideId) : false;
+      if (batchContinues) {
+        setResult(`✅ Return confirmed! ₹${earned} earned — heading to your next stop.`);
+      } else {
+        setTripSummary({ fare: '0', payment_method: activeRide.payment_method || 'online', earned: '₹' + earned, fee: '₹0' });
+        setActiveRide(null);
+      }
     } catch { setResult('❌ Network error'); }
     setLoading(false);
   };
@@ -2632,6 +2742,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     }
     return (
       <View>
+        {/* Sender picked "retry" after a flagged non-delivery — return_status
+            goes back to null but the backend deliberately leaves
+            delivery_fail_reason set (not cleared on retry), so that's a
+            durable, server-truth signal for "this is a retry attempt" that
+            survives an app restart/reconnect, unlike a local-only flag would. */}
+        {!!activeRide?.delivery_fail_reason && !activeRide?.return_status && (
+          <View style={{ backgroundColor: 'rgba(99,102,241,0.1)', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: 'rgba(99,102,241,0.3)', alignItems: 'center' }}>
+            <Text style={{ fontSize: 20, marginBottom: 4 }}>🔁</Text>
+            <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#4338CA', textAlign: 'center' }}>Try Again — Deliver to {activeRide.receiver_name || 'the Receiver'}</Text>
+            <Text style={{ fontSize: 11, color: '#6366F1', textAlign: 'center', marginTop: 2 }}>The sender wants you to make another delivery attempt</Text>
+          </View>
+        )}
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, textAlign: 'center', fontWeight: '600' }}>Ask the receiver for the delivery OTP</Text>
           <TextInput
@@ -2730,6 +2852,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           earningsCorrectedRef.current.add(rideKey);
           setEarnings(e => Math.max(0, e - (fare - earned)));
         }
+        loadDriverWallet(phone); loadCommissionHistory(phone);
       } else if (data.payment_status === 'cash_pending') {
         setPaymentMethod('cash');
       }
@@ -2772,26 +2895,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         earningsCorrectedRef.current.add(rideKey);
         setEarnings(e => Math.max(0, e - (fare - earned)));
       }
+      loadDriverWallet(phone); loadCommissionHistory(phone);
     } catch (_e) { setResult('❌ Error — please retry'); }
     setLoading(false);
   };
 
   const cancelTrip = async () => {
     setLoading(true);
+    const cancelledRideId = activeRide.id;
+    const wasBatched = !!activeBatch;
     try {
-      const cd = await authRidePost('/api/rides/cancel-smart', { ride_id: activeRide.id, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
+      const cd = await authRidePost('/api/rides/cancel-smart', { ride_id: cancelledRideId, cancelled_by: 'driver', reason: cancelReason || 'Driver cancelled', phone });
       if (cd.success) {
         setResult(cd.message ? '⚠️ ' + cd.message : '❌ Trip cancelled');
-        setActiveRide(null);
-        useDriverStore.setState({ activeRide: null });
         setShowDriverCancelModal(false);
+        // Cancelling ONE leg of a batch must not wipe visibility into the
+        // OTHER leg the driver still has to finish — advance to whatever
+        // stop is next (the backend's `done` derivation already treats a
+        // cancelled ride's own stops as skippable) instead of blindly
+        // clearing activeRide, which would otherwise strand the driver with
+        // no UI for a delivery they're still on the hook for.
+        const batchContinues = wasBatched ? await advanceBatchIfNeeded(cancelledRideId) : false;
+        if (!batchContinues) { setActiveRide(null); useDriverStore.setState({ activeRide: null }); }
       } else {
         setResult('❌ Cancel failed — please retry');
       }
     } catch (_e) {
       setResult('❌ Network error — please retry');
-      setActiveRide(null);
-      useDriverStore.setState({ activeRide: null });
+      if (!wasBatched) { setActiveRide(null); useDriverStore.setState({ activeRide: null }); }
     }
     setLoading(false);
   };
@@ -6027,8 +6158,45 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
         )}
 
+        {/* ── INCOMING BATCH (2-PARCEL) OFFER — takes display priority over a
+             plain single-ride offer if both happen to be pending at once, so
+             the driver isn't yanked mid-decision from one card to the other. ── */}
+        {batchOffer && !activeRide && !activeHourlyRide && (
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+            <View style={{ backgroundColor: C.bgDark, paddingTop: 20, paddingHorizontal: SP.md, paddingBottom: SP.lg, alignItems: 'center', overflow: 'hidden' }}>
+              <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.08)', top: -60, right: -40 }} />
+              <View style={{ backgroundColor: 'rgba(46,20,97,0.35)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(196,181,253,0.60)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Text style={{ fontSize: 13 }}>📦📦</Text>
+                <Text style={{ color: '#C4B5FD', fontSize: 11, fontWeight: '900', letterSpacing: 1 }}>2 PARCELS · ONE TRIP</Text>
+              </View>
+              <Text style={{ fontSize: 30, fontWeight: '900', color: '#fff' }}>₹{batchOffer.totalFare}</Text>
+              <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 4 }}>Combined fare for both deliveries</Text>
+            </View>
+            <View style={{ padding: SP.md }}>
+              {batchOffer.packages.map((p, i) => (
+                <View key={i} style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: C.pink, letterSpacing: 1, marginBottom: 8 }}>PACKAGE {i + 1} · ₹{p.fare}</Text>
+                  <Text style={{ fontSize: 13, color: '#0F172A', fontWeight: '600' }}>📍 {p.pickup}</Text>
+                  <Text style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>🎯 {p.drop}</Text>
+                </View>
+              ))}
+              <Text style={{ fontSize: 12, color: '#94A3B8', textAlign: 'center', marginBottom: 16 }}>
+                Both pickups first, then both drops — accept once to take both.
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity onPress={declineBatchOffer} disabled={batchAcceptLoading} style={{ flex: 1, backgroundColor: '#F1F5F9', borderRadius: 16, paddingVertical: 16, alignItems: 'center' }}>
+                  <Text style={{ color: '#64748B', fontWeight: '800', fontSize: 15 }}>Skip</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={acceptBatchOffer} disabled={batchAcceptLoading} style={{ flex: 2, backgroundColor: C.pink, borderRadius: 16, paddingVertical: 16, alignItems: 'center', elevation: 4 }}>
+                  <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{batchAcceptLoading ? '...' : `Accept Both — ₹${batchOffer.totalFare}`}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        )}
+
         {/* ── INCOMING STANDARD RIDE REQUEST ── */}
-        {rideReq && !activeRide && !activeHourlyRide && (
+        {rideReq && !activeRide && !activeHourlyRide && !batchOffer && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
             {/* Dark plum header — premium, urgent */}
             <View style={{ backgroundColor: C.bgDark, paddingTop: 20, paddingHorizontal: SP.md, paddingBottom: SP.lg, alignItems: 'center', overflow: 'hidden' }}>
@@ -6292,6 +6460,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {activeRide && (
           <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
             <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 160 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+              {activeBatch?.stops?.length ? (
+                <View style={{ backgroundColor: 'rgba(46,20,97,0.08)', borderRadius: 12, padding: 10, marginBottom: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(46,20,97,0.18)' }}>
+                  <Text style={{ fontSize: 14 }}>📦📦</Text>
+                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#4C1D95' }}>
+                    Stop {activeBatch.stops.filter((s: any) => s.done).length + 1} of {activeBatch.stops.length} — 2-parcel batch
+                  </Text>
+                </View>
+              ) : null}
               <TripStatusBar status={activeRide.status} />
 
               {/* Status banner */}
@@ -6752,14 +6928,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 : t('docs_in_review')}
             </Text>
           </View>
-
-          {/* Driver face photo */}
-          {driverInfo?.face_photo && (
-            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-              <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 10 }}>📸 Profile Photo</Text>
-              <Image source={{ uri: driverInfo.face_photo }} style={{ width: '100%', height: 180, borderRadius: 12 }} resizeMode="cover" />
-            </View>
-          )}
 
           {/* Document IDs */}
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
