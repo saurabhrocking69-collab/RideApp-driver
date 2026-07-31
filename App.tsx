@@ -618,6 +618,10 @@ function App() {
   const splashScale = useRef(new Animated.Value(0.3)).current;
   const splashTag   = useRef(new Animated.Value(0)).current;
   const splashFade  = useRef(new Animated.Value(1)).current;
+  // One continuous loop for the splash — drives the wheel's rock and the
+  // progress shimmer. Splash has no scrollable content, so a loop here can't
+  // fight a gesture the way the parcel guide's loops did.
+  const splashLoop  = useRef(new Animated.Value(0)).current;
   const dstore = useDriverStore();
   // Store watcher — guaranteed UI update
   useEffect(() => {
@@ -985,6 +989,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setTimeout(() => {
       Animated.timing(splashTag, { toValue: 1, duration: 380, useNativeDriver: true }).start();
     }, 620);
+    // Continuous motion for the wheel + shimmer
+    const spin = Animated.loop(
+      Animated.sequence([
+        Animated.timing(splashLoop, { toValue: 1, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(splashLoop, { toValue: 0, duration: 1500, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    spin.start();
     // After 2.6s — check session then fade out
     const timer = setTimeout(async () => {
       // Clean up any stale background location task from previous session
@@ -1037,7 +1049,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } catch (_e) {}
       Animated.timing(splashFade, { toValue: 0, duration: 320, useNativeDriver: true }).start(() => setScreen(navTo));
     }, 2600);
-    return () => clearTimeout(timer);
+    // Stop the loop too — the splash unmounts after ~2.6s and an unstopped
+    // Animated.loop keeps driving a value nothing renders any more.
+    return () => { clearTimeout(timer); spin.stop(); };
   }, []);
   // ── Initial GPS (for pickup distance before going online) ─
   useEffect(() => {
@@ -3152,64 +3166,80 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   // ═══ SPLASH SCREEN ═══
-  if (screen === 'splash') return (
-    <Animated.View style={{ flex: 1, backgroundColor: '#080E18', alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
-      {/* Green glow circle top-right */}
-      <View style={{ position: 'absolute', top: -80, right: -80, width: 280, height: 280, borderRadius: 140, backgroundColor: 'rgba(76,175,80,0.08)' }} />
-      {/* Red accent circle bottom-left */}
-      <View style={{ position: 'absolute', bottom: -100, left: -100, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(233,69,96,0.06)' }} />
-      {/* Center glow ring */}
-      <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, borderWidth: 1, borderColor: 'rgba(76,175,80,0.12)' }} />
+  if (screen === 'splash') {
+    // Steering wheel, built from exact geometry — a ring, a hub and three
+    // spokes — rather than an emoji. Emoji render differently on every OEM
+    // skin and read as a placeholder on a launch screen.
+    const WHEEL = 116;
+    const rock  = splashLoop.interpolate({ inputRange: [0, 1], outputRange: ['-7deg', '7deg'] });
+    const sheen = splashLoop.interpolate({ inputRange: [0, 1], outputRange: [-90, 190] });
+    const spoke = { position: 'absolute' as const, backgroundColor: C.pink, borderRadius: 3 };
 
-      {/* Logo box — spring animated */}
-      <Animated.View style={{
-        width: 114, height: 114, borderRadius: 30, backgroundColor: '#0F1923',
-        borderWidth: 2, borderColor: C.green,
-        alignItems: 'center', justifyContent: 'center',
-        elevation: 20,
-        shadowColor: C.green, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.55, shadowRadius: 22,
-        opacity: splashLogo,
-        transform: [{ scale: splashScale }],
-      }}>
-        <Text style={{ fontSize: 52 }}>🚗</Text>
+    return (
+      <Animated.View style={{ flex: 1, backgroundColor: '#160B29', alignItems: 'center', justifyContent: 'center', opacity: splashFade }}>
+        {/* Brand wash — pink/plum, matching the app icon and the rest of the
+            app. The old splash was navy with green accents, which is the
+            online/success colour, not the brand. */}
+        <View pointerEvents="none" style={{ position: 'absolute', top: -110, right: -90, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(255,45,120,0.16)' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', bottom: -130, left: -110, width: 360, height: 360, borderRadius: 180, backgroundColor: 'rgba(124,58,237,0.16)' }} />
+        {/* concentric halo behind the mark */}
+        <View pointerEvents="none" style={{ position: 'absolute', width: 230, height: 230, borderRadius: 115, borderWidth: 1, borderColor: 'rgba(255,45,120,0.16)' }} />
+        <View pointerEvents="none" style={{ position: 'absolute', width: 176, height: 176, borderRadius: 88, borderWidth: 1, borderColor: 'rgba(255,45,120,0.10)' }} />
+
+        {/* ── Logo mark ── */}
+        <Animated.View style={{
+          opacity: splashLogo,
+          transform: [{ scale: splashScale }, { rotate: rock }],
+          width: WHEEL, height: WHEEL, alignItems: 'center', justifyContent: 'center',
+          shadowColor: C.pink, shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.6, shadowRadius: 26, elevation: 20,
+        }}>
+          {/* rim */}
+          <View style={{
+            position: 'absolute', width: WHEEL, height: WHEEL, borderRadius: WHEEL / 2,
+            borderWidth: 11, borderColor: C.pink,
+          }} />
+          {/* spokes: left, right, bottom — classic three-spoke wheel */}
+          <View style={[spoke, { width: 30, height: 9, left: 14, top: WHEEL / 2 - 4.5 }]} />
+          <View style={[spoke, { width: 30, height: 9, right: 14, top: WHEEL / 2 - 4.5 }]} />
+          <View style={[spoke, { width: 9, height: 28, bottom: 14, left: WHEEL / 2 - 4.5 }]} />
+          {/* hub */}
+          <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: C.pink, alignItems: 'center', justifyContent: 'center' }}>
+            <View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: '#160B29' }} />
+          </View>
+        </Animated.View>
+
+        {/* ── Wordmark ── */}
+        <Animated.View style={{ alignItems: 'center', marginTop: 30, opacity: splashLogo }}>
+          <Text style={{ color: '#fff', fontSize: 42, fontWeight: '900', letterSpacing: -0.8 }}>
+            Sppero
+          </Text>
+          <Text style={{ color: C.pink, fontSize: 20, fontWeight: '900', letterSpacing: 5, marginTop: 2 }}>
+            BUDDY
+          </Text>
+        </Animated.View>
+
+        {/* ── Tagline ── */}
+        <Animated.View style={{
+          opacity: splashTag,
+          transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
+          alignItems: 'center', marginTop: 18,
+        }}>
+          <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 13.5, letterSpacing: 0.4 }}>
+            India ka best earning partner
+          </Text>
+        </Animated.View>
+
+        {/* ── Loading shimmer — a sweep reads as progress, where bouncing dots
+             just read as "waiting". ── */}
+        <View style={{ position: 'absolute', bottom: 66, width: 150, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.10)', overflow: 'hidden' }}>
+          <Animated.View style={{
+            width: 60, height: 3, borderRadius: 2, backgroundColor: C.pink,
+            transform: [{ translateX: sheen }],
+          }} />
+        </View>
       </Animated.View>
-
-      {/* Brand name */}
-      <Animated.View style={{ alignItems: 'center', marginTop: 22, opacity: splashLogo }}>
-        <Text style={{ color: '#ffffff', fontSize: 40, fontWeight: '900', letterSpacing: 0.5 }}>
-          Sppero <Text style={{ color: C.green }}>Buddy</Text>
-        </Text>
-        <View style={{ width: 48, height: 2, backgroundColor: C.green, borderRadius: 1, marginTop: 8, opacity: 0.7 }} />
-      </Animated.View>
-
-      {/* Tagline — slides up */}
-      <Animated.View style={{
-        opacity: splashTag,
-        transform: [{ translateY: splashTag.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }) }],
-        alignItems: 'center', marginTop: 12,
-      }}>
-        <Text style={{ color: '#94A3B8', fontSize: 14, letterSpacing: 0.6 }}>India ka best earning partner</Text>
-      </Animated.View>
-
-      {/* Captain badge */}
-      <Animated.View style={{
-        opacity: splashTag,
-        marginTop: 32,
-        backgroundColor: 'rgba(76,175,80,0.1)',
-        borderRadius: 20, borderWidth: 1, borderColor: 'rgba(76,175,80,0.3)',
-        paddingHorizontal: 18, paddingVertical: 8,
-        flexDirection: 'row', alignItems: 'center', gap: 8,
-      }}>
-        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: C.green }} />
-        <Text style={{ color: C.green, fontSize: 12, fontWeight: '700', letterSpacing: 1.2 }}>CAPTAIN PORTAL</Text>
-      </Animated.View>
-
-      {/* Animated dots at bottom */}
-      <View style={{ position: 'absolute', bottom: 54, alignItems: 'center' }}>
-        <FloatingDots color="#4CAF50" />
-      </View>
-    </Animated.View>
-  );
+    );
+  }
 
   // ═══ PERMISSIONS SETUP SCREEN ═══
   if (screen === 'permissions') {
