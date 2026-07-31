@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import {
   ActivityIndicator, View, Text, TouchableOpacity, StyleSheet, Image, Alert,
-  ScrollView, Switch, TextInput, Animated, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules, Dimensions
+  ScrollView, Switch, TextInput, Animated, Easing, Linking, Vibration, KeyboardAvoidingView, Platform, BackHandler, Share, AppState, Modal, StatusBar, NativeModules, Dimensions
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
@@ -700,7 +700,28 @@ function App() {
   const driverGpsRef                = useRef<any>(null);
   const [tripSummary, setTripSummary]   = useState<any>(null);
   const [paymentWaiting, setPaymentWaiting]     = useState(false);
-  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list' | 'subscription' | 'fare-rates'>('');
+  const [driverSubScreen, setDrSubScreen] = useState<'' | 'documents' | 'bank' | 'support' | 'settings' | 'orders' | 'ticket-new' | 'ticket-list' | 'subscription' | 'fare-rates' | 'parcel-guide'>('');
+  // ── Parcel guide motion ──────────────────────────────────────────────────
+  // ONE looping value for the whole guide screen, read twice via interpolation
+  // (box bob + coin drift). Deliberately not one loop per element: the customer
+  // parcel guide shipped with five concurrent native loops and the page became
+  // unscrollable on mid-range Android, since those compete with the scroll
+  // gesture on the UI thread.
+  const parcelGuideT = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (driverSubScreen !== 'parcel-guide') return;   // idle unless the guide is open
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(parcelGuideT, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(parcelGuideT, { toValue: 0, duration: 2400, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [driverSubScreen, parcelGuideT]);
+  const parcelGuideBob  = parcelGuideT.interpolate({ inputRange: [0, 1], outputRange: [0, -9] });
+  const parcelGuideCoin = parcelGuideT.interpolate({ inputRange: [0, 1], outputRange: [0, -15] });
+
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -5451,6 +5472,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
 
+          {/* Parcel earning guide — one tap from home */}
+          {!activeRide && !rideReq && !activeHourlyRide && (
+            <TouchableOpacity activeOpacity={0.9} onPress={() => setDrSubScreen('parcel-guide')}
+              style={{
+                flexDirection: 'row', alignItems: 'center', gap: 12,
+                backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12,
+                borderWidth: 1.5, borderColor: C.pinkBorder,
+                shadowColor: C.pink, shadowOpacity: 0.16, shadowRadius: 12, shadowOffset: { width: 0, height: 5 }, elevation: 3,
+              }}>
+              <View style={{ width: 46, height: 46, borderRadius: 15, backgroundColor: 'rgba(255,45,120,0.10)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.pinkBorder }}>
+                <Text style={{ fontSize: 22 }}>📦</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 14, fontWeight: '900', color: C.text }}>
+                  {lang === 'hi' ? 'Parcel se extra kamai' : 'Earn extra with parcels'}
+                </Text>
+                <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }}>
+                  {lang === 'hi' ? 'Kaise kaam karta hai, niyam aur kamai — poori jaankari' : 'How it works, the rules, and how you get paid'}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={C.pink} />
+            </TouchableOpacity>
+          )}
+
           {/* Sppero Buddy Recruit Banner */}
           {!activeRide && !rideReq && !activeHourlyRide && (
             <TouchableOpacity activeOpacity={0.92}
@@ -6911,6 +6956,305 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } catch { Alert.alert('Error', 'Could not submit.'); }
       finally { setDriverTicketSubmitting(false); }
     };
+
+    // ── Parcel earning guide ────────────────────────────────────────────────
+    // Illustrations are built from plain Views (rounded blocks, transforms,
+    // shadows) rather than SVG — this app has no react-native-svg, and adding
+    // a native module for artwork isn't worth the rebuild risk on a project
+    // that has already been bitten by a version-pin crash.
+    //
+    // Motion is a SINGLE looping value shared by everything that moves. The
+    // customer parcel guide shipped with five concurrent infinite loops and
+    // became unscrollable on mid-range Android.
+    //
+    // Copy is bilingual because this is persistent UI, which follows the
+    // driver's language toggle (alerts/FCM stay English). Kept as one local
+    // block instead of ~50 new keys in translations.ts.
+    if (driverSubScreen === 'parcel-guide') {
+      const hi = lang === 'hi';
+      const P = C.pink, G = C.green, PU = '#7C3AED', Y = '#F59E0B';
+
+      const Section = ({ kicker, title }: { kicker: string; title: string }) => (
+        <View style={{ marginBottom: 12, marginTop: 22 }}>
+          <Text style={{ color: P, fontSize: 10.5, fontWeight: '900', letterSpacing: 1 }}>{kicker}</Text>
+          <Text style={{ color: C.text, fontSize: 18.5, fontWeight: '900', marginTop: 3 }}>{title}</Text>
+        </View>
+      );
+
+      const Row = ({ icon, title, desc, tint }: any) => (
+        <View style={{
+          flexDirection: 'row', gap: 12, backgroundColor: '#fff', borderRadius: 16,
+          padding: 14, marginBottom: 9, borderWidth: 1, borderColor: '#E9E6F5',
+        }}>
+          <View style={{
+            width: 34, height: 34, borderRadius: 11, backgroundColor: tint + '18',
+            alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: tint + '33',
+          }}>
+            <Ionicons name={icon} size={17} color={tint} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: C.text, fontSize: 13.5, fontWeight: '800' }}>{title}</Text>
+            <Text style={{ color: C.textMuted, fontSize: 12.5, marginTop: 3, lineHeight: 18 }}>{desc}</Text>
+          </View>
+        </View>
+      );
+
+      return (
+        <View style={s.screen}>
+          <SubHeader title={hi ? '📦 Parcel — Kamai Guide' : '📦 Parcel — Earning Guide'} />
+          <ScrollView
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingBottom: 40 }}
+            showsVerticalScrollIndicator
+            overScrollMode="always"
+          >
+            {/* ── HERO ─────────────────────────────────────────────────── */}
+            <View style={{
+              backgroundColor: C.plum, paddingBottom: 24, paddingTop: 6,
+              borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: 'hidden',
+            }}>
+              <View pointerEvents="none" style={{ position: 'absolute', top: -70, right: -50, width: 190, height: 190, borderRadius: 95, backgroundColor: 'rgba(255,45,120,0.20)' }} />
+              <View pointerEvents="none" style={{ position: 'absolute', bottom: -60, left: -44, width: 156, height: 156, borderRadius: 78, backgroundColor: 'rgba(124,58,237,0.22)' }} />
+
+              {/* floating parcel box, built from layered Views */}
+              <View style={{ height: 168, alignItems: 'center', justifyContent: 'center' }}>
+                <View pointerEvents="none" style={{ position: 'absolute', width: 150, height: 150, borderRadius: 75, backgroundColor: 'rgba(255,255,255,0.07)' }} />
+                <Animated.View style={{ transform: [{ translateY: parcelGuideBob }] }}>
+                  <View style={{ width: 116, height: 88, alignItems: 'center' }}>
+                    {/* body */}
+                    <View style={{
+                      position: 'absolute', bottom: 0, width: 108, height: 68, borderRadius: 10,
+                      backgroundColor: '#E8A552',
+                      shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 12, shadowOffset: { width: 0, height: 8 }, elevation: 7,
+                    }} />
+                    {/* lid */}
+                    <View style={{ position: 'absolute', top: 8, width: 116, height: 22, borderRadius: 7, backgroundColor: '#FFD9A0' }} />
+                    {/* ribbon */}
+                    <View style={{ position: 'absolute', bottom: 0, top: 8, width: 17, backgroundColor: P, borderRadius: 3 }} />
+                    {/* knot */}
+                    <View style={{ position: 'absolute', top: 2, width: 20, height: 20, borderRadius: 10, backgroundColor: P, alignItems: 'center', justifyContent: 'center' }}>
+                      <View style={{ width: 7, height: 7, borderRadius: 4, backgroundColor: '#fff', opacity: 0.9 }} />
+                    </View>
+                  </View>
+                </Animated.View>
+
+                {/* rupee coins drifting on the same loop */}
+                <Animated.View pointerEvents="none" style={{ position: 'absolute', left: 30, top: 26, transform: [{ translateY: parcelGuideCoin }] }}>
+                  <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#FFD54A', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#E0A800' }}>
+                    <Text style={{ fontSize: 17, fontWeight: '900', color: '#7A5A00' }}>₹</Text>
+                  </View>
+                </Animated.View>
+                <Animated.View pointerEvents="none" style={{ position: 'absolute', right: 34, top: 52, transform: [{ translateY: parcelGuideBob }] }}>
+                  <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFD54A', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#E0A800' }}>
+                    <Text style={{ fontSize: 13, fontWeight: '900', color: '#7A5A00' }}>₹</Text>
+                  </View>
+                </Animated.View>
+              </View>
+
+              <View style={{ paddingHorizontal: 22, alignItems: 'center' }}>
+                <Text style={{ color: '#fff', fontSize: 23, fontWeight: '900', textAlign: 'center', lineHeight: 29 }}>
+                  {hi ? 'Parcel se extra kamai' : 'Earn extra with parcels'}
+                </Text>
+                <Text style={{ color: 'rgba(255,255,255,0.80)', fontSize: 13, textAlign: 'center', marginTop: 8, lineHeight: 19 }}>
+                  {hi
+                    ? 'Chhoti trips, koi cash nahi, aur paisa seedha wallet mein. Wahi gaadi jo aap already chalate ho.'
+                    : 'Short trips, no cash to handle, money straight to your wallet — on the same vehicle you already drive.'}
+                </Text>
+              </View>
+
+              <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 14, paddingHorizontal: 14 }}>
+                {[
+                  ['💸', hi ? 'Cash nahi' : 'No cash'],
+                  ['⚡', hi ? 'Chhoti trip' : 'Short trips'],
+                  ['🔒', hi ? 'Paisa pakka' : 'Payment secured'],
+                ].map(([e, txt], i) => (
+                  <View key={i} style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 5,
+                    backgroundColor: 'rgba(255,255,255,0.13)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.22)',
+                    paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20,
+                  }}>
+                    <Text style={{ fontSize: 11 }}>{e}</Text>
+                    <Text style={{ color: '#fff', fontSize: 11, fontWeight: '800' }}>{txt}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            <View style={{ paddingHorizontal: 16 }}>
+              {/* ── HOW YOU GET PAID ─────────────────────────────────── */}
+              <Section kicker={hi ? 'SABSE ZAROORI' : 'THE IMPORTANT PART'} title={hi ? 'Paisa kaise milta hai' : 'How you get paid'} />
+
+              <View style={{
+                backgroundColor: '#fff', borderRadius: 20, padding: 16,
+                borderWidth: 1.5, borderColor: C.greenBorder,
+                shadowColor: G, shadowOpacity: 0.13, shadowRadius: 14, shadowOffset: { width: 0, height: 5 }, elevation: 3,
+              }}>
+                {/* money-flow strip */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                  {[
+                    { icon: 'person', tint: PU, label: hi ? 'Sender pay karta hai' : 'Sender pays' },
+                    { icon: 'shield-checkmark', tint: Y, label: hi ? 'Sppero rakhta hai' : 'Sppero holds it' },
+                    { icon: 'wallet', tint: G, label: hi ? 'Aapka wallet' : 'Your wallet' },
+                  ].map((st, i, arr) => (
+                    <View key={i} style={{ flex: 1, alignItems: 'center' }}>
+                      <View style={{
+                        width: 42, height: 42, borderRadius: 14, backgroundColor: st.tint + '18',
+                        alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: st.tint + '40',
+                      }}>
+                        <Ionicons name={st.icon as any} size={19} color={st.tint} />
+                      </View>
+                      <Text style={{ fontSize: 10, fontWeight: '800', color: C.textMuted, marginTop: 5, textAlign: 'center' }}>{st.label}</Text>
+                      {i < arr.length - 1 && (
+                        <View style={{ position: 'absolute', right: -10, top: 20, width: 20, height: 2, backgroundColor: '#DCD6F0' }} />
+                      )}
+                    </View>
+                  ))}
+                </View>
+
+                {([
+                  [hi ? 'Booking ke waqt hi payment ho chuka hai' : 'Already paid at booking time',
+                   hi ? 'Sender poora fare pehle hi de deta hai. Aapko kisi se cash ya UPI nahi lena — na sender se, na receiver se.'
+                      : "The sender pays the full fare upfront. You collect nothing from anyone — not the sender, not the receiver."],
+                  [hi ? 'Delivery OTP daalte hi paisa aata hai' : 'Money lands the moment the delivery OTP is entered',
+                   hi ? 'Receiver ka OTP confirm hote hi aapki kamai wallet mein automatic add ho jaati hai.'
+                      : 'As soon as the receiver\'s OTP is confirmed, your earning is credited to your wallet automatically.'],
+                  [hi ? 'Commission wahi, jaisa normal ride mein' : 'Same commission as any normal ride',
+                   hi ? 'Platform commission kat kar baaki aapka. Ride pack active hai to commission maaf.'
+                      : 'Platform commission is deducted, the rest is yours. With an active ride pack, commission is waived.'],
+                  [hi ? 'Wapas le jaana pada? Uska bhi paisa milta hai' : 'Had to bring it back? That trip is paid too',
+                   hi ? 'Agar sender parcel wapas mangwaata hai, to return trip ka bhi paisa milta hai — exact amount confirm karte waqt dikh jaayega.'
+                      : 'If the sender asks for the parcel back, the return trip is paid as well — the exact amount is shown when you confirm the return.'],
+                  [hi ? 'Sender jawab hi na de? Tab bhi kamai pakki' : "Sender never replies? You're still paid",
+                   hi ? 'Jo trip aapne ki hai uska paisa milta hai. Wait poora hone par app aapko trip band karne ka option de deti hai.'
+                      : 'You are paid for the trip you actually made. Once the wait window is over, the app lets you close the trip.'],
+                ] as const).map(([t1, d1], i, arr) => (
+                  <View key={i} style={{
+                    flexDirection: 'row', gap: 9, paddingVertical: 9,
+                    borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderColor: '#EDEAF7',
+                  }}>
+                    <Ionicons name="checkmark-circle" size={16} color={G} style={{ marginTop: 1 }} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '800' }}>{t1}</Text>
+                      <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2, lineHeight: 17 }}>{d1}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* ── THE TRIP, STEP BY STEP ───────────────────────────── */}
+              <Section kicker={hi ? 'TRIP KAISE CHALTI HAI' : 'THE TRIP'} title={hi ? 'Step by step' : 'Step by step'} />
+              {([
+                ['📲', hi ? 'Request accept karo' : 'Accept the request', hi ? 'Pickup, drop aur kamai dikh jaati hai — accept karne se pehle.' : 'You see pickup, drop and the earning before you accept.', P],
+                ['📦', hi ? 'Sender se parcel lo' : 'Collect from the sender', hi ? 'Parcel lekar sender se pickup OTP maango — tabhi trip start hogi.' : 'Take the package and ask the sender for the pickup OTP to start the trip.', PU],
+                ['🛵', hi ? 'Receiver tak pahuncho' : 'Ride to the receiver', hi ? 'App mein navigation aur receiver ka number dono milte hain.' : 'Navigation and the receiver\'s number are both in the app.', Y],
+                ['🔑', hi ? 'Delivery OTP lekar do' : 'Take the delivery OTP, then hand over', hi ? 'OTP ke bina parcel mat do — yahi aapka proof hai.' : "Never hand it over without the OTP — that code is your proof.", G],
+                ['💰', hi ? 'Paisa wallet mein' : 'Money in your wallet', hi ? 'Automatic. Kuch aur karne ki zaroorat nahi.' : 'Automatic. Nothing else for you to do.', G],
+              ] as const).map(([icon, title, desc, tint], i, arr) => (
+                <View key={i} style={{ flexDirection: 'row' }}>
+                  <View style={{ width: 42, alignItems: 'center' }}>
+                    <View style={{
+                      width: 36, height: 36, borderRadius: 12, backgroundColor: '#fff',
+                      alignItems: 'center', justifyContent: 'center',
+                      borderWidth: 1.5, borderColor: tint + '55',
+                      shadowColor: tint, shadowOpacity: 0.2, shadowRadius: 6, shadowOffset: { width: 0, height: 3 }, elevation: 2,
+                    }}>
+                      <Text style={{ fontSize: 16 }}>{icon}</Text>
+                    </View>
+                    {i < arr.length - 1 && <View style={{ width: 2.5, flex: 1, minHeight: 22, backgroundColor: '#E3DEF3', borderRadius: 2, marginVertical: 3 }} />}
+                  </View>
+                  <View style={{ flex: 1, paddingBottom: 13, paddingTop: 2 }}>
+                    <Text style={{ color: C.text, fontSize: 14, fontWeight: '800' }}>{title}</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 12.5, marginTop: 2, lineHeight: 18 }}>{desc}</Text>
+                  </View>
+                </View>
+              ))}
+
+              {/* ── IF DELIVERY FAILS ────────────────────────────────── */}
+              <Section kicker={hi ? 'AGAR DELIVERY NA HO' : 'IF IT CAN\'T BE DELIVERED'} title={hi ? 'Receiver mana kar de to' : 'Receiver refuses or won\'t answer'} />
+              <View style={{
+                backgroundColor: 'rgba(245,158,11,0.08)', borderRadius: 20, padding: 16,
+                borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.28)',
+              }}>
+                {([
+                  ['1', hi ? '"Deliver nahi ho paa raha" tap karo' : 'Tap "Can\'t deliver"', hi ? 'Sender ko turant pata chal jaata hai aur wo decide karta hai.' : 'The sender is told immediately and gets to decide.'],
+                  ['2', hi ? 'Sender chunta hai' : 'The sender chooses', hi ? 'Dobara koshish, ya parcel wapas. Dono mein aapko kaam ka paisa milta hai.' : 'Try again, or send it back. Either way your work is paid.'],
+                  ['3', hi ? 'Jawab na aaye to kaam rukta nahi' : "No reply? You don't stay stuck", hi ? 'Thodi der baad parcel aapki queue mein chala jaata hai — aap doosri rides lena shuru kar sakte ho, parcel aapke paas rehta hai.' : 'After a short wait the parcel moves to your queue — you can start taking other rides again while still carrying it.'],
+                  ['4', hi ? 'Aakhir mein trip band kar sakte ho' : 'Finally, you can close the trip', hi ? 'Wait poora hone par close karke paisa le lo. Parcel apne paas sambhaal kar rakhna — sender baad mein call kar sakta hai.' : 'Once the wait is over, close it and take your payment. Keep the package safe — the sender may still call you.'],
+                ] as const).map(([n, t1, d1], i, arr) => (
+                  <View key={i} style={{
+                    flexDirection: 'row', gap: 10, paddingVertical: 9,
+                    borderBottomWidth: i < arr.length - 1 ? 1 : 0, borderColor: 'rgba(245,158,11,0.22)',
+                  }}>
+                    <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: Y, alignItems: 'center', justifyContent: 'center' }}>
+                      <Text style={{ color: '#fff', fontSize: 11, fontWeight: '900' }}>{n}</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ color: C.text, fontSize: 12.5, fontWeight: '800' }}>{t1}</Text>
+                      <Text style={{ color: C.textMuted, fontSize: 12, marginTop: 2, lineHeight: 17 }}>{d1}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
+              {/* ── RULES ────────────────────────────────────────────── */}
+              <Section kicker={hi ? 'NIYAM' : 'THE RULES'} title={hi ? 'Yaad rakhne wali baatein' : 'Worth remembering'} />
+              <Row icon="key-outline" tint={G}
+                title={hi ? 'OTP ke bina parcel mat do' : 'Never hand over without the OTP'}
+                desc={hi ? 'Delivery OTP hi sabooot hai ki aapne sahi insaan ko diya. Bina OTP diye to aap phans sakte ho.' : "The delivery OTP is your proof you handed it to the right person. Without it, a complaint lands on you."} />
+              <Row icon="lock-closed-outline" tint={P}
+                title={hi ? 'Parcel kholna mana hai' : 'Do not open the package'}
+                desc={hi ? 'Parcel sender ki property hai. Kholna ya chhedna account band karwa sakta hai.' : "The package is the sender's property. Opening or tampering with it can get your account blocked."} />
+              <Row icon="cube-outline" tint={PU}
+                title={hi ? 'Sirf apni gaadi ke parcel milenge' : 'You only get parcels your vehicle can carry'}
+                desc={hi ? 'Size ke hisaab se system khud decide karta hai — bike, auto ya car.' : 'The system matches package size to vehicle type, so you never get something that will not fit.'} />
+              <Row icon="albums-outline" tint={Y}
+                title={hi ? 'Ek time par ek hi undelivered parcel' : 'One undelivered parcel at a time'}
+                desc={hi ? 'Jab tak ek parcel aapke paas pada hai, naya parcel offer nahi aayega. Normal rides milti rahengi.' : "While one parcel is still with you, you won't be offered another. Normal rides keep coming."} />
+              <Row icon="call-outline" tint={PU}
+                title={hi ? 'Sender aur receiver dono se baat kar sakte ho' : 'You can call both sender and receiver'}
+                desc={hi ? 'Number app mein hi milta hai — address ya timing confirm karne ke liye call kar lo.' : 'Both numbers are in the app — call to confirm an address or a time.'} />
+
+              {/* ── TIPS ─────────────────────────────────────────────── */}
+              <View style={{ backgroundColor: C.greenGlass, borderRadius: 20, padding: 16, marginTop: 20, borderWidth: 1, borderColor: C.greenBorder }}>
+                <Text style={{ color: G, fontSize: 13.5, fontWeight: '900', marginBottom: 10 }}>
+                  {hi ? '💡 Kamai badhane ke tips' : '💡 Tips to earn more'}
+                </Text>
+                {(hi ? [
+                  'Parcel trips chhoti hoti hain — beech ke khaali time mein sabse acchi.',
+                  'Pickup par pahunch kar hi OTP maango, pehle nahi.',
+                  'Receiver ko pahunchne se pehle ek call kar lo — mana karne ka chance kam ho jaata hai.',
+                  'Parcel ko safe jagah rakho, khaas kar baarish mein.',
+                  'Ride pack active rakho to commission bachta hai.',
+                ] : [
+                  'Parcel trips are short — ideal for filling gaps between rides.',
+                  'Ask for the OTP once you actually reach, not before.',
+                  'Call the receiver before arriving — far fewer refusals that way.',
+                  'Keep the package somewhere safe, especially in the rain.',
+                  'An active ride pack saves you the commission.',
+                ]).map((tip, i) => (
+                  <View key={i} style={{ flexDirection: 'row', gap: 8, marginBottom: 7 }}>
+                    <Text style={{ color: G, fontSize: 14, fontWeight: '900' }}>•</Text>
+                    <Text style={{ color: C.textMuted, fontSize: 12.5, flex: 1, lineHeight: 18 }}>{tip}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity onPress={back} activeOpacity={0.9}
+                style={{
+                  backgroundColor: P, borderRadius: 16, paddingVertical: 15, marginTop: 20,
+                  flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+                  shadowColor: P, shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 6 }, elevation: 6,
+                }}>
+                <Text style={{ color: '#fff', fontSize: 15.5, fontWeight: '900' }}>
+                  {hi ? 'Samajh gaya — kaam par chalein' : "Got it — back to work"}
+                </Text>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </View>
+      );
+    }
 
     if (driverSubScreen === 'documents') return (
       <View style={s.screen}>
