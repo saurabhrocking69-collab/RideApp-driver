@@ -4984,7 +4984,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   ) : null;
 
   // ═══ HOME TAB — Uber style ═══
-  if (activeTab === 'home') return (
+  // `&& driverSubScreen === ''` is load-bearing: this return sits ~2000 lines
+  // ABOVE the `if (driverSubScreen !== '')` block, so without it the home tab
+  // short-circuits and any sub-screen opened FROM home silently never renders.
+  // The symptom is confusing rather than obviously broken — the tap appears
+  // dead, and the sub-screen only pops into view later when the driver taps a
+  // different tab, because that finally makes this condition false. Hit both
+  // the parcel guide and the subscription CTA below.
+  if (activeTab === 'home' && driverSubScreen === '') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Full map background */}
       <View style={s.mapFit}>
