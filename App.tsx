@@ -623,12 +623,48 @@ function App() {
   // fight a gesture the way the parcel guide's loops did.
   const splashLoop  = useRef(new Animated.Value(0)).current;
   const dstore = useDriverStore();
+
+  // ── Full-screen lock-screen ride alert ──────────────────────────────────
+  // Launches the native RideAlertActivity (see plugins/withFullScreenRideAlert.js)
+  // so the phone wakes and shows the offer over the lock screen, Rapido-style.
+  //
+  // Hooked to the store subscription below because that is the ONE funnel every
+  // offer passes through, whichever way it arrived — socket push, poll, or FCM.
+  const lastAlertedRideRef = useRef<string | null>(null);
+  const maybeShowFullScreenAlert = (pending: any) => {
+    try {
+      if (Platform.OS !== 'android') return;
+      const id = pending?.id ? String(pending.id) : null;
+      // Offer gone — reset so the same ride can alert again if it returns.
+      if (!id) { lastAlertedRideRef.current = null; return; }
+      if (lastAlertedRideRef.current === id) return;      // already alerted
+      // The app's own full-screen offer modal already covers the foreground
+      // case; stacking a second native screen on top of it would be jarring.
+      if (AppState.currentState === 'active') return;
+
+      lastAlertedRideRef.current = id;
+      const fare = pending?.fare != null ? `₹${Math.round(parseFloat(pending.fare))}` : '';
+      const dist = pending?.distance ? `${pending.distance} km` : '';
+      const title = [fare, dist].filter(Boolean).join(' · ') || 'New Ride Request';
+      const body = pending?.pickup ? `Pickup: ${pending.pickup}` : 'A rider is waiting nearby.';
+      const q = [
+        `title=${encodeURIComponent(title)}`,
+        `body=${encodeURIComponent(body)}`,
+        `scheduled=${pending?.scheduled ? 'true' : 'false'}`,
+      ].join('&');
+      // Fails harmlessly if the driver never granted "Display over other apps"
+      // — they still get the ordinary high-priority notification.
+      Linking.openURL(`spperoalert://ride?${q}`).catch(() => {});
+    } catch (_e) {}
+  };
+
   // Store watcher — guaranteed UI update
   useEffect(() => {
     const unsub = useDriverStore.subscribe((state) => {
       setActiveRide(state.activeRide);
       setActiveBatch(state.activeBatch);
       setRideReq(state.pendingRide);
+      maybeShowFullScreenAlert(state.pendingRide);
     });
     return unsub;
   }, []);
