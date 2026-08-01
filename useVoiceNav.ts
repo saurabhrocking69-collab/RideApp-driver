@@ -12,6 +12,18 @@ type NavStep = {
   distanceM: number;
 };
 
+// How close counts as having reached a step's end point. Google's step ends
+// sit at the junction itself, and a phone GPS fix is routinely 10-20m out, so
+// this has to be forgiving enough to trigger while still inside the junction.
+const ARRIVE_STEP_M = 30;
+
+// While on-route the distance to the current step's end only shrinks. If it
+// grows by more than this, the driver has left the route (missed the turn,
+// took a different road) and every remaining instruction is now wrong — so
+// re-route from where they actually are. Generous enough not to trip on GPS
+// jitter, which is metres, not hundreds of them.
+const OFF_ROUTE_M = 150;
+
 // Haversine distance in metres
 function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371000;
@@ -50,11 +62,21 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
   const [steps, setSteps]           = useState<NavStep[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
   const [nextDistM, setNextDistM]   = useState(0);
-  const lastAnnouncedIdx = useRef(-1);
+  // Per-step, per-tier announcement keys ("3:far", "3:near") — see the effect
+  // below for why a single "last announced index" was not enough.
+  const announced        = useRef<Set<string>>(new Set());
   const isSpeaking       = useRef(false);
+  // Bumped to force a re-route; see OFF_ROUTE_M.
+  const [routeSeq, setRouteSeq] = useState(0);
+  // Closest the driver has been to the current step's end, to detect moving away.
+  const minDistRef       = useRef(Infinity);
 
+  // A newer instruction always matters more than one still being spoken —
+  // "turn right now" must not be swallowed because "in 500 metres…" is still
+  // playing. The old version returned early while speaking and silently
+  // dropped the more urgent line.
   const speak = (text: string) => {
-    if (isSpeaking.current) return;
+    try { Speech.stop(); } catch (_e) {}
     isSpeaking.current = true;
     Speech.speak(text, {
       language: 'hi-IN',
@@ -67,7 +89,7 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
   // Fetch directions when origin/destination change
   useEffect(() => {
     if (!active || driverLat == null || driverLng == null || destLat == null || destLng == null) {
-      setSteps([]); setCurrentIdx(0); lastAnnouncedIdx.current = -1;
+      setSteps([]); setCurrentIdx(0); announced.current.clear();
       return;
     }
     let cancelled = false;
@@ -88,48 +110,73 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
         }));
         setSteps(parsed);
         setCurrentIdx(0);
-        lastAnnouncedIdx.current = -1;
+        announced.current.clear();
         if (parsed.length > 0) {
           const label = phase === 'to_pickup' ? 'Pickup ki taraf chal rahe hain.' : 'Drop point ki taraf chal rahe hain.';
           speak(`${label} ${distLabel(parsed[0].distanceM)} mein ${parsed[0].text}`);
-          lastAnnouncedIdx.current = 0;
+          announced.current.add('0:far');
         }
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [active, destLat, destLng, phase]);
+  }, [active, destLat, destLng, phase, routeSeq]);
 
-  // Announce next instruction when driver approaches a turn (within 200m)
+  // Advance through steps + announce as the driver approaches each turn.
   useEffect(() => {
     if (!active || !steps.length || driverLat == null || driverLng == null) return;
 
-    // Find the first upcoming step the driver hasn't passed
-    let nearest = currentIdx;
-    let nearestDist = Infinity;
-    for (let i = currentIdx; i < Math.min(currentIdx + 3, steps.length); i++) {
-      const d = distM(driverLat, driverLng, steps[i].endLat, steps[i].endLng);
-      if (!isNaN(d) && d < nearestDist) { nearestDist = d; nearest = i; }
+    // Advance PAST a step once its end point has been reached, rather than
+    // picking whichever of the next few step-ends is nearest.
+    //
+    // The old "nearest end wins" rule kept showing a turn after the driver had
+    // already taken it: having just passed step N's end, that end is still the
+    // closest one, so the arrow only changed once the driver got more than
+    // halfway to step N+1's end. Drivers saw the turn they had just completed
+    // instead of the one coming up.
+    let idx = currentIdx;
+    while (
+      idx < steps.length - 1 &&
+      distM(driverLat, driverLng, steps[idx].endLat, steps[idx].endLng) < ARRIVE_STEP_M
+    ) {
+      idx++;
     }
-    setCurrentIdx(nearest);
-    setNextDistM(nearestDist);
+    const dist = distM(driverLat, driverLng, steps[idx].endLat, steps[idx].endLng);
+    if (idx !== currentIdx) { setCurrentIdx(idx); minDistRef.current = Infinity; }
+    if (!isNaN(dist)) setNextDistM(dist);
 
-    // Announce 250m before the turn, and once more at 80m
-    const announceAt = (idx: number, distThreshold: number) => {
-      if (idx === lastAnnouncedIdx.current) return;
-      if (idx >= steps.length) return;
-      const d = distM(driverLat, driverLng, steps[idx].endLat, steps[idx].endLng);
-      if (d < distThreshold) {
-        lastAnnouncedIdx.current = idx;
-        const announcement = d < 100
-          ? `Abhi ${steps[idx].text}`
-          : `${distLabel(d)} mein ${steps[idx].text}`;
-        speak(announcement);
+    // Off-route detection. Without this the route was fetched exactly once and
+    // never again — the fetch effect deliberately leaves driverLat/Lng out of
+    // its deps to avoid refetching on every GPS tick — so a driver who missed a
+    // turn kept being told about turns from a road they were no longer on, for
+    // the rest of the trip.
+    if (!isNaN(dist)) {
+      if (dist < minDistRef.current) {
+        minDistRef.current = dist;
+      } else if (dist > minDistRef.current + OFF_ROUTE_M) {
+        minDistRef.current = Infinity;
+        setRouteSeq(v => v + 1);   // refetch directions from the current position
       }
+    }
+
+    // Announce each step at most once per tier, so pre-announcing the NEXT
+    // turn can't cancel that turn's own at-the-junction call. The old code
+    // stored a single lastAnnouncedIdx, so priming step N+1 early meant the
+    // "Abhi …" prompt for step N+1 was skipped entirely — the driver heard the
+    // turn only well in advance, never at the moment of turning.
+    const announce = (i: number, tier: 'far' | 'near', threshold: number) => {
+      if (i >= steps.length) return;
+      const key = `${i}:${tier}`;
+      if (announced.current.has(key)) return;
+      const d = distM(driverLat, driverLng, steps[i].endLat, steps[i].endLng);
+      if (isNaN(d) || d >= threshold) return;
+      announced.current.add(key);
+      speak(tier === 'near' ? `Abhi ${steps[i].text}` : `${distLabel(d)} mein ${steps[i].text}`);
     };
 
-    announceAt(nearest, 250);
-    if (nearestDist < 80) announceAt(nearest + 1, 600); // prime the next turn early
-  }, [driverLat, driverLng]);
+    announce(idx, 'far', 250);
+    announce(idx, 'near', 90);
+    if (dist < 90) announce(idx + 1, 'far', 600);  // prime the following turn
+  }, [driverLat, driverLng, steps, active, currentIdx]);
 
   const currentInstruction = steps[currentIdx]?.text ?? '';
   const currentManeuver    = steps[currentIdx]?.maneuver ?? '';

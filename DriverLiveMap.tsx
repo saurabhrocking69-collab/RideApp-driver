@@ -67,12 +67,24 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 // ── Driver self-marker — large circle with bearing arrow ──────────────────────
-function DriverMarker({ vehicleType, heading }: { vehicleType: string; heading: number }) {
+function DriverMarker({ vehicleType, heading, navMode }: { vehicleType: string; heading: number; navMode?: boolean }) {
   const icon  = VEHICLE_ICONS[vehicleType] || '🛺';
   const badge = VEHICLE_BADGE[vehicleType];
+  // The marker is a billboard (Marker has no `flat` prop, so flat=false): it
+  // always faces the screen and does NOT rotate with the map.
+  //
+  // In nav mode the CAMERA is already rotated to the driver's heading, so the
+  // direction of travel is drawn straight up the screen. Rotating the arrow by
+  // `heading` on top of that double-rotates it — driving south (180°) turned
+  // the map so south was up and then pointed the arrow 180°, i.e. straight
+  // DOWN, exactly backwards. Screen-up is already "forward" there, so the
+  // arrow must not rotate at all.
+  //
+  // In north-up mode the map is unrotated, so the arrow does carry the bearing.
+  const arrowDeg = navMode ? 0 : heading;
   return (
     <View style={styles.driverOuter}>
-      <View style={[styles.bearingArrow, { transform: [{ rotate: `${heading}deg` }] }]}>
+      <View style={[styles.bearingArrow, { transform: [{ rotate: `${arrowDeg}deg` }] }]}>
         <View style={styles.bearingTip} />
       </View>
       <View style={styles.driverInner}>
@@ -531,7 +543,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         {/* Animated driver marker */}
         {driverLat != null && driverLng != null && (
           <Marker.Animated coordinate={driverRegion as any} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <DriverMarker vehicleType={vehicleType} heading={heading} />
+            <DriverMarker vehicleType={vehicleType} heading={heading} navMode={navMode} />
           </Marker.Animated>
         )}
       </MapView>
