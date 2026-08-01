@@ -726,6 +726,47 @@ function App() {
   const parcelGuideBob  = parcelGuideT.interpolate({ inputRange: [0, 1], outputRange: [0, -9] });
   const parcelGuideCoin = parcelGuideT.interpolate({ inputRange: [0, 1], outputRange: [0, -15] });
 
+  // ── Parcels the driver is still carrying after a failed delivery ─────────
+  // /api/driver/active-ride deliberately EXCLUDES parked parcels (that is what
+  // frees the driver to take other rides), so without this poll the package
+  // would be invisible in the app the moment it stopped blocking dispatch —
+  // and there would be no way to ever close it.
+  const [heldParcels, setHeldParcels] = useState<any[]>([]);
+  const [heldBusy, setHeldBusy]       = useState<number | null>(null);
+  const [keepSafeNotice, setKeepSafeNotice] = useState<any>(null);
+
+  const loadHeldParcels = async (ph: string) => {
+    if (!ph) return;
+    try {
+      const d = await apiGet(`/api/parcel/held?phone=${encodeURIComponent(ph)}`, 0, 8000);
+      if (!d?._error) setHeldParcels(d.parcels || []);
+    } catch (_e) {}
+  };
+
+  useEffect(() => {
+    if (!phone || screen !== 'home') return;
+    loadHeldParcels(phone);
+    // 2 min is enough — the only thing that changes is an hours counter.
+    const iv = setInterval(() => loadHeldParcels(phone), 120000);
+    return () => clearInterval(iv);
+  }, [phone, screen]);
+
+  const closeUnclaimedParcel = async (rideId: number) => {
+    setHeldBusy(rideId);
+    try {
+      const d = await authRidePost('/api/parcel/close-unclaimed', { ride_id: rideId, driver_phone: phone });
+      if (d?.success) {
+        setKeepSafeNotice({ ...(d.keep_safe_notice || {}), earned: d.earned });
+        setHeldParcels(p => p.filter(x => x.id !== rideId));
+        loadDriverWallet(phone).catch(() => {});
+      } else {
+        Alert.alert('Not yet', d?.error || 'Could not close this delivery right now.');
+      }
+    } catch (_e) {
+      Alert.alert('Network', 'Could not reach the server — please try again.');
+    } finally { setHeldBusy(null); }
+  };
+
   const [custRatingStars, setCustRatingStars]   = useState(0);
   const [custRatingDone, setCustRatingDone]     = useState(false);
   const [bankAccount, setBankAccount]   = useState('');
@@ -789,6 +830,10 @@ function App() {
   const [bonusRedeemLoading, setBonusRedeemLoading] = useState(false);
   const [driverWallet, setDriverWallet] = useState<any>({ balance: 0, total_earned: 0, total_withdrawn: 0 });
   const [driverRideHistory, setDriverRideHistory] = useState<any[]>([]);
+  // Actual wallet movements. The ride list shows each job's GROSS fare, which
+  // is not what reached the wallet after commission — this is the statement
+  // that explains the balance.
+  const [driverTxns, setDriverTxns] = useState<any[]>([]);
   const [driverHourlyHistory, setDriverHourlyHistory] = useState<any[]>([]);
   const [walletEarningsTab, setWalletEarningsTab] = useState<'summary'|'rides'|'hourly'|'commission'>('summary');
   const [earningsAnalytics, setEarningsAnalytics] = useState<any>(null);
@@ -1633,6 +1678,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const d = await authRideGet(`/api/wallet/driver/detail?phone=${ph}`);
       setDriverWallet(d.wallet || { balance: 0, total_earned: 0, total_withdrawn: 0 });
       setDriverRideHistory(d.rides || []);
+      setDriverTxns(d.transactions || []);
       setDriverHourlyHistory(d.hourly || []);
       setWalletLoaded(true);
     } catch (_e) {}
@@ -5252,6 +5298,68 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: C.online, false: C.glassBorder }} thumbColor="#fff" />
       </View>
 
+      {/* ── Keep-the-parcel-safe notice, after closing an unclaimed delivery ──
+          The backend sends this copy with the close response. It matters: the
+          trip is over and the driver has been paid, but the package is still
+          someone else's property and the sender can still come back for it. */}
+      <Modal visible={!!keepSafeNotice} transparent animationType="fade" onRequestClose={() => setKeepSafeNotice(null)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(15,8,28,0.62)', alignItems: 'center', justifyContent: 'center', padding: 26 }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 22, padding: 22, width: '100%' }}>
+            <View style={{ alignItems: 'center' }}>
+              <View style={{ width: 62, height: 62, borderRadius: 21, backgroundColor: 'rgba(5,150,105,0.12)', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 30 }}>📦</Text>
+              </View>
+              {keepSafeNotice?.earned > 0 && (
+                <Text style={{ fontSize: 22, fontWeight: '900', color: C.green, marginTop: 12 }}>
+                  +₹{Math.round(keepSafeNotice.earned)}
+                </Text>
+              )}
+              <Text style={{ fontSize: 16, fontWeight: '900', color: C.text, marginTop: 6, textAlign: 'center' }}>
+                {lang === 'hi' ? 'Parcel apne paas safe rakhein' : (keepSafeNotice?.title || 'Please keep the parcel safe')}
+              </Text>
+            </View>
+
+            <View style={{ marginTop: 14 }}>
+              {(lang === 'hi'
+                ? [
+                    'Ise apne ghar/dukaan par safe jagah rakhein — phenkein nahi.',
+                    'Sender abhi bhi call kar sakta hai; kai log ek-do din baad sampark karte hain.',
+                    'Unka address raaste mein pade to wapas de aana acchi baat hai — zaroori nahi.',
+                    'Kuch din tak koi na aaye to Sppero support se baat karein.',
+                  ]
+                : (keepSafeNotice?.lines || [])
+              ).map((l: string, i: number) => (
+                <View key={i} style={{ flexDirection: 'row', gap: 9, marginBottom: 9 }}>
+                  <Ionicons name="ellipse" size={7} color={C.pink} style={{ marginTop: 6 }} />
+                  <Text style={{ flex: 1, fontSize: 12.5, color: C.textMuted, lineHeight: 18 }}>{l}</Text>
+                </View>
+              ))}
+            </View>
+
+            {!!keepSafeNotice?.sender_phone && (
+              <TouchableOpacity
+                onPress={() => Linking.openURL(`tel:${keepSafeNotice.sender_phone}`)}
+                style={{
+                  marginTop: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7,
+                  backgroundColor: '#F7F5FC', borderRadius: 12, paddingVertical: 11,
+                }}>
+                <Ionicons name="call-outline" size={15} color={C.plum} />
+                <Text style={{ fontSize: 13, fontWeight: '800', color: C.plum }}>
+                  {lang === 'hi' ? 'Sender ko call karein' : 'Call the sender'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <TouchableOpacity onPress={() => setKeepSafeNotice(null)} activeOpacity={0.9}
+              style={{ marginTop: 12, backgroundColor: C.pink, borderRadius: 14, paddingVertical: 14, alignItems: 'center' }}>
+              <Text style={{ color: '#fff', fontSize: 15, fontWeight: '900' }}>
+                {lang === 'hi' ? 'Samajh gaya' : 'Got it'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* ── Driver Notification Center Modal ─────────────────────────────── */}
       <Modal visible={showNotifCenter} animationType="slide" transparent={false} onRequestClose={() => setShowNotifCenter(false)}>
         <View style={{ flex: 1, backgroundColor: '#0F172A' }}>
@@ -5508,6 +5616,95 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
             </View>
           )}
+
+          {/* ── Parcels still in your bag ──────────────────────────────────
+              Shown even mid-ride: the driver is physically carrying these, and
+              a sender may call about one at any time. */}
+          {heldParcels.map(p => {
+            const hi = lang === 'hi';
+            const waitingReturn = p.awaiting_return_trip;
+            const canClose = p.can_close;
+            return (
+              <View key={p.id} style={{
+                backgroundColor: '#fff', borderRadius: 18, padding: 14, marginBottom: 12,
+                borderWidth: 1.5, borderColor: waitingReturn ? 'rgba(124,58,237,0.35)' : 'rgba(245,158,11,0.35)',
+                shadowColor: C.plum, shadowOpacity: 0.1, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3,
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={{
+                    width: 42, height: 42, borderRadius: 14,
+                    backgroundColor: waitingReturn ? 'rgba(124,58,237,0.10)' : 'rgba(245,158,11,0.12)',
+                    alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    <Text style={{ fontSize: 20 }}>📦</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 13.5, fontWeight: '900', color: C.text }}>
+                      {waitingReturn
+                        ? (hi ? 'Sender ne return ka paisa de diya' : 'Sender paid for the return')
+                        : (hi ? 'Ye parcel abhi aapke paas hai' : 'This parcel is still with you')}
+                    </Text>
+                    <Text style={{ fontSize: 11.5, color: C.textMuted, marginTop: 2 }} numberOfLines={1}>
+                      {p.receiver_name ? `${hi ? 'Receiver' : 'For'}: ${p.receiver_name} · ` : ''}#{p.id}
+                    </Text>
+                  </View>
+                </View>
+
+                {waitingReturn ? (
+                  <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 10, lineHeight: 17 }}>
+                    {hi
+                      ? 'Parcel wapas sender ko pahunchao aur unse return OTP lekar confirm karo.'
+                      : "Take it back to the sender and confirm with their return OTP."}
+                  </Text>
+                ) : canClose ? (
+                  <>
+                    <Text style={{ fontSize: 12, color: C.textMuted, marginTop: 10, lineHeight: 17 }}>
+                      {hi
+                        ? `Sender ne ${Math.floor(p.hours_waited)}h se koi jawab nahi diya. Ab aap trip band karke apna paisa le sakte ho.`
+                        : `No reply from the sender for ${Math.floor(p.hours_waited)}h. You can close this now and take your payment.`}
+                    </Text>
+                    <TouchableOpacity
+                      disabled={heldBusy === p.id}
+                      onPress={() => Alert.alert(
+                        hi ? 'Trip band karein?' : 'Close this delivery?',
+                        hi
+                          ? 'Aapko is trip ka paisa mil jaayega. Parcel apne paas safe rakhna — sender baad mein sampark kar sakta hai.'
+                          : 'You will be paid for this trip. Keep the package safe with you — the sender may still contact you.',
+                        [
+                          { text: hi ? 'Abhi nahi' : 'Not now', style: 'cancel' },
+                          { text: hi ? 'Haan, band karo' : 'Yes, close it', onPress: () => closeUnclaimedParcel(p.id) },
+                        ]
+                      )}
+                      activeOpacity={0.9}
+                      style={{
+                        marginTop: 12, backgroundColor: heldBusy === p.id ? '#C9C4D8' : C.green,
+                        borderRadius: 13, paddingVertical: 13, alignItems: 'center',
+                        flexDirection: 'row', justifyContent: 'center', gap: 7,
+                      }}>
+                      {heldBusy === p.id
+                        ? <ActivityIndicator color="#fff" size="small" />
+                        : <Ionicons name="checkmark-circle-outline" size={17} color="#fff" />}
+                      <Text style={{ color: '#fff', fontSize: 14, fontWeight: '900' }}>
+                        {hi ? 'Trip band karo aur paisa lo' : 'Close & get paid'}
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <View style={{
+                    marginTop: 10, backgroundColor: '#F7F5FC', borderRadius: 12, padding: 10,
+                    flexDirection: 'row', alignItems: 'center', gap: 8,
+                  }}>
+                    <Ionicons name="time-outline" size={15} color={C.textMuted} />
+                    <Text style={{ flex: 1, fontSize: 11.5, color: C.textMuted, lineHeight: 16 }}>
+                      {hi
+                        ? `Sender ke jawab ka intezaar. ${Math.ceil(p.hours_until_close)}h baad aap trip band kar sakte ho — tab tak parcel safe rakho.`
+                        : `Waiting on the sender. You can close this in ${Math.ceil(p.hours_until_close)}h — keep the parcel safe until then.`}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          })}
 
           {/* Parcel earning guide — one tap from home */}
           {!activeRide && !rideReq && !activeHourlyRide && (
@@ -8676,6 +8873,46 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </>)}
 
         {walletEarningsTab === 'rides' && (<>
+          {/* ── Wallet statement ────────────────────────────────────────────
+              Every credit and deduction, with a reason. Before this existed
+              the balance moved with nothing anywhere explaining why — the ride
+              list below shows gross fares, which is a different number. */}
+          {driverTxns.length > 0 && (
+            <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0' }}>
+              <Text style={{ fontSize: 13, fontWeight: '900', color: '#0F172A', marginBottom: 10 }}>
+                {lang === 'hi' ? '💰 Wallet statement' : '💰 Wallet statement'}
+              </Text>
+              {driverTxns.slice(0, 12).map((tx: any, i: number) => {
+                const credit = tx.type === 'credit';
+                return (
+                  <View key={i} style={{
+                    flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 8,
+                    borderBottomWidth: i < Math.min(11, driverTxns.length - 1) ? 1 : 0, borderColor: '#E9EDF3',
+                  }}>
+                    <View style={{
+                      width: 28, height: 28, borderRadius: 10,
+                      backgroundColor: credit ? 'rgba(5,150,105,0.10)' : 'rgba(239,68,68,0.10)',
+                      alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <Ionicons name={credit ? 'arrow-down' : 'arrow-up'} size={14} color={credit ? C.green : '#EF4444'} />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>
+                        {tx.description || (credit ? 'Earning' : 'Deduction')}
+                      </Text>
+                      <Text style={{ fontSize: 10.5, color: '#64748B', marginTop: 1 }}>
+                        {fmtDate(tx.created_at)}{tx.ride_id ? ` · #${tx.ride_id}` : ''}
+                      </Text>
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '900', color: credit ? C.green : '#EF4444' }}>
+                      {credit ? '+' : '−'}₹{Math.round(parseFloat(tx.amount || 0))}
+                    </Text>
+                  </View>
+                );
+              })}
+            </View>
+          )}
+
           {!walletLoaded ? (
             [1,2,3,4].map(i => <SkeletonRideCard key={i} />)
           ) : driverRideHistory.length === 0 ? (
@@ -8686,8 +8923,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           ) : driverRideHistory.map((r: any, i: number) => (
             <View key={r.id || i} style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{r.passenger_name || 'Passenger'}</Text>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }} numberOfLines={1}>
+                      {r.passenger_name || 'Passenger'}
+                    </Text>
+                    {/* A completed parcel is otherwise indistinguishable from a
+                        passenger ride here — both just carry a vehicle type. */}
+                    {r.is_parcel && (
+                      <View style={{ backgroundColor: 'rgba(255,45,120,0.10)', borderRadius: 7, paddingHorizontal: 6, paddingVertical: 2 }}>
+                        <Text style={{ fontSize: 9.5, fontWeight: '900', color: C.pink }}>
+                          {r.return_status === 'unclaimed' ? '📦 UNCLAIMED'
+                            : r.return_status === 'returned' ? '📦 RETURNED'
+                            : '📦 PARCEL'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{fmtDate(r.created_at)} · {r.payment_method}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
