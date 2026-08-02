@@ -202,10 +202,16 @@ class RideAlertActivity : Activity() {
       layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(12))
     }
 
-    val dismiss = pill(Color.parseColor("#2A1B45"), "Dismiss", Color.parseColor("#C9BFE0")) { finish() }
+    // "Not now", not "Dismiss". This button only closes this screen — it does
+    // NOT decline the offer, because the alert is display-only (it is handed a
+    // title and body, never a ride_id, so it has nothing to decline WITH). A
+    // driver who read it as "Dismiss" was surprised when the ordinary
+    // heads-up notification for the same still-live offer appeared right
+    // afterwards. The wording now matches what actually happens.
+    val dismiss = pill(Color.parseColor("#2A1B45"), "Not now", Color.parseColor("#C9BFE0")) { finish() }
 
     val note = TextView(this).apply {
-      text = "Accept / Decline are also on the notification"
+      text = "Offer stays live — Accept / Decline on the notification"
       setTextColor(Color.parseColor("#7E7099"))
       textSize = 12f
       gravity = Gravity.CENTER
