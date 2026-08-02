@@ -5,6 +5,14 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# A new push supersedes whatever is still running for the same branch. Without
+# this, every push queued ANOTHER full build; a dozen pushes in a day means a
+# dozen queued runs fighting for the free-tier runners, which is why runs sit
+# "in progress" for hours without compiling anything.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,6 +32,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Install dependencies
         run: npm install

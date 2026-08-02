@@ -3,9 +3,20 @@ name: Build Android APK - Driver
 on:
   workflow_dispatch:
 
+# A new push supersedes whatever is still running for the same branch. Without
+# this, every push queued ANOTHER full build; a dozen pushes in a day means a
+# dozen queued runs fighting for the free-tier runners, which is why runs sit
+# "in progress" for hours without compiling anything.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    # Without this the job inherits GitHub's 6-HOUR cap, so anything that
+    # hangs burns six hours before failing instead of failing fast.
+    timeout-minutes: 60
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -22,6 +33,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'gradle'
 
       - name: Install dependencies
         run: npm install
