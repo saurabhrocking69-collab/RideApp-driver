@@ -48,6 +48,24 @@ jobs:
       - name: Force legacy native-lib packaging (extract .so files; fixes crashes on many devices)
         run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
 
+      # expo-updates runs a KSP (Kotlin Symbol Processing) step, and KSP loads a
+      # large amount of class metadata. Expo's generated default is
+      #   org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m
+      # which is not enough once expo-updates is in the graph — the build dies
+      # with "[ksp] java.lang.OutOfMemoryError: Metaspace" on
+      # :expo-updates:kspReleaseKotlin. Metaspace is NATIVE memory holding class
+      # metadata, separate from the heap, so raising -Xmx alone does not help.
+      # Appended after prebuild because prebuild regenerates gradle.properties;
+      # duplicate keys in a properties file resolve to the last one written.
+      - name: Raise Gradle/Kotlin memory for KSP
+        run: |
+          {
+            echo ""
+            echo "org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1536m -Dfile.encoding=UTF-8"
+            echo "kotlin.daemon.jvmargs=-Xmx2g -XX:MaxMetaspaceSize=1g"
+          } >> android/gradle.properties
+          tail -5 android/gradle.properties
+
       - name: Build Release APK (always bundles JS + Hermes-compiles, no Metro needed)
         run: |
           cd android
