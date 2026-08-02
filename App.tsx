@@ -2748,7 +2748,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const a = Math.sin(dLat/2)**2 + Math.cos(curLat*Math.PI/180)*Math.cos(dropLat*Math.PI/180)*Math.sin(dLon/2)**2;
         const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 
-        if (distKm > 0.8) {
+        // 300m, lowered from 800m. At 800m a driver finishing 300-400m short —
+        // the exact "dropped me at the chowk, not my shop" complaint — was
+        // silent for both sides. Viable only because ride-time GPS is now
+        // BestForNavigation (~5-10m) rather than Balanced (~100m); at Balanced
+        // accuracy a 300m threshold would have fired on position error alone.
+        if (distKm > 0.3) {
           const confirm = await new Promise<boolean>(resolve => {
             distWarnResolveRef.current = resolve;
             setDistWarnModal({ dist: distKm.toFixed(1) });
