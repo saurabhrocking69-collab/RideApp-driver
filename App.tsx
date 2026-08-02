@@ -6584,7 +6584,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
              the driver isn't yanked mid-decision from one card to the other. ── */}
         {batchOffer && !activeRide && !activeHourlyRide && (
           <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
-            <View style={{ backgroundColor: C.bgDark, paddingTop: 20, paddingHorizontal: SP.md, paddingBottom: SP.lg, alignItems: 'center', overflow: 'hidden' }}>
+            <View style={{ backgroundColor: C.bgDark, paddingTop: 14, paddingHorizontal: SP.md, paddingBottom: SP.md, alignItems: 'center', overflow: 'hidden' }}>
               <View style={{ position: 'absolute', width: 200, height: 200, borderRadius: 100, backgroundColor: 'rgba(255,45,120,0.08)', top: -60, right: -40 }} />
               <View style={{ backgroundColor: 'rgba(46,20,97,0.35)', borderRadius: R.full, paddingHorizontal: 16, paddingVertical: 5, marginBottom: 14, borderWidth: 1.5, borderColor: 'rgba(196,181,253,0.60)', flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <Text style={{ fontSize: 13 }}>📦📦</Text>
@@ -6618,7 +6618,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
         {/* ── INCOMING STANDARD RIDE REQUEST ── */}
         {rideReq && !activeRide && !activeHourlyRide && !batchOffer && (
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+          <View style={{ flex: 1 }}>
+          {/* paddingBottom clears the pinned action bar below, so the last card
+              is never trapped underneath it. */}
+          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 172 }} showsVerticalScrollIndicator={false}>
             {/* Dark plum header — premium, urgent */}
             <View style={{ backgroundColor: C.bgDark, paddingTop: 20, paddingHorizontal: SP.md, paddingBottom: SP.lg, alignItems: 'center', overflow: 'hidden' }}>
               {/* Subtle blob */}
@@ -6667,16 +6670,21 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               ))}
 
-              {/* Vehicle emoji */}
-              <Text style={{ fontSize: 60, marginBottom: SP.sm }}>
-                {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
-              </Text>
-
-              {/* Passenger name — "Sender:" for parcels, since there's no passenger to carry */}
-              {rideReq?.is_parcel && (
-                <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 11, fontWeight: '700', letterSpacing: 0.5, marginBottom: 2 }}>SENDER</Text>
-              )}
-              <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 0.3 }}>{rideReq?.passenger_name || 'Passenger'}</Text>
+              {/* Vehicle + name on ONE row. A 60px emoji stacked above the name
+                  cost ~90px of vertical space and said nothing the small icon
+                  does not — and that space is exactly what pushed Accept off
+                  the screen. */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 }}>
+                <Text style={{ fontSize: 30 }}>
+                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
+                </Text>
+                <View>
+                  {rideReq?.is_parcel && (
+                    <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>SENDER</Text>
+                  )}
+                  <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', letterSpacing: 0.3 }} numberOfLines={1}>{rideReq?.passenger_name || 'Passenger'}</Text>
+                </View>
+              </View>
 
               {/* Surge badge */}
               {surgeMultiplier > 1.0 && (
@@ -6687,9 +6695,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               )}
 
               {/* Big earn number — the hero moment */}
-              <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.xl, paddingVertical: SP.md, marginTop: SP.md, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
+              <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.lg, paddingVertical: 10, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
-                <Text style={{ color: C.online, fontSize: 54, fontWeight: '900', lineHeight: 60, letterSpacing: -1.5 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * (rideReq?.is_intercity ? 0.90 : 0.88))}</Text>
+                <Text style={{ color: C.online, fontSize: 42, fontWeight: '900', lineHeight: 48, letterSpacing: -1.2 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * (rideReq?.is_intercity ? 0.90 : 0.88))}</Text>
                 {driverSub?.active
                   ? <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
                   : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · {rideReq?.is_intercity ? '10%' : '12%'} commission</Text>}
@@ -6722,6 +6730,45 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <View style={{ flex: 1, backgroundColor: C.greenGlass, borderRadius: R.md, padding: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.greenBorder }}>
                     <Text style={{ color: C.online, fontSize: 11, fontWeight: '800' }}>🛣️ Trip Distance</Text>
                     <Text style={{ color: C.online, fontSize: 22, fontWeight: '900', marginTop: 3 }}>{rideReq.distance} km</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* ── Decision facts ────────────────────────────────────────────
+                     Everything above tells the driver what the ride PAYS. This
+                     row tells them what taking it will be LIKE, which is the
+                     other half of the decision and was missing entirely:
+                     how they get paid, roughly how long it takes, and the
+                     landmark that decides whether the pickup is easy to find. */}
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
+                {(() => {
+                  // Cash vs already-paid changes what happens at the drop and
+                  // whether commission is owed — drivers ask this first.
+                  const pm = String(rideReq?.payment_method || 'cash').toLowerCase();
+                  const prepaid = pm === 'wallet' || pm === 'online' || pm === 'upi';
+                  return (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: prepaid ? 'rgba(37,99,235,0.15)' : C.greenGlass, borderRadius: R.full, paddingHorizontal: 11, paddingVertical: 6, borderWidth: 1, borderColor: prepaid ? 'rgba(96,165,250,0.5)' : C.greenBorder }}>
+                      <Text style={{ fontSize: 12 }}>{prepaid ? '💳' : '💵'}</Text>
+                      <Text style={{ color: prepaid ? '#93C5FD' : C.online, fontSize: 11.5, fontWeight: '800' }}>
+                        {prepaid ? 'Already paid' : 'Collect cash'}
+                      </Text>
+                    </View>
+                  );
+                })()}
+                {!!rideReq?.distance && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.bgCard, borderRadius: R.full, paddingHorizontal: 11, paddingVertical: 6, borderWidth: 1, borderColor: C.glassBorder }}>
+                    <Text style={{ fontSize: 12 }}>⏱️</Text>
+                    <Text style={{ color: C.textDim, fontSize: 11.5, fontWeight: '800' }}>
+                      ~{Math.max(5, Math.round((parseFloat(rideReq.distance) / 18) * 60))} min trip
+                    </Text>
+                  </View>
+                )}
+                {!!rideReq?.pickup_landmark && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: C.bgCard, borderRadius: R.full, paddingHorizontal: 11, paddingVertical: 6, borderWidth: 1, borderColor: C.glassBorder, flexShrink: 1 }}>
+                    <Text style={{ fontSize: 12 }}>📍</Text>
+                    <Text style={{ color: C.textDim, fontSize: 11.5, fontWeight: '800', flexShrink: 1 }} numberOfLines={1}>
+                      Near {rideReq.pickup_landmark}
+                    </Text>
                   </View>
                 )}
               </View>
@@ -6774,24 +6821,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 </View>
               </View>
 
-              {/* Countdown */}
-              {rideReq && <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />}
-
-              {/* Accept / Reject */}
-              <View style={{ flexDirection: 'row', gap: 14, marginTop: SP.md }}>
-                <Bouncy style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, padding: 20, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }} onPress={rejectRide}>
-                  <Text style={{ fontSize: 24 }}>✕</Text>
-                  <Text style={{ color: C.red, fontWeight: '800', fontSize: 14, marginTop: 4 }}>Reject</Text>
+            </View>
+          </ScrollView>
+          {/* ── Action bar ─ PINNED, deliberately outside the ScrollView ──────
+                 These used to sit at the end of the scrolling content, so on a
+                 shorter phone (or any offer carrying a surge badge, advance
+                 notice or parcel block) Accept was pushed below the fold. The
+                 driver had to scroll to accept, against a 30-second timer they
+                 could not see either — the countdown scrolled away with it.
+                 Both are now fixed to the bottom and always reachable. ── */}
+          {rideReq && (
+            <View style={{
+              position: 'absolute', left: 0, right: 0, bottom: 0,
+              paddingHorizontal: SP.md, paddingTop: 10,
+              paddingBottom: Platform.OS === 'android' ? 14 : 26,
+              backgroundColor: C.bg,
+              borderTopWidth: 1, borderTopColor: C.glassBorder,
+              elevation: 24,
+              shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 16, shadowOffset: { width: 0, height: -4 },
+            }}>
+              <CountdownBar seconds={rideReq.seconds_to_accept || 30} onTimeout={rejectRide} />
+              <View style={{ flexDirection: 'row', gap: 12, marginTop: 10 }}>
+                <Bouncy style={{ flex: 1, backgroundColor: C.bgCard, borderRadius: R.md, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.pinkBorder }} onPress={rejectRide}>
+                  <Text style={{ color: C.red, fontWeight: '800', fontSize: 14 }}>✕  Reject</Text>
                 </Bouncy>
-                <Bouncy style={{ flex: 2, backgroundColor: C.online, borderRadius: R.md, padding: 20, alignItems: 'center', elevation: 8, shadowColor: C.online, shadowOpacity: 0.5, shadowRadius: 14 }} onPress={acceptRide} disabled={loading}>
-                  <Text style={{ fontSize: 24 }}>✓</Text>
-                  <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 16, marginTop: 4 }}>
-                    {loading ? t('live_accept_loading') : t('live_accept')}
+                <Bouncy style={{ flex: 2, backgroundColor: C.online, borderRadius: R.md, paddingVertical: 14, alignItems: 'center', elevation: 8, shadowColor: C.online, shadowOpacity: 0.5, shadowRadius: 14 }} onPress={acceptRide} disabled={loading}>
+                  <Text style={{ color: '#FFFFFF', fontWeight: '900', fontSize: 16 }}>
+                    {loading ? t('live_accept_loading') : `✓  ${t('live_accept')}`}
                   </Text>
                 </Bouncy>
               </View>
             </View>
-          </ScrollView>
+          )}
+          </View>
         )}
 
         {/* ── INCOMING HOURLY RIDE REQUEST ── */}
