@@ -647,9 +647,38 @@ function App() {
       const dist = pending?.distance ? `${pending.distance} km` : '';
       const title = [fare, dist].filter(Boolean).join(' · ') || 'New Ride Request';
       const body = pending?.pickup ? `Pickup: ${pending.pickup}` : 'A rider is waiting nearby.';
+
+      // How long the driver ACTUALLY has. The alert used to hardcode a 45s
+      // auto-dismiss, which was wrong in both directions: a real-time offer
+      // gets WINDOW_SEC = 30s, so the alert sat there for 15s advertising an
+      // offer that was already dead, and a scheduled offer gets 120s, so the
+      // alert vanished 75s early. The server already computes the true
+      // remaining seconds (`seconds_to_accept`, from assignment_expires_at) —
+      // pass it through and let the countdown be honest.
+      const secs = Math.max(0, Math.round(Number(pending?.seconds_to_accept) || 0));
+
+      // Distance from the driver to the pickup — the single most useful number
+      // for deciding whether to take the ride, and the app already has both
+      // coordinates. Omitted rather than guessed when GPS isn't ready.
+      let away = '';
+      try {
+        const dLatV = driverGpsRef.current?.lat ?? driverGpsRef.current?.latitude;
+        const dLngV = driverGpsRef.current?.lng ?? driverGpsRef.current?.longitude;
+        const pLat = parseFloat(pending?.pickup_lat), pLng = parseFloat(pending?.pickup_lng);
+        if (dLatV != null && dLngV != null && !isNaN(pLat) && !isNaN(pLng)) {
+          const R = 6371;
+          const a1 = (pLat - dLatV) * Math.PI / 180, a2 = (pLng - dLngV) * Math.PI / 180;
+          const h = Math.sin(a1 / 2) ** 2 + Math.cos(dLatV * Math.PI / 180) * Math.cos(pLat * Math.PI / 180) * Math.sin(a2 / 2) ** 2;
+          const km = R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+          away = km < 1 ? `${Math.round(km * 1000)} m away` : `${km.toFixed(1)} km away`;
+        }
+      } catch (_e) {}
+
       const q = [
         `title=${encodeURIComponent(title)}`,
         `body=${encodeURIComponent(body)}`,
+        `away=${encodeURIComponent(away)}`,
+        `secs=${secs}`,
         `scheduled=${pending?.scheduled ? 'true' : 'false'}`,
       ].join('&');
       // Fails harmlessly if the driver never granted "Display over other apps"

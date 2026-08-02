@@ -56,6 +56,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.util.TypedValue
 import android.view.Gravity
 import android.view.View
@@ -78,15 +79,42 @@ import android.widget.TextView
 class RideAlertActivity : Activity() {
 
   private val autoDismiss = Handler(Looper.getMainLooper())
+  private var deadlineAt = 0L
+  private var timerLabel: TextView? = null
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     showOverLockScreen()
     setContentView(buildUi())
 
-    // Offers expire server-side; don't leave a stale full-screen alert sitting
-    // on a driver's phone after the offer is gone.
-    autoDismiss.postDelayed({ if (!isFinishing) finish() }, 45_000)
+    startCountdown()
+  }
+
+  // The offer's real remaining seconds, passed in from JS (server-computed from
+  // assignment_expires_at). This used to be a hardcoded 45s auto-dismiss, which
+  // was wrong BOTH ways: a real-time offer's window is 30s, so the alert sat
+  // there 15 seconds advertising a dead offer — tap "Open & Accept" and there
+  // was nothing to accept — while a scheduled offer's window is 120s, so the
+  // alert vanished 75 seconds early. Falls back to 30 (the real-time window)
+  // rather than 45 if the parameter is missing.
+  private fun startCountdown() {
+    autoDismiss.removeCallbacksAndMessages(null)
+    val secs = param("secs", "0").toIntOrNull()?.takeIf { it > 0 } ?: 30
+    deadlineAt = SystemClock.elapsedRealtime() + secs * 1000L
+    tick()
+  }
+
+  private fun tick() {
+    val leftMs = deadlineAt - SystemClock.elapsedRealtime()
+    val left = Math.ceil(leftMs / 1000.0).toInt()
+    if (left <= 0) { if (!isFinishing) finish(); return }
+    timerLabel?.text = "$left s to respond"
+    // Turns red for the last third, so urgency is visible at a glance from a
+    // locked screen without the driver having to read the number.
+    timerLabel?.setTextColor(
+      if (left <= 10) Color.parseColor("#FF5A5A") else Color.parseColor("#C9BFE0")
+    )
+    autoDismiss.postDelayed({ tick() }, 250)
   }
 
   // Launched again for a newer offer while still showing — replace, not stack.
@@ -94,6 +122,9 @@ class RideAlertActivity : Activity() {
     super.onNewIntent(newIntent)
     setIntent(newIntent)
     setContentView(buildUi())
+    // Restart against the NEW offer's deadline — otherwise a replacement offer
+    // inherits the previous one's countdown and expires at the wrong moment.
+    startCountdown()
   }
 
   override fun onDestroy() {
@@ -159,6 +190,19 @@ class RideAlertActivity : Activity() {
       )
     }
 
+    // Brand line. On a lock screen the driver sees this before anything else,
+    // and an unbranded dark card asking them to tap a button is exactly what a
+    // phishing overlay looks like. Naming the app is a trust signal, not decor.
+    val brand = TextView(this).apply {
+      text = "SPPERO BUDDY"
+      setTextColor(Color.parseColor("#8B7BA8"))
+      textSize = 12f
+      letterSpacing = 0.28f
+      gravity = Gravity.CENTER
+      setTypeface(typeface, Typeface.BOLD)
+      setPadding(0, 0, 0, dp(18))
+    }
+
     val kicker = TextView(this).apply {
       text = kickerText
       setTextColor(Color.parseColor("#FF2D78"))
@@ -182,8 +226,31 @@ class RideAlertActivity : Activity() {
       setTextColor(Color.parseColor("#C9BFE0"))
       textSize = 16f
       gravity = Gravity.CENTER
-      setPadding(0, dp(12), 0, dp(34))
+      setPadding(0, dp(12), 0, 0)
     }
+
+    // How far the pickup is — the number that actually decides whether the ride
+    // is worth taking. Hidden rather than shown empty when GPS wasn't ready.
+    val away = TextView(this).apply {
+      val a = param("away", "")
+      text = a
+      visibility = if (a.isBlank()) View.GONE else View.VISIBLE
+      setTextColor(Color.parseColor("#7ED6A5"))
+      textSize = 15f
+      gravity = Gravity.CENTER
+      setTypeface(typeface, Typeface.BOLD)
+      setPadding(0, dp(8), 0, 0)
+    }
+
+    // Live countdown against the offer's true expiry.
+    val timer = TextView(this).apply {
+      setTextColor(Color.parseColor("#C9BFE0"))
+      textSize = 14f
+      gravity = Gravity.CENTER
+      setTypeface(typeface, Typeface.BOLD)
+      setPadding(0, dp(16), 0, dp(30))
+    }
+    timerLabel = timer
 
     val open = pill(Color.parseColor("#FF2D78"), "Open & Accept", Color.WHITE) {
       try {
@@ -221,9 +288,12 @@ class RideAlertActivity : Activity() {
     val wide = LinearLayout.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
     )
+    root.addView(brand, wide)
     root.addView(kicker, wide)
     root.addView(heading, wide)
     root.addView(detail, wide)
+    root.addView(away, wide)
+    root.addView(timer, wide)
     root.addView(open, wide)
     root.addView(gap)
     root.addView(dismiss, wide)
