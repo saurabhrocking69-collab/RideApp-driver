@@ -252,7 +252,10 @@ class RideAlertActivity : Activity() {
     }
     timerLabel = timer
 
-    val open = pill(Color.parseColor("#FF2D78"), "Open & Accept", Color.WHITE) {
+    // "Open & See Offer", not "Open & Accept". This screen accepts nothing — it
+    // opens the app, where the real offer card does. Promising "Accept" on a
+    // button that cannot accept is the same class of lie "Dismiss" was.
+    val open = pill(Color.parseColor("#FF2D78"), "Open & See Offer", Color.WHITE) {
       try {
         packageManager.getLaunchIntentForPackage(packageName)?.let {
           it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -277,12 +280,25 @@ class RideAlertActivity : Activity() {
     // afterwards. The wording now matches what actually happens.
     val dismiss = pill(Color.parseColor("#2A1B45"), "Not now", Color.parseColor("#C9BFE0")) { finish() }
 
+    // The real pressure: the offer went to every eligible Buddy in the radius
+    // at the same moment, so hesitating loses it to someone else. Sits directly
+    // under the countdown, brighter than the footnote, because this is the
+    // reason to act rather than a piece of small print.
+    val urgency = TextView(this).apply {
+      text = "Decide fast — another Buddy can grab this ride"
+      setTextColor(Color.parseColor("#FFC46B"))
+      textSize = 13f
+      gravity = Gravity.CENTER
+      setTypeface(typeface, Typeface.BOLD)
+      setPadding(0, dp(16), 0, 0)
+    }
+
     val note = TextView(this).apply {
       text = "Offer stays live — Accept / Decline on the notification"
       setTextColor(Color.parseColor("#7E7099"))
       textSize = 12f
       gravity = Gravity.CENTER
-      setPadding(0, dp(18), 0, 0)
+      setPadding(0, dp(10), 0, 0)
     }
 
     val wide = LinearLayout.LayoutParams(
@@ -297,6 +313,7 @@ class RideAlertActivity : Activity() {
     root.addView(open, wide)
     root.addView(gap)
     root.addView(dismiss, wide)
+    root.addView(urgency, wide)
     root.addView(note, wide)
     return root
   }
