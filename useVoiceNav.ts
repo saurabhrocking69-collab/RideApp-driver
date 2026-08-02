@@ -51,12 +51,17 @@ function distLabel(m: number): string {
   return `${Math.round(m)} metre`;
 }
 
-export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, phase }: {
+export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, muted = false, phase }: {
   driverLat: number | null;
   driverLng: number | null;
   destLat:   number | null;
   destLng:   number | null;
   active:    boolean;
+  // Silences speech only. Routing, step advancement, the turn arrow and the
+  // distance countdown all keep running — muting the voice must not take the
+  // navigation away, which is what happened when the caller folded this into
+  // `active` instead.
+  muted?:    boolean;
   phase:     'to_pickup' | 'to_drop';
 }) {
   const [steps, setSteps]           = useState<NavStep[]>([]);
@@ -75,7 +80,17 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, ph
   // "turn right now" must not be swallowed because "in 500 metres…" is still
   // playing. The old version returned early while speaking and silently
   // dropped the more urgent line.
+  // Kept in a ref so the announcement effect doesn't need `muted` in its deps —
+  // toggling mute must not re-run step logic or re-trigger announcements.
+  const mutedRef = useRef(muted);
+  useEffect(() => {
+    mutedRef.current = muted;
+    // Cut off anything mid-sentence the moment the driver mutes.
+    if (muted) { try { Speech.stop(); } catch (_e) {} }
+  }, [muted]);
+
   const speak = (text: string) => {
+    if (mutedRef.current) return;
     try { Speech.stop(); } catch (_e) {}
     isSpeaking.current = true;
     Speech.speak(text, {

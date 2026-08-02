@@ -56,6 +56,17 @@ function decodePolyline(encoded: string): { latitude: number; longitude: number 
   return pts;
 }
 
+// ── Metres between two fixes ──────────────────────────────────────────────────
+// Used to decide whether the phone has genuinely moved or merely jittered.
+function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const mLat = ((lat1 + lat2) / 2) * Math.PI / 180;
+  const x = dLng * Math.cos(mLat);
+  return Math.sqrt(dLat * dLat + x * x) * R;
+}
+
 // ── Compass bearing ───────────────────────────────────────────────────────────
 function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toR = (d: number) => d * Math.PI / 180;
@@ -191,6 +202,10 @@ export interface DriverLiveMapProps {
   dropCoords?:    { lat: number; lng: number } | null;
   driverLat?:     number | null;
   driverLng?:     number | null;
+  // Straight from the GPS fix. Both can be null or -1 when the device cannot
+  // determine them (indoors, stationary), so both are validated before use.
+  driverHeading?: number | null;   // degrees, device's own course
+  driverSpeed?:   number | null;   // m/s
   customerLat?:   number | null;
   customerLng?:   number | null;
   vehicleType?:   string;
@@ -215,6 +230,8 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   dropCoords:   rawDrop,
   driverLat:    rawDriverLat,
   driverLng:    rawDriverLng,
+  driverHeading = null,
+  driverSpeed   = null,
   customerLat:  rawCustomerLat,
   customerLng:  rawCustomerLng,
   vehicleType   = 'auto',
@@ -276,9 +293,35 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   // Driver position animation + bearing tracking
   useEffect(() => {
     if (driverLat == null || driverLng == null) return;
-    if (prevPos.current) {
+    // Heading, in order of trustworthiness:
+    //
+    // 1. The device's own course, when actually moving. A phone reports this
+    //    from its sensors and it is stable.
+    // 2. Bearing between consecutive fixes, but only over a distance large
+    //    enough that it is signal rather than noise.
+    // 3. Whatever we had before — better a slightly stale heading than a
+    //    random one.
+    //
+    // The old rule was bearing-between-fixes over a 0.00001 degree (~1.1m)
+    // threshold, with no speed check. Urban GPS scatter is routinely 5-20m, so
+    // a driver stopped at a light generated a stream of "movements" in random
+    // directions and the heading-up nav map span on the spot. This is what made
+    // the on-screen direction feel wrong.
+    const spd = typeof driverSpeed === 'number' ? driverSpeed : null;   // m/s
+    const gpsHead = typeof driverHeading === 'number' ? driverHeading : null;
+    const MOVING_MS = 1.4;          // ~5 km/h — below this a heading is meaningless
+    const MIN_FIX_DELTA_M = 8;      // must exceed typical urban GPS scatter
+
+    if (spd != null && spd >= MOVING_MS && gpsHead != null && gpsHead >= 0) {
+      headingRef.current = gpsHead;
+      setHeading(gpsHead);
+    } else if (prevPos.current) {
       const { lat: pl, lng: pg } = prevPos.current;
-      if (Math.abs(driverLat - pl) > 0.00001 || Math.abs(driverLng - pg) > 0.00001) {
+      const movedM = distanceMeters(pl, pg, driverLat, driverLng);
+      // When speed is unavailable (null/-1 indoors) fall back to distance
+      // alone; when it IS available and says we're stopped, hold the heading.
+      const stoppedBySpeed = spd != null && spd < MOVING_MS;
+      if (movedM >= MIN_FIX_DELTA_M && !stoppedBySpeed) {
         const newHeading = computeBearing(pl, pg, driverLat, driverLng);
         headingRef.current = newHeading;
         setHeading(newHeading);

@@ -1765,6 +1765,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ── Location tracking (foreground: UI updates + backend ping) ──────────────
   // Background task handles backend pings when app is minimized.
+  //
+  // Derived here rather than inside the effect so it can sit in the dependency
+  // array — the watcher must re-subscribe with navigation-grade settings the
+  // moment a ride becomes active, and drop back to the cheap ones when it ends.
+  const navigating = !!activeRide &&
+    (activeRide.status === 'matched' || activeRide.status === 'arrived' || activeRide.status === 'started');
   useEffect(() => {
     if (!isOnline) return;
     let sub: Location.LocationSubscription | null = null;
@@ -1773,11 +1779,36 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       try {
         const { status } = await Location.requestForegroundPermissionsAsync();
         if (!mounted || status !== 'granted') return;
+        // GPS precision is adaptive, because navigation and idle tracking want
+        // opposite things. Balanced/5s/20m is right for an idle online driver:
+        // cheap on battery, and the backend only needs a rough position for
+        // matching. It is badly wrong DURING a ride — Balanced is accurate to
+        // ~100m in a city, so the driver can render on the wrong road, and a
+        // 20m/5s update rate makes the turn arrow and the "50 m" countdown lag
+        // behind reality by most of a block. Turn-by-turn needs
+        // BestForNavigation at ~1s/5m, which is exactly what every real nav app
+        // does — and only while actually navigating, so idle drivers keep
+        // their battery.
         sub = await Location.watchPositionAsync(
-          { accuracy: Location.Accuracy.Balanced, timeInterval: 5000, distanceInterval: 20 },
+          navigating
+            ? { accuracy: Location.Accuracy.BestForNavigation, timeInterval: 1000, distanceInterval: 5 }
+            : { accuracy: Location.Accuracy.Balanced,          timeInterval: 5000, distanceInterval: 20 },
           ({ coords }) => {
             if (!mounted) return;
-            setDriverGps({ lat: coords.latitude, lng: coords.longitude });
+            // heading/speed were being thrown away. The device's own course is
+            // far more trustworthy than a bearing derived from two consecutive
+            // fixes: at low speed that derivation is computed almost entirely
+            // from GPS noise, which is what made the nav map spin while sitting
+            // still in traffic. Speed lets the consumer decide when the heading
+            // is meaningful at all. Both can be null/-1 indoors, so they are
+            // passed through as-is and validated where they are used.
+            setDriverGps({
+              lat: coords.latitude,
+              lng: coords.longitude,
+              heading: coords.heading,
+              speed: coords.speed,
+              accuracy: coords.accuracy,
+            });
             // Retry once on failure — handles Jio packet drops
             const body = JSON.stringify({ phone, lat: coords.latitude, lng: coords.longitude });
             fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
@@ -1789,14 +1820,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } catch (_e) {}
     })();
     return () => { mounted = false; sub?.remove(); };
-  }, [isOnline, phone]);
+  }, [isOnline, phone, navigating]);
 
   // ── Keep gpsRef in sync (for use inside intervals) ──
   useEffect(() => { driverGpsRef.current = driverGps; }, [driverGps]);
 
   // ── Voice navigation ──
   const navPhase = activeRide?.status === 'started' ? 'to_drop' : 'to_pickup';
-  const navActive = !!activeRide && (activeRide.status === 'matched' || activeRide.status === 'started') && !navMuted;
+  // NOT gated on navMuted. It used to be, which meant muting the voice tore
+  // down navigation entirely: the hook cleared its steps, so the driver lost
+  // the turn arrow, the instruction text and the distance countdown as well as
+  // the speech. Mute silences the voice — nothing else. The hook now takes
+  // `muted` separately and gates only speak().
+  const navActive = !!activeRide && (activeRide.status === 'matched' || activeRide.status === 'started');
   const navDestLat = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lat) || null : parseFloat(activeRide?.drop_lat) || null;
   const navDestLng = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lng) || null : parseFloat(activeRide?.drop_lng) || null;
   const { currentInstruction: navInstruction, currentManeuver: navManeuver, nextDistM: navDist } = useVoiceNav({
@@ -1805,6 +1841,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     destLat: navActive ? navDestLat : null,
     destLng: navActive ? navDestLng : null,
     active: navActive,
+    muted: navMuted,
     phase: navPhase,
   });
 
@@ -4951,6 +4988,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         pickupCoords={_navPickup}
         dropCoords={_navDrop}
         driverLat={driverGps?.lat}
+        driverHeading={driverGps?.heading}
+        driverSpeed={driverGps?.speed}
         driverLng={driverGps?.lng}
         customerLat={_navPickup?.lat ?? null}
         customerLng={_navPickup?.lng ?? null}
@@ -5148,6 +5187,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           pickupCoords={activePickupCoords}
           dropCoords={activeDropCoords}
           driverLat={driverGps?.lat}
+          driverHeading={driverGps?.heading}
+          driverSpeed={driverGps?.speed}
           driverLng={driverGps?.lng}
           customerLat={activeRide ? parseFloat(activeRide.pickup_lat) || null : null}
           customerLng={activeRide ? parseFloat(activeRide.pickup_lng) || null : null}
