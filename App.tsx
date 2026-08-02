@@ -2623,7 +2623,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const markArrived = async () => {
     setLoading(true);
-    const data = await authRidePost('/api/rides/arrived', { ride_id: activeRide.id, driver_phone: phone });
+    // Send the real GPS position at arrival. The backend stores it and learns
+    // it as a known-good boarding point — this exact spot is, by definition,
+    // somewhere a vehicle could reach and wait, which is far better evidence
+    // than wherever the customer dropped their pin. Same driverGps source the
+    // completion call already uses; omitted harmlessly if GPS isn't ready.
+    const data = await authRidePost('/api/rides/arrived', {
+      ride_id: activeRide.id, driver_phone: phone,
+      driver_lat: driverGps?.lat, driver_lng: driverGps?.lng,
+    });
     if (data._error) setResult('❌ ' + data.message);
     else setActiveRide({ ...activeRide, status: 'arrived' });
     setLoading(false);
@@ -5898,6 +5906,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
               <View style={s.tripRoute}>
                 <Text style={s.tripFrom}>📍 {activeRide.pickup}</Text>
+                {/* Landmark the customer saw and confirmed at booking. A street
+                    address is often useless on the ground in Indian cities;
+                    "near Charbagh Metro Station" is what actually gets the
+                    driver to the right spot. Persistent UI, so it follows the
+                    language toggle (alerts/FCM stay English). */}
+                {!!activeRide.pickup_landmark && (
+                  <Text style={{ color: '#86EFAC', fontSize: 11.5, fontWeight: '700', marginTop: 3 }} numberOfLines={1}>
+                    {t('pickup_near_landmark')} {activeRide.pickup_landmark}
+                  </Text>
+                )}
                 <Text style={s.tripArrow}>↓</Text>
                 <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
               </View>
@@ -6057,6 +6075,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       <View>
                         <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8 }}>PICKUP</Text>
                         <Text style={{ fontSize: 14, fontWeight: '700', color: '#111827', marginTop: 2 }} numberOfLines={2}>{rideReq?.pickup}</Text>
+                        {!!rideReq?.pickup_landmark && (
+                          <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#059669', marginTop: 2 }} numberOfLines={1}>
+                            {t('pickup_near_landmark')} {rideReq.pickup_landmark}
+                          </Text>
+                        )}
                       </View>
                       <View>
                         <Text style={{ fontSize: 10, color: '#64748B', fontWeight: '700', letterSpacing: 0.8 }}>DROP</Text>
