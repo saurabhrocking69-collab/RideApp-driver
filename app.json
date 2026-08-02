@@ -7,7 +7,8 @@
       "enabled": true,
       "url": "https://u.expo.dev/8c13e622-0206-4e3f-ad33-8851c0f9353c",
       "checkAutomatically": "ON_LOAD",
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "requestHeaders": { "expo-channel-name": "production" }
     },
     "runtimeVersion": {
       "policy": "fingerprint"
