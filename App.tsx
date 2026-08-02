@@ -5988,6 +5988,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 )}
                 <Text style={s.tripArrow}>↓</Text>
                 <Text style={s.tripTo}>🎯 {activeRide.drop_location}</Text>
+                {/* The customer's own words for the last 100 metres. A pin gets
+                    you to the street; this gets you to the door, which is where
+                    Indian addresses actually live. */}
+                {!!activeRide.drop_note && (
+                  <Text style={{ color: '#FDE68A', fontSize: 11.5, fontWeight: '700', marginTop: 4 }} numberOfLines={2}>
+                    📝 {activeRide.drop_note}
+                  </Text>
+                )}
               </View>
 
               {eta ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
