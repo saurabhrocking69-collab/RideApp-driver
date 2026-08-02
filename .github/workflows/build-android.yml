@@ -77,12 +77,7 @@ jobs:
       # Patched after prebuild because prebuild regenerates settings.gradle.
       - name: Resolve plugin deps via Maven Central (avoids plugins.gradle.org 429)
         run: |
-          sed -i '0,/pluginManagement {/s//pluginManagement {
-  repositories {
-    google()
-    mavenCentral()
-    gradlePluginPortal()
-  }/' android/settings.gradle
+          sed -i 's|pluginManagement {|pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() }|' android/settings.gradle
           head -8 android/settings.gradle
 
       - name: Build Release APK (always bundles JS + Hermes-compiles, no Metro needed)
