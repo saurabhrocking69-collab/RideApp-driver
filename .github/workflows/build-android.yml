@@ -66,6 +66,25 @@ jobs:
           } >> android/gradle.properties
           tail -5 android/gradle.properties
 
+      # plugins.gradle.org returned HTTP 429 (Too Many Requests) and failed the
+      # whole build. The reason it is being asked for so much: Expo's generated
+      # settings.gradle has a pluginManagement block with NO repositories{} in
+      # it, and when that is absent Gradle falls back to gradlePluginPortal()
+      # ALONE. So ordinary artifacts — kotlin-stdlib, gson, guava, javapoet —
+      # that live on Maven Central were all being pulled from the plugin portal,
+      # which rate-limits. Adding google() and mavenCentral() ahead of it means
+      # only actual Gradle plugins ever touch the portal.
+      # Patched after prebuild because prebuild regenerates settings.gradle.
+      - name: Resolve plugin deps via Maven Central (avoids plugins.gradle.org 429)
+        run: |
+          sed -i '0,/pluginManagement {/s//pluginManagement {
+  repositories {
+    google()
+    mavenCentral()
+    gradlePluginPortal()
+  }/' android/settings.gradle
+          head -8 android/settings.gradle
+
       - name: Build Release APK (always bundles JS + Hermes-compiles, no Metro needed)
         run: |
           cd android
