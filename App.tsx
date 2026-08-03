@@ -5996,6 +5996,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* The customer's own words for the last 100 metres. A pin gets
                     you to the street; this gets you to the door, which is where
                     Indian addresses actually live. */}
+                {/* Structured delivery address. For a parcel the agent has
+                    nobody on board to ask, so these three lines are what stand
+                    between a delivery and a paid return trip. Rendered as
+                    separate lines, not one blob, so they can be read at a
+                    glance while riding. */}
+                {(!!activeRide.drop_building || !!activeRide.drop_floor || !!activeRide.drop_landmark) && (
+                  <View style={{ backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 10, padding: 9, marginTop: 6, borderLeftWidth: 3, borderLeftColor: '#FDE68A' }}>
+                    {!!activeRide.drop_building && (
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '900' }} numberOfLines={2}>
+                        🏠 {activeRide.drop_building}
+                      </Text>
+                    )}
+                    {!!activeRide.drop_floor && (
+                      <Text style={{ color: '#E2E8F0', fontSize: 12, fontWeight: '700', marginTop: 2 }} numberOfLines={1}>
+                        🔢 {activeRide.drop_floor}
+                      </Text>
+                    )}
+                    {!!activeRide.drop_landmark && (
+                      <Text style={{ color: '#CBD5E1', fontSize: 12, fontWeight: '600', marginTop: 2 }} numberOfLines={2}>
+                        📍 {activeRide.drop_landmark}
+                      </Text>
+                    )}
+                  </View>
+                )}
                 {!!activeRide.drop_note && (
                   <Text style={{ color: '#FDE68A', fontSize: 11.5, fontWeight: '700', marginTop: 4 }} numberOfLines={2}>
                     📝 {activeRide.drop_note}
