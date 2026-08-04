@@ -1931,15 +1931,34 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Auto-exit in-app nav mode when ride ends ──
   useEffect(() => { if (!activeRide) setInNavMode(false); }, [activeRide]);
 
-  // Keep screen awake while navigating (never let it sleep mid-route).
+  // Keep the screen awake while the driver is actually driving a route.
+  //
+  // This used to key off inNavMode alone — the full-screen nav overlay — so
+  // the moment a driver backed out to glance at the ride card, read the
+  // address or take a call, the phone was free to sleep again mid-route. It
+  // now also covers the two states where they're driving somewhere with or
+  // without the overlay open: 'matched' (heading to pickup) and 'started'
+  // (heading to drop).
+  //
+  // 'arrived' is deliberately NOT included — that's standing still waiting
+  // for the passenger, where letting the screen sleep saves battery.
+  const keepScreenOn = inNavMode
+    || activeRide?.status === 'matched'
+    || activeRide?.status === 'started';
   useEffect(() => {
-    if (!KeepAwake) return;
+    // KeepAwake is null on any build that predates expo-keep-awake being
+    // bundled — the require() at the top of this file is guarded, so this
+    // simply no-ops there rather than crashing.
+    if (!KeepAwake || !keepScreenOn) return;
     try {
-      if (inNavMode) (KeepAwake.activateKeepAwakeAsync || KeepAwake.activateKeepAwake)?.('sppero-nav');
-      else (KeepAwake.deactivateKeepAwake)?.('sppero-nav');
+      // activateKeepAwakeAsync returns a promise, and a bare try/catch does
+      // not catch a rejected one — attach a catch so it can't surface as an
+      // unhandled rejection.
+      const r = (KeepAwake.activateKeepAwakeAsync || KeepAwake.activateKeepAwake)?.('sppero-nav');
+      if (r && typeof r.catch === 'function') r.catch(() => {});
     } catch (_e) {}
     return () => { try { KeepAwake.deactivateKeepAwake?.('sppero-nav'); } catch (_e) {} };
-  }, [inNavMode]);
+  }, [keepScreenOn]);
 
   // ── Live location posting to backend during active ride (every 4s) ──
   useEffect(() => {
