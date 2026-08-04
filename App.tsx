@@ -461,6 +461,24 @@ const SkeletonBonusCard = () => (
   </View>
 );
 
+// ─── Vehicle labels ──────────────────────────────────────────────────────────
+// Single source of truth for how a vehicle_type is shown to the driver.
+// `car`/`car_7` are the 5- and 7-seater subcategories; seat counts are stated
+// as "passengers + you" because the driver's own seat is not sellable.
+// Module level so the background task can use it too.
+const VEHICLE_EMOJI_MAP: Record<string, string> = {
+  bike: '🏍️', green_bike: '⚡', auto: '🛺', electric_auto: '🌿',
+  eriksha: '🛵', car: '🚕', car_7: '🚐', luxury: '🚙', ultra_luxury: '🚙',
+};
+const VEHICLE_LABEL_MAP: Record<string, string> = {
+  bike: 'Bike', green_bike: 'Green Bike', auto: 'Auto', electric_auto: 'Electric Auto',
+  eriksha: 'E-Riksha', car: 'Car — 5 Seater', car_7: 'Car — 7 Seater',
+  luxury: 'Ultra Luxury', ultra_luxury: 'Ultra Luxury',
+};
+const vehEmoji = (vt?: string) => VEHICLE_EMOJI_MAP[String(vt || '').toLowerCase()] || '🚖';
+const vehLabel = (vt?: string) =>
+  VEHICLE_LABEL_MAP[String(vt || '').toLowerCase()] || String(vt || '—').replace(/_/g, ' ');
+
 // ─── Background Location Task ────────────────────────────────────────────────
 // MUST be defined at module level, before any component mounts.
 // When app is minimized/screen locked, this task fires every ~5s and pings backend.
@@ -507,7 +525,7 @@ TaskManager.defineTask(DRIVER_LOCATION_TASK, async ({ data, error }: any) => {
     await AsyncStorage.setItem('_bgLastRideId', String(rd.ride.id));
     // Local notification — bypasses FCM entirely, guaranteed delivery from background task.
     // Category 'ride_request' shows Accept ✅ / Decline ✕ action buttons on lock screen.
-    const rideEmoji = rd.ride.ride_type === 'bike' ? '🏍️' : rd.ride.ride_type === 'car' ? '🚕' : '🛺';
+    const rideEmoji = vehEmoji(rd.ride.ride_type);
     const fareStr   = rd.ride.fare ? `₹${rd.ride.fare}` : '';
     const pickup    = (rd.ride.pickup || 'Pickup').slice(0, 45);
     const drop      = (rd.ride.drop_location || 'Drop').slice(0, 45);
@@ -970,7 +988,7 @@ function App() {
     const v = (vt || '').toLowerCase();
     if (['bike','green_bike'].includes(v)) return 'bike';
     if (['auto','electric_auto','e_riksha','eriksha'].includes(v)) return 'auto';
-    if (['car','luxury','ultra_luxury'].includes(v)) return 'car';
+    if (['car','car_7','luxury','ultra_luxury'].includes(v)) return 'car';
     return 'bike';
   };
 
@@ -3691,7 +3709,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         {[
           { id:'bike',          mci:'motorbike',       ion:undefined,        label:'Bike',          sub:'',                                      color: null },
           { id:'auto',          mci:'rickshaw',         ion:undefined,        label:'Auto',          sub:'',                                      color: null },
-          { id:'car',           mci:undefined,          ion:'car-sport',      label:'Car / Taxi',    sub:'',                                      color: null },
+          { id:'car',           mci:undefined,          ion:'car-sport',      label:'Car — 5 Seater', sub:'4 passengers + you · Swift, Dzire, WagonR, i20', color: null },
+          { id:'car_7',         mci:'van-passenger',    ion:undefined,        label:'Car — 7 Seater', sub:'6 passengers + you · Ertiga, Innova, Marazzo, Carens', color: null },
           { id:'eriksha',       mci:undefined,          ion:'flash',          label:'E-Riksha',      sub:'',                                      color: null },
           { id:'green_bike',    mci:undefined,          ion:'leaf',           label:'Green Bike',    sub:'Electric Bike / Scooty — Eco Friendly', color: '#2e7d32' },
           { id:'electric_auto', mci:undefined,          ion:'flash-outline',  label:'Electric Auto', sub:'Electric 3-Wheeler — Zero Emission',    color: '#1565c0' },
@@ -3784,7 +3803,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // ═══ REGISTRATION STEP 4 — Vehicle ═══
   if (screen === 'login' && regStep === 4) {
-    const needBrand  = ['bike','car','luxury','green_bike'].includes(regData.vehicle_type);
+    const needBrand  = ['bike','car','car_7','luxury','green_bike'].includes(regData.vehicle_type);
     const needModel  = !['eriksha'].includes(regData.vehicle_type);
     const needNum    = !['eriksha'].includes(regData.vehicle_type);
     const brandValid = !needBrand || !!regData.vehicle_brand;
@@ -3803,7 +3822,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
     const modelPlaceholder: any = {
       bike:          'eg. Activa 6G, Splendor Plus, Pulsar 150, Royal Enfield Classic',
-      car:           'eg. Swift Dzire, Creta, Nexon, City, Fortuner',
+      car:           'eg. Swift Dzire, Creta, Nexon, City, i20',
+      car_7:         'eg. Ertiga, Innova Crysta, Marazzo, Carens, XL6',
       auto:          'eg. Bajaj RE, TVS King, Piaggio Ape',
       green_bike:    'eg. Ather 450X, Ola S1 Pro, TVS iQube, Bajaj Chetak, Hero Optima CX',
       electric_auto: 'eg. Bajaj RE Electric, Piaggio Ape E-City, Mahindra Treo, Champion Electric',
@@ -5644,7 +5664,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   : zone.heat === 'medium'
                   ? { bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.35)', dot: '#F59E0B', label: 'Medium', labelBg: '#F59E0B' }
                   : { bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.3)', dot: C.green, label: 'Low', labelBg: C.green };
-                const vehicleEmoji = zone.top_vehicle === 'bike' ? '🏍️' : zone.top_vehicle === 'auto' ? '🛺' : zone.top_vehicle === 'car' ? '🚕' : zone.top_vehicle === 'eriksha' ? '🛵' : '🚗';
+                const vehicleEmoji = vehEmoji(zone.top_vehicle);
                 const nearLabel = zone.dist_km < 0.5 ? 'Aapke paas' : `${zone.dist_km} km door`;
                 return (
                   <TouchableOpacity
@@ -6102,7 +6122,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   {rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE AAYI!'}
                 </Text>
                 <Text style={{ fontSize: 72, marginBottom: 4 }}>
-                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
+                  {vehEmoji(rideReq?.ride_type)}
                 </Text>
                 <Text style={{ color: '#1A1200', fontSize: 26, fontWeight: '900', letterSpacing: 0.5 }}>
                   {rideReq?.passenger_name || 'Passenger'}
@@ -6700,7 +6720,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   the screen. */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 }}>
                 <Text style={{ fontSize: 30 }}>
-                  {rideReq?.ride_type === 'car' ? '🚕' : rideReq?.ride_type === 'bike' ? '🏍️' : rideReq?.ride_type === 'eriksha' ? '🛵' : rideReq?.ride_type === 'green_bike' ? '⚡' : rideReq?.ride_type === 'electric_auto' ? '🌿' : '🛺'}
+                  {vehEmoji(rideReq?.ride_type)}
                 </Text>
                 <View>
                   {rideReq?.is_parcel && (
@@ -7753,7 +7773,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
             <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 12 }}>🚗 Vehicle Info</Text>
             {[
-              ['Type', (driverInfo?.vehicle_type || '—').replace('_', ' ').toUpperCase()],
+              ['Type', vehLabel(driverInfo?.vehicle_type).toUpperCase()],
               ['Vehicle No', driverInfo?.vehicle_no || '—'],
               ['Brand', driverInfo?.vehicle_brand || '—'],
               ['Model', driverInfo?.vehicle_model || '—'],
@@ -8651,13 +8671,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const VEHICLE_META: Record<string, { icon: string; label: string }> = {
         bike:          { icon: '🏍️', label: 'Bike' },
         auto:          { icon: '🛺',  label: 'Auto' },
-        car:           { icon: '🚕',  label: 'Car' },
+        car:           { icon: '🚕',  label: 'Car — 5 Seater' },
+        car_7:         { icon: '🚐',  label: 'Car — 7 Seater' },
         eriksha:       { icon: '🛵',  label: 'E-Riksha' },
         green_bike:    { icon: '⚡',  label: 'Green Bike' },
         electric_auto: { icon: '🌿',  label: 'Electric Auto' },
         luxury:        { icon: '🚙',  label: 'Ultra Luxury' },
       };
-      const VEHICLE_ORDER = ['bike', 'auto', 'car', 'eriksha', 'green_bike', 'electric_auto', 'luxury'];
+      const VEHICLE_ORDER = ['bike', 'auto', 'car', 'car_7', 'eriksha', 'green_bike', 'electric_auto', 'luxury'];
       const faresMap: Record<string, any> = {};
       for (const row of drFares) faresMap[row.vehicle_type] = row;
 
@@ -9191,7 +9212,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View key={h.id || i} style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 14, marginBottom: 8, elevation: 1, borderWidth: 1, borderColor: '#E2E8F0' }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <View>
-                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{h.vehicle_type} · {h.package_hours}h Package</Text>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{vehLabel(h.vehicle_type)} · {h.package_hours}h Package</Text>
                   <Text style={{ fontSize: 11, color: '#64748B', marginTop: 2 }}>{h.customer_phone} · {fmtDate(h.created_at)}</Text>
                 </View>
                 <View style={{ alignItems: 'flex-end' }}>
@@ -9614,7 +9635,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <View style={s.profileAvatar}><Text style={{ color: '#fff', fontSize: 36, fontWeight: 'bold' }}>{(driverInfo?.name || 'D')[0].toUpperCase()}</Text></View>
           <Text style={s.profileName}>{driverInfo?.name || phone}</Text>
           <Text style={s.profilePhone}>+91 {phone}</Text>
-          <Text style={s.profileVehicle}>{driverInfo?.vehicle_type || ''} · {driverInfo?.vehicle_no || ''}</Text>
+          <Text style={s.profileVehicle}>{vehLabel(driverInfo?.vehicle_type)} · {driverInfo?.vehicle_no || ''}</Text>
           <View style={s.badge}><Text style={{ color: '#F59E0B', fontWeight: 'bold' }}>⭐ {driverInfo?.rating || '4.8'}</Text></View>
         </View>
 
