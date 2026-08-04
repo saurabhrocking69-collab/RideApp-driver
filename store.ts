@@ -16,7 +16,6 @@ type DriverState = {
   activeBatch: any;
   pendingRide: any;
   suspended: boolean;
-  pendingCommission: number;
   hourlyBusy: boolean;
   _pollTimer: any;
   _lastRideId: string | null;
@@ -34,7 +33,6 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   activeBatch: null,
   pendingRide: null,
   suspended: false,
-  pendingCommission: 0,
   hourlyBusy: false,
   _pollTimer: null,
   _lastRideId: null,
@@ -107,7 +105,8 @@ export const useDriverStore = create<DriverState>((set, get) => ({
     set({ _pollTimer: timer, _pollFn: doPoll });
   },
 
-  // Socket.io calls this to trigger an immediate poll without waiting 4s
+  // Socket.io calls this to trigger an immediate poll without waiting for the
+  // next 6s tick
   triggerPoll: () => {
     const fn = get()._pollFn;
     if (fn) fn();
@@ -116,12 +115,12 @@ export const useDriverStore = create<DriverState>((set, get) => ({
   stopPolling: () => {
     const t = get()._pollTimer;
     if (t) clearInterval(t);
-    set({ _pollTimer: null, pendingRide: null, activeRide: null, activeBatch: null, _pollFn: null, pendingCommission: 0 });
+    set({ _pollTimer: null, pendingRide: null, activeRide: null, activeBatch: null, _pollFn: null });
   },
 
   clearAll: () => {
     get().stopPolling();
-    set({ activeRide: null, activeBatch: null, pendingRide: null, suspended: false, pendingCommission: 0, hourlyBusy: false, _lastRideId: null, _pollFn: null });
+    set({ activeRide: null, activeBatch: null, pendingRide: null, suspended: false, hourlyBusy: false, _lastRideId: null, _pollFn: null });
   },
 
   setHourlyBusy: (busy: boolean) => set({ hourlyBusy: busy, ...(busy ? { pendingRide: null } : {}) }),

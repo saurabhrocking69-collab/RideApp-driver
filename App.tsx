@@ -46,13 +46,31 @@ const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 // whatever phone is typed into the request body — see
 // rideapp-backend/middleware/userAuth.js. Every driver-initiated ride call
 // needs to go through this instead of a bare apiPost/fetch, or it 401s.
+// One place to notice the backend rejecting our identity. Every driver ride
+// action goes through these two, and a driver can end up tokenless (logged in
+// before the token was ever stored, or the token expired and was cleared) — in
+// which case an empty Bearer goes out. Today the server doesn't check, so
+// nothing fires; the moment the held-back auth enforcement deploys, this is
+// the difference between a clear "log in again" and every button failing with
+// a generic error. Alerts stay English by house rule.
+let _authAlertShownAt = 0;
+function notifyAuthExpired() {
+  const now = Date.now();
+  if (now - _authAlertShownAt < 60000) return; // never stack on a burst of calls
+  _authAlertShownAt = now;
+  Alert.alert('Session expired', 'Please log out and log in again to continue.');
+}
 async function authRidePost(path: string, body: any) {
   const token = await AsyncStorage.getItem('driverToken').catch(() => null);
-  return apiAuthPost(path, body, token || '');
+  const res = await apiAuthPost(path, body, token || '');
+  if (res?._authExpired) notifyAuthExpired();
+  return res;
 }
 async function authRideGet(path: string) {
   const token = await AsyncStorage.getItem('driverToken').catch(() => null);
-  return apiAuthGet(path, token || '');
+  const res = await apiAuthGet(path, token || '');
+  if (res?._authExpired) notifyAuthExpired();
+  return res;
 }
 
 // Reads the `exp` claim out of a JWT without verifying it (verification is
@@ -1072,6 +1090,43 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [loginCanResend, setLoginCanResend] = useState(false);
   const loginOtpRefs = useRef<any[]>([]);
   const [driverInfo, setDriverInfo]       = useState<any>(null);
+
+  // ── Real commission, not a hardcoded guess ─────────────────────────────
+  // commission_rate is per-vehicle AND admin-editable (live today: bike 9%,
+  // auto 11%, car 12%, car_7/luxury 15%), and drops to zero on an active
+  // ride pack. The screens used to hardcode it: offer cards assumed 12% and
+  // the trip-complete screen assumed 15%, so the SAME ride quoted two
+  // different earnings — and a 15%-commission driver was shown MORE than
+  // they'd actually be paid. Everything now resolves off the live
+  // fare_settings row for the driver's own vehicle.
+  //
+  // Fallbacks are the WORST case (highest commission) on purpose: if the
+  // rates haven't loaded yet, under-promising is the only safe direction.
+  const commissionPct = (kind: 'standard' | 'hourly' | 'intercity' = 'standard') => {
+    if (driverSub?.active) return 0;
+    const vt  = String(driverInfo?.vehicle_type || '').toLowerCase();
+    const row = drFares.find((f: any) => String(f.vehicle_type).toLowerCase() === vt);
+    const raw = kind === 'hourly'    ? row?.hourly_commission_rate
+              : kind === 'intercity' ? row?.intercity_commission_rate
+              :                        row?.commission_rate;
+    const n = parseFloat(raw);
+    if (Number.isFinite(n) && n >= 0 && n < 100) return n;
+    return kind === 'intercity' ? 10 : kind === 'hourly' ? 12 : 15;
+  };
+  const netEarn = (fare: any, kind: 'standard' | 'hourly' | 'intercity' = 'standard') => {
+    const f = parseFloat(String(fare ?? 0)) || 0;
+    return Math.round(f * (1 - commissionPct(kind) / 100));
+  };
+  // Back out the commission from a server-computed earning: the server sends
+  // the authoritative `driver_earning` (fare x (1-c)), so the fee it already
+  // took is earning x c/(1-c). Returns 0 on an active ride pack, where c is 0.
+  const feeFromEarning = (earning: any, kind: 'standard' | 'hourly' | 'intercity' = 'standard') => {
+    const e = parseFloat(String(earning ?? 0)) || 0;
+    const c = commissionPct(kind) / 100;
+    if (c <= 0 || c >= 1) return 0;
+    return Math.round(e * c / (1 - c));
+  };
+
   const [favouriteCount, setFavouriteCount] = useState<number | null>(null);
   const [devOtp, setDevOtp]         = useState('');
   // Login banner animations
@@ -1093,6 +1148,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const [ordersPeriod, setOrdersPeriod]   = useState<'day'|'week'|'month'>('day');
   const [ordersDate, setOrdersDate]       = useState(() => new Date());
   const [ordersFilter, setOrdersFilter]   = useState<'all'|'completed'|'cancelled'>('all');
+
+  // Fare settings drive every "your earning" figure (see commissionPct), so
+  // they must be in hand BEFORE the first ride offer lands — not only when
+  // the driver happens to open the Fare Rates screen.
+  useEffect(() => {
+    fetch(`${API}/api/fare-settings`)
+      .then(r => r.json())
+      .then(d => { if (d.fares) setDrFares(d.fares); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (driverSubScreen === 'orders' && phone) loadOrders(ordersPeriod, ordersDate);
@@ -2569,8 +2634,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           setTimeout(() => setZoneAlertSentCount(null), 3000);
         });
         s.on('fareSettingsUpdated', () => {
-          // Refresh fare rates if user is currently viewing the fare-rates sub-screen
-          setDrFares([]);
+          // Replace in place — do NOT blank first. These rates now back every
+          // "your earning" figure, so an empty window would make commissionPct
+          // fall back to its worst-case default and visibly flicker the number.
           fetch(`${API}/api/fare-settings`)
             .then(r => r.json())
             .then(d => { if (d.fares) setDrFares(d.fares); })
@@ -3233,7 +3299,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) {
         if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
-        setTripSummary({ fare: activeHourlyRide.base_fare, payment_method: 'wallet', earned: '₹' + data.driver_earning, fee: '₹' + Math.round(data.driver_earning * 0.12 / 0.88), isHourly: true, earlyEnd: true });
+        setTripSummary({ fare: activeHourlyRide.base_fare, payment_method: 'wallet', earned: '₹' + data.driver_earning, fee: '₹' + feeFromEarning(data.driver_earning, 'hourly'), isHourly: true, earlyEnd: true });
         setActiveHourlyRide(null); setHourlyTimerSec(0);
         setRides(r => r + 1); setEarnings(e => e + parseFloat(data.driver_earning));
       }
@@ -4523,7 +4589,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         <CountUp value={paymentFare} prefix="₹" style={{ ...T.earnings, color: '#FFFFFF', letterSpacing: -2.5, lineHeight: 56 }} />
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.full, paddingHorizontal: 18, paddingVertical: 8, borderWidth: 1, borderColor: 'rgba(0,200,83,0.3)' }}>
-          <Text style={{ fontSize: 13, color: C.online, fontWeight: '900' }}>Est. Net Kamai: ₹{(parseFloat(paymentFare) * 0.85).toFixed(0)}+</Text>
+          <Text style={{ fontSize: 13, color: C.online, fontWeight: '900' }}>Est. Net Kamai: ₹{netEarn(paymentFare)}+</Text>
           <Text style={{ fontSize: 11, color: 'rgba(0,200,83,0.55)' }}>· exact amount after payment confirms</Text>
         </View>
       </View>
@@ -6166,10 +6232,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {/* Big fare card */}
                 <View style={{ backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 14, alignItems: 'center', elevation: 4, shadowColor: '#22C55E', shadowOpacity: 0.18, shadowRadius: 10 }}>
                   <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 4, fontWeight: '700', letterSpacing: 1.5 }}>AAPKI KAMAI</Text>
-                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * 0.88)}</Text>
+                  <Text style={{ color: '#22C55E', fontSize: 54, fontWeight: '900', lineHeight: 60 }}>₹{netEarn(rideReq?.fare, rideReq?.is_intercity ? 'intercity' : 'standard')}</Text>
                   {driverSub?.active
                     ? <Text style={{ color: '#22C55E', fontSize: 12, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
-                    : <Text style={{ color: '#64748B', fontSize: 12 }}>Total: ₹{rideReq?.fare} · 12% commission</Text>}
+                    : <Text style={{ color: '#64748B', fontSize: 12 }}>Total: ₹{rideReq?.fare} · {commissionPct(rideReq?.is_intercity ? 'intercity' : 'standard')}% commission</Text>}
                 </View>
 
                 {/* Distance badges */}
@@ -6262,7 +6328,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
                 )}
                 <View style={{ backgroundColor: 'rgba(16,185,129,0.1)', borderRadius: 8, padding: 8, marginTop: 6, marginBottom: 4, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '600' }}>{tp('your_earning_colon', { amt: String(driverSub?.active ? Math.round(parseFloat(hourlyRideReq.base_fare || 0)) : Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)), suffix: driverSub?.active ? t('subscribed_zero_comm') : t('commission_12_wallet') })}</Text>
+                  <Text style={{ color: C.green, fontSize: 11, fontWeight: '600' }}>{tp('your_earning_colon', { amt: String(netEarn(hourlyRideReq.base_fare, 'hourly')), suffix: driverSub?.active ? t('subscribed_zero_comm') : tp('commission_pct_wallet', { pct: String(commissionPct('hourly')) }) })}</Text>
                 </View>
                 {!hourlyRideReq.scheduled_at && <CountdownBar seconds={25} onTimeout={() => setHourlyRideReq(null)} />}
                 <View style={[s.rideActions, { marginTop: 12 }]}>
@@ -6374,7 +6440,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   </View>
 
                   <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 8, padding: 8, marginBottom: 10, borderWidth: 1, borderColor: 'rgba(16,185,129,0.25)' }}>
-                    <Text style={{ color: C.green, fontSize: 12 }}>{tp('guaranteed_min_full', { min: String(Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.70 * 0.88).toFixed(0)), full: String(Math.round(parseFloat(activeHourlyRide.base_fare || 0) * 0.88).toFixed(0)) })}</Text>
+                    <Text style={{ color: C.green, fontSize: 12 }}>{tp('guaranteed_min_full', { min: String(Math.round(netEarn(activeHourlyRide.base_fare, 'hourly') * 0.70)), full: String(netEarn(activeHourlyRide.base_fare, 'hourly')) })}</Text>
                   </View>
 
                   {/* Return trip navigation — driver navigates back to original pickup */}
@@ -6741,7 +6807,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               {/* Big earn number — the hero moment */}
               <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: R.lg, paddingHorizontal: SP.lg, paddingVertical: 10, marginTop: 10, borderWidth: 1.5, borderColor: 'rgba(0,200,83,0.30)', alignItems: 'center' }}>
                 <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '800', letterSpacing: 1.8, marginBottom: 2 }}>AAPKI KAMAI</Text>
-                <Text style={{ color: C.online, fontSize: 42, fontWeight: '900', lineHeight: 48, letterSpacing: -1.2 }}>₹{driverSub?.active ? Math.round(rideReq?.fare || 0) : Math.round((rideReq?.fare || 0) * (rideReq?.is_intercity ? 0.90 : 0.88))}</Text>
+                <Text style={{ color: C.online, fontSize: 42, fontWeight: '900', lineHeight: 48, letterSpacing: -1.2 }}>₹{netEarn(rideReq?.fare, rideReq?.is_intercity ? 'intercity' : 'standard')}</Text>
                 {driverSub?.active
                   ? <Text style={{ color: '#86EFAC', fontSize: 11, marginTop: 2, fontWeight: '700' }}>✅ Subscribed · ₹0 Commission</Text>
                   : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, marginTop: 2 }}>Total: ₹{rideReq?.fare} · {rideReq?.is_intercity ? '10%' : '12%'} commission</Text>}
@@ -6920,7 +6986,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 4 }}>
                 <View style={{ backgroundColor: 'rgba(0,200,83,0.12)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(0,200,83,0.3)', alignItems: 'center', flex: 1 }}>
                   <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>{t('your_earning_label')}</Text>
-                  <Text style={{ color: C.online, fontSize: 28, fontWeight: '900', lineHeight: 34 }}>₹{driverSub?.active ? Math.round(parseFloat(hourlyRideReq.base_fare || 0)) : Math.round(parseFloat(hourlyRideReq.base_fare || 0) * 0.88)}</Text>
+                  <Text style={{ color: C.online, fontSize: 28, fontWeight: '900', lineHeight: 34 }}>₹{netEarn(hourlyRideReq.base_fare, 'hourly')}</Text>
                   {driverSub?.active
                     ? <Text style={{ color: '#86EFAC', fontSize: 9, fontWeight: '700' }}>✅ ₹0 Commission</Text>
                     : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>{t('commission_deducted_label')}</Text>}
