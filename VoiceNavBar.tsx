@@ -21,9 +21,13 @@ interface Props {
   onMute:      () => void;
   muted:       boolean;
   visible:     boolean;
+  // True while the driver is off the route and a new one is being fetched.
+  // Without this the bar kept confidently showing the old turn for a road the
+  // driver had already left, with nothing to say it was out of date.
+  rerouting?:  boolean;
 }
 
-export function VoiceNavBar({ instruction, maneuver, nextDistM, phase, onMute, muted, visible }: Props) {
+export function VoiceNavBar({ instruction, maneuver, nextDistM, phase, onMute, muted, visible, rerouting }: Props) {
   const slideAnim = useRef(new Animated.Value(-160)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
@@ -62,8 +66,25 @@ export function VoiceNavBar({ instruction, maneuver, nextDistM, phase, onMute, m
         shadowColor: '#000', shadowOpacity: 0.55, shadowRadius: 20,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.08)',
       }}>
-        {/* Phase colour bar — top edge */}
-        <View style={{ height: 4, backgroundColor: isPickup ? C.green : NAV_BLUE }} />
+        {/* Phase colour bar — turns amber while the route on screen is stale */}
+        <View style={{ height: 4, backgroundColor: rerouting ? '#F59E0B' : isPickup ? C.green : NAV_BLUE }} />
+
+        {/* Off-route banner. The distance and turn below are from the OLD
+            route until the new one lands, so say so rather than let the
+            driver keep trusting them. */}
+        {rerouting && (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: 8,
+            paddingHorizontal: 14, paddingVertical: 8,
+            backgroundColor: 'rgba(245,158,11,0.16)',
+            borderBottomWidth: 1, borderBottomColor: 'rgba(245,158,11,0.32)',
+          }}>
+            <MaterialIcons name="alt-route" size={16} color="#F59E0B" />
+            <Text style={{ color: '#F59E0B', fontSize: 12.5, fontWeight: '800', flex: 1 }} numberOfLines={1}>
+              Route se hat gaye — naya raasta bana rahe hain…
+            </Text>
+          </View>
+        )}
 
         <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 14, gap: 14 }}>
 

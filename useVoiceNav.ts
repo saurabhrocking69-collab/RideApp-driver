@@ -17,12 +17,28 @@ type NavStep = {
 // this has to be forgiving enough to trigger while still inside the junction.
 const ARRIVE_STEP_M = 30;
 
-// While on-route the distance to the current step's end only shrinks. If it
-// grows by more than this, the driver has left the route (missed the turn,
-// took a different road) and every remaining instruction is now wrong — so
-// re-route from where they actually are. Generous enough not to trip on GPS
-// jitter, which is metres, not hundreds of them.
-const OFF_ROUTE_M = 150;
+// How far off the actual route line counts as "left the route".
+//
+// This used to be measured as "distance to the current step's END point grew
+// by 150m from its minimum", which was wrong in both directions:
+//   - MISSED real deviations — turn off onto a parallel road that still heads
+//     toward the same junction and the distance keeps shrinking, so the driver
+//     was never flagged and kept getting turns for a road they had left.
+//   - FALSE positives — a legitimately curved step (flyover, loop, service
+//     road) moves you away from its end point while perfectly on-route.
+// Measuring perpendicular distance to the route polyline is what actually
+// answers "am I still on this road".
+const OFF_ROUTE_M = 60;
+
+// Consecutive off-route fixes before rerouting. Urban GPS routinely throws a
+// single fix 50-100m out (tall buildings, tunnels); one bad sample must not
+// tear up a correct route.
+const OFF_ROUTE_STRIKES = 3;
+
+// How long to wait before retrying a failed reroute fetch. A reroute that
+// fails used to be swallowed silently, leaving the driver navigating a stale
+// route for the rest of the trip with no indication anything was wrong.
+const REROUTE_RETRY_MS = 5000;
 
 // Haversine distance in metres
 function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -31,6 +47,47 @@ function distM(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const dLng = ((lng2 - lng1) * Math.PI) / 180;
   const a = Math.sin(dLat / 2) ** 2 + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Google's encoded-polyline format → [lat, lng] pairs.
+function decodePolyline(enc: string): Array<[number, number]> {
+  const pts: Array<[number, number]> = [];
+  let i = 0, lat = 0, lng = 0;
+  while (i < enc.length) {
+    let b = 0, shift = 0, result = 0;
+    do { b = enc.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+    shift = 0; result = 0;
+    do { b = enc.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+    lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  return pts;
+}
+
+// Metres from a point to the NEAREST SEGMENT of the route — not to the nearest
+// vertex, which would read as "off route" halfway along any long straight.
+// Uses a local equirectangular projection: exact enough well under a kilometre
+// (all that matters here) and far cheaper than haversine per segment.
+function distToRouteM(lat: number, lng: number, pts: Array<[number, number]>): number {
+  if (pts.length === 0) return Infinity;
+  if (pts.length === 1) return distM(lat, lng, pts[0][0], pts[0][1]);
+  const mPerDegLat = 111320;
+  const mPerDegLng = 111320 * Math.cos((lat * Math.PI) / 180);
+  const px = lng * mPerDegLng, py = lat * mPerDegLat;
+  let best = Infinity;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const ax = pts[i][1] * mPerDegLng,     ay = pts[i][0] * mPerDegLat;
+    const bx = pts[i + 1][1] * mPerDegLng, by = pts[i + 1][0] * mPerDegLat;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    let t = len2 === 0 ? 0 : ((px - ax) * dx + (py - ay) * dy) / len2;
+    t = t < 0 ? 0 : t > 1 ? 1 : t;
+    const cx = ax + t * dx, cy = ay + t * dy;
+    const d = Math.sqrt((px - cx) ** 2 + (py - cy) ** 2);
+    if (d < best) best = d;
+  }
+  return best;
 }
 
 // Strip HTML tags + convert common abbreviations to speakable text
@@ -73,8 +130,14 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
   const isSpeaking       = useRef(false);
   // Bumped to force a re-route; see OFF_ROUTE_M.
   const [routeSeq, setRouteSeq] = useState(0);
-  // Closest the driver has been to the current step's end, to detect moving away.
-  const minDistRef       = useRef(Infinity);
+  // Decoded route line, for "am I still on this road" (see distToRouteM).
+  const [routePts, setRoutePts] = useState<Array<[number, number]>>([]);
+  // True from the moment we notice the driver has left the route until a new
+  // route actually arrives — surfaced to the UI so the driver is told, instead
+  // of silently staring at an instruction for a road they're no longer on.
+  const [rerouting, setRerouting] = useState(false);
+  // Consecutive fixes measured off the route line.
+  const offStrikesRef    = useRef(0);
 
   // A newer instruction always matters more than one still being spoken —
   // "turn right now" must not be swallowed because "in 500 metres…" is still
@@ -105,15 +168,27 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
   useEffect(() => {
     if (!active || driverLat == null || driverLng == null || destLat == null || destLng == null) {
       setSteps([]); setCurrentIdx(0); announced.current.clear();
+      setRoutePts([]); setRerouting(false); offStrikesRef.current = 0;
       return;
     }
     let cancelled = false;
+    let retryTimer: any = null;
     const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${driverLat},${driverLng}&destination=${destLat},${destLng}&mode=driving&key=${MAPS_KEY}`;
     fetch(url)
       .then(r => r.json())
       .then(data => {
         if (cancelled) return;
         const rawSteps = data.routes?.[0]?.legs?.[0]?.steps ?? [];
+        if (rawSteps.length === 0) throw new Error('no route');
+        // Prefer the per-step geometry (finer than overview_polyline, which is
+        // simplified and can cut corners enough to read as 30-40m off-route).
+        const pts: Array<[number, number]> = [];
+        for (const s of rawSteps) {
+          if (s.polyline?.points) pts.push(...decodePolyline(s.polyline.points));
+        }
+        setRoutePts(pts.length ? pts : decodePolyline(data.routes[0].overview_polyline?.points || ''));
+        setRerouting(false);
+        offStrikesRef.current = 0;
         const parsed: NavStep[] = rawSteps.map((s: any, idx: number) => ({
           html: s.html_instructions,
           text: htmlToSpeak(s.html_instructions),
@@ -132,8 +207,18 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
           announced.current.add('0:far');
         }
       })
-      .catch(() => {});
-    return () => { cancelled = true; };
+      .catch(() => {
+        // A failed reroute used to be swallowed here, which left the driver on
+        // a stale route permanently: routeSeq had already been bumped, so
+        // nothing tried again until they drifted far enough to trip the
+        // detector a second time. Retry until it lands, and keep the
+        // "rerouting" banner up so they know the route on screen is not live.
+        if (cancelled) return;
+        retryTimer = setTimeout(() => {
+          if (!cancelled) setRouteSeq(v => v + 1);
+        }, REROUTE_RETRY_MS);
+      });
+    return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
   }, [active, destLat, destLng, phase, routeSeq]);
 
   // Advance through steps + announce as the driver approaches each turn.
@@ -156,20 +241,29 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
       idx++;
     }
     const dist = distM(driverLat, driverLng, steps[idx].endLat, steps[idx].endLng);
-    if (idx !== currentIdx) { setCurrentIdx(idx); minDistRef.current = Infinity; }
+    if (idx !== currentIdx) setCurrentIdx(idx);
     if (!isNaN(dist)) setNextDistM(dist);
 
-    // Off-route detection. Without this the route was fetched exactly once and
-    // never again — the fetch effect deliberately leaves driverLat/Lng out of
-    // its deps to avoid refetching on every GPS tick — so a driver who missed a
-    // turn kept being told about turns from a road they were no longer on, for
-    // the rest of the trip.
-    if (!isNaN(dist)) {
-      if (dist < minDistRef.current) {
-        minDistRef.current = dist;
-      } else if (dist > minDistRef.current + OFF_ROUTE_M) {
-        minDistRef.current = Infinity;
-        setRouteSeq(v => v + 1);   // refetch directions from the current position
+    // Off-route detection, measured against the route LINE (see OFF_ROUTE_M).
+    // Without this the route was fetched exactly once and never again — the
+    // fetch effect deliberately leaves driverLat/Lng out of its deps to avoid
+    // refetching on every GPS tick — so a driver who missed a turn kept being
+    // told about turns from a road they were no longer on, for the whole trip.
+    if (routePts.length > 1 && !rerouting) {
+      const off = distToRouteM(driverLat, driverLng, routePts);
+      if (off > OFF_ROUTE_M) {
+        offStrikesRef.current += 1;
+        if (offStrikesRef.current >= OFF_ROUTE_STRIKES) {
+          offStrikesRef.current = 0;
+          setRerouting(true);
+          // Say it as well as show it — the driver is watching the road, not
+          // the screen, and this is the one moment they need to know the
+          // instruction they can hear is about to change.
+          speak('Aap route se hat gaye hain. Naya raasta bana rahe hain.');
+          setRouteSeq(v => v + 1);  // refetch directions from where they are
+        }
+      } else {
+        offStrikesRef.current = 0;   // back on the line — forget the near-misses
       }
     }
 
@@ -188,13 +282,17 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
       speak(tier === 'near' ? `Abhi ${steps[i].text}` : `${distLabel(d)} mein ${steps[i].text}`);
     };
 
+    // While rerouting, the on-screen route is known-stale — don't read out
+    // turns from it. The new route announces itself the moment it lands.
+    if (rerouting) return;
+
     announce(idx, 'far', 250);
     announce(idx, 'near', 90);
     if (dist < 90) announce(idx + 1, 'far', 600);  // prime the following turn
-  }, [driverLat, driverLng, steps, active, currentIdx]);
+  }, [driverLat, driverLng, steps, active, currentIdx, routePts, rerouting]);
 
   const currentInstruction = steps[currentIdx]?.text ?? '';
   const currentManeuver    = steps[currentIdx]?.maneuver ?? '';
 
-  return { currentInstruction, currentManeuver, nextDistM, stepCount: steps.length, currentStep: currentIdx };
+  return { currentInstruction, currentManeuver, nextDistM, stepCount: steps.length, currentStep: currentIdx, rerouting };
 }

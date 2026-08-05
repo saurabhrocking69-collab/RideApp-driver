@@ -1918,7 +1918,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const navActive = !!activeRide && (activeRide.status === 'matched' || activeRide.status === 'started');
   const navDestLat = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lat) || null : parseFloat(activeRide?.drop_lat) || null;
   const navDestLng = navPhase === 'to_pickup' ? parseFloat(activeRide?.pickup_lng) || null : parseFloat(activeRide?.drop_lng) || null;
-  const { currentInstruction: navInstruction, currentManeuver: navManeuver, nextDistM: navDist } = useVoiceNav({
+  const { currentInstruction: navInstruction, currentManeuver: navManeuver, nextDistM: navDist, rerouting: navRerouting } = useVoiceNav({
     driverLat: driverGps?.lat ?? null,
     driverLng: driverGps?.lng ?? null,
     destLat: navActive ? navDestLat : null,
@@ -5138,6 +5138,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             nextDistM={navDist}
             phase={navPhase}
             muted={navMuted}
+            rerouting={navRerouting}
             onMute={() => setNavMuted(p => !p)}
             visible={true}
           />
@@ -5321,6 +5322,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             nextDistM={navDist}
             phase={navPhase}
             muted={navMuted}
+            rerouting={navRerouting}
             onMute={() => setNavMuted(p => !p)}
             visible={navActive}
           />
