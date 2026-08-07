@@ -15,6 +15,7 @@ import { useVoiceNav } from './useVoiceNav';
 import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
 import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
+import { DeleteAccountSheet } from './DeleteAccountSheet';
 import { Audio } from 'expo-av';
 import { apiGet, apiPost, apiAuthPost, apiAuthGet } from './api';
 // Keep the screen on during navigation. Guarded so the app never crashes if the
@@ -881,6 +882,7 @@ function App() {
   const [cancelReason, setCancelReason]         = useState('');
   const [earlyFlagModal, setEarlyFlagModal] = useState<{ dist: string } | null>(null);
   const [distWarnModal, setDistWarnModal]   = useState<{ dist: string } | null>(null);
+  const [showDeleteAccount, setShowDeleteAccount] = useState(false);
   const distWarnResolveRef = useRef<((v: boolean) => void) | null>(null);
   const [driverTickets, setDriverTickets]                         = useState<any[]>([]);
   const [driverTicketsLoading, setDriverTicketsLoading]           = useState(false);
@@ -5329,6 +5331,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
       )}
       {/* Zone Alert received banner */}
+      <DeleteAccountSheet
+        visible={showDeleteAccount}
+        onClose={() => setShowDeleteAccount(false)}
+        phone={phone}
+        role="driver"
+      />
       <ZoneAlertBanner
         alert={zoneAlert}
         onDismiss={() => setZoneAlert(null)}
@@ -7987,6 +7995,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {[
             { icon: '🎫', label: t('ticket_new_label'), sub: t('ticket_new_sub'), color: C.pink, action: () => { setDriverTicketCategory(''); setDriverTicketDesc(''); setDriverTicketSuccess(null); setDrSubScreen('ticket-new'); } },
             { icon: '📋', label: t('ticket_list_label'), sub: t('ticket_list_sub'), color: '#3B82F6', action: () => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); } },
+            // Play requires this to be reachable in-app, not only by email.
+            { icon: '🗑️', label: 'Delete Account', sub: 'Request deletion of your account and data', color: C.red, action: () => setShowDeleteAccount(true) },
             { icon: '💬', label: 'WhatsApp', sub: t('whatsapp_fast_sub'), color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
             { icon: '📞', label: 'Helpline Call', sub: '24x7 available', color: '#3B82F6', action: () => Linking.openURL('tel:9999999999') },
             { icon: '📧', label: 'Email Support', sub: 'Response in 24 hrs', color: C.pink, action: () => Linking.openURL('mailto:driver.support@sppero.com') },
@@ -9918,8 +9928,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           ['⚙️', 'Settings', 'Preferences', 'settings'],
           ['🔒', 'Privacy Policy', 'How we handle your data', 'privacy-policy'],
           ['📄', 'Terms & Conditions', 'Platform terms of use', 'terms-of-service'],
+          // Google Play requires account deletion to be startable inside the app.
+          ['🗑️', 'Delete Account', 'Request deletion of your account and data', 'delete-account'],
         ] as [string,string,string,string][]).map(([icon,title,sub,key]) => (
           <Bouncy key={key} style={s.menuItem} onPress={() => {
+            if (key === 'delete-account') { setShowDeleteAccount(true); return; }
             if (key === 'privacy-policy') { Linking.openURL('https://api.sppero.com/privacy'); return; }
             if (key === 'terms-of-service') { Linking.openURL('https://api.sppero.com/terms'); return; }
             if (key === 'orders') { setOrdersData(null); setOrdersLoading(false); setOrdersPeriod('day'); setOrdersDate(new Date()); setOrdersFilter('all'); }
