@@ -74,6 +74,20 @@ async function authRideGet(path: string) {
   return res;
 }
 
+/* A drop-in for fetch() that attaches the driver's token.
+   The hourly endpoints were all called with raw fetch and inline options, so
+   they sent no credentials at all. Keeping fetch's exact signature means each
+   of those call sites becomes a one-word change and every `.then(r => r.json())`
+   downstream keeps working — a rewrite of fourteen call sites would have been
+   the riskier way to close the same hole. */
+async function authFetch(url: string, opts: any = {}) {
+  const token = await AsyncStorage.getItem('driverToken').catch(() => null);
+  return fetch(url, {
+    ...opts,
+    headers: { ...(opts.headers || {}), Authorization: `Bearer ${token || ''}` },
+  });
+}
+
 // Reads the `exp` claim out of a JWT without verifying it (verification is
 // the server's job) — just enough to know whether it's expired or getting
 // close, for the silent-refresh check below.
@@ -1016,7 +1030,7 @@ function App() {
     try {
       const cat = vehicleType ? vehicleCategoryFor(vehicleType) : null;
       const [myRes, plansRes] = await Promise.all([
-        fetch(`${API}/api/subscriptions/my?phone=${encodeURIComponent(ph)}`).then(r => r.json()),
+        authFetch(`${API}/api/subscriptions/my?phone=${encodeURIComponent(ph)}`).then(r => r.json()),
         cat ? fetch(`${API}/api/subscriptions/plans?vehicle_category=${cat}`).then(r => r.json()) : Promise.resolve({ plans: [] }),
       ]);
       setDriverSub(myRes);
@@ -1690,11 +1704,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const loadBonusDash = async (ph: string) => {
     setBonusLoading(true);
-    try { const r = await fetch(`${API}/api/bonus/dashboard?phone=${ph}`); const d = await r.json(); setBonusDash(d); } catch (_e) {}
+    try { const r = await authFetch(`${API}/api/bonus/dashboard?phone=${ph}`); const d = await r.json(); setBonusDash(d); } catch (_e) {}
     setBonusLoading(false);
   };
   const loadBonusHistory = async (ph: string) => {
-    try { const r = await fetch(`${API}/api/bonus/history?phone=${ph}`); const d = await r.json(); setBonusHistory(d.history || []); setBonusHistoryLoaded(true); } catch (_e) {}
+    try { const r = await authFetch(`${API}/api/bonus/history?phone=${ph}`); const d = await r.json(); setBonusHistory(d.history || []); setBonusHistoryLoaded(true); } catch (_e) {}
   };
   const loadOrders = async (period: 'day'|'week'|'month', date: Date) => {
     if (!phone) return;
@@ -1769,7 +1783,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const claimDailyBonus = async (rule_id: number, tier_index: number) => {
     setBonusClaiming(true); setBonusMsg('');
     try {
-      const res = await fetch(`${API}/api/bonus/claim-daily`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, rule_id, tier_index }) });
+      const res = await authFetch(`${API}/api/bonus/claim-daily`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, rule_id, tier_index }) });
       const d = await res.json();
       setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
       if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
@@ -1779,7 +1793,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const claimStreakBonus = async () => {
     setBonusClaiming(true); setBonusMsg('');
     try {
-      const res = await fetch(`${API}/api/bonus/claim-streak`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+      const res = await authFetch(`${API}/api/bonus/claim-streak`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
       const d = await res.json();
       setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
       if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
@@ -1791,7 +1805,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (isNaN(amt) || amt < 50) { setBonusMsg('❌ Minimum ₹50 required to redeem'); return; }
     setBonusRedeemLoading(true); setBonusMsg('');
     try {
-      const res = await fetch(`${API}/api/bonus/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
+      const res = await authFetch(`${API}/api/bonus/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
       setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
       if (d.success) { setBonusRedeemAmt(''); loadBonusDash(phone); loadDriverWallet(phone); }
@@ -2118,7 +2132,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (stopped || busy) return;
       busy = true;
       try {
-        const active = await fetch(`${API}/api/hourly/driver-active?phone=${phone}`).then(r => r.json());
+        const active = await authFetch(`${API}/api/hourly/driver-active?phone=${phone}`).then(r => r.json());
         if (active.booking && !['completed','cancelled'].includes(active.booking.status)) {
           setActiveHourlyRide(active.booking);
           setHourlyRideReq(null);
@@ -2126,7 +2140,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }
         setActiveHourlyRide(null);
         if (!activeRide) {
-          const pending = await fetch(`${API}/api/hourly/driver-pending?phone=${phone}`).then(r => r.json());
+          const pending = await authFetch(`${API}/api/hourly/driver-pending?phone=${phone}`).then(r => r.json());
           if (pending.booking) setHourlyRideReq(pending.booking);
           else setHourlyRideReq(null);
         }
@@ -3243,7 +3257,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!hourlyRideReq) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: hourlyRideReq.id, driver_phone: phone }) });
+      const res = await authFetch(`${API}/api/hourly/accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: hourlyRideReq.id, driver_phone: phone }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide({ ...hourlyRideReq, driver_phone: phone, status: 'matched' }); setHourlyRideReq(null); }
       else { setResult('❌ ' + (data.message || 'Accept failed')); setHourlyRideReq(null); }
@@ -3255,7 +3269,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput, driver_phone: phone }) });
+      const res = await authFetch(`${API}/api/hourly/start`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, otp: hourlyOtpInput, driver_phone: phone }) });
       const data = await res.json();
       if (data.success) { setActiveHourlyRide((p: any) => ({ ...p, status: 'active', started_at: new Date().toISOString() })); setHourlyOtpInput(''); setResult(''); }
       else setResult('❌ ' + (data.message || 'Incorrect OTP!'));
@@ -3267,7 +3281,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide) return;
     setLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, actual_km: Math.round(liveKm * 10) / 10 }) });
+      const res = await authFetch(`${API}/api/hourly/complete`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, actual_km: Math.round(liveKm * 10) / 10 }) });
       const data = await res.json();
       if (data.success) {
         if (data.pending_confirm) {
@@ -3290,7 +3304,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide) return;
     setHEarlyEndLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/early-end-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, requested_by: 'driver' }) });
+      const res = await authFetch(`${API}/api/hourly/early-end-request`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, requested_by: 'driver' }) });
       const data = await res.json();
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: 'driver' }));
@@ -3305,7 +3319,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide) return;
     setHEarlyEndLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/early-end-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const res = await authFetch(`${API}/api/hourly/early-end-confirm`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       const data = await res.json();
       if (data.success) {
         if (hourlyTimerRef.current) clearInterval(hourlyTimerRef.current);
@@ -3320,7 +3334,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const rejectHourlyEarlyEnd = async () => {
     if (!activeHourlyRide) return;
     try {
-      const res = await fetch(`${API}/api/hourly/early-end-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const res = await authFetch(`${API}/api/hourly/early-end-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       const data = await res.json();
       setActiveHourlyRide((p: any) => ({ ...p, early_end_requested_by: null, early_end_reject_count: data.reject_count || (p.early_end_reject_count||0)+1, early_end_last_rejected_at: new Date().toISOString() }));
     } catch (_e) {}
@@ -3330,7 +3344,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide || hExtendLoading) return;
     setHExtendLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/accept-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const res = await authFetch(`${API}/api/hourly/accept-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       const data = await res.json();
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, package_hours: data.new_hours, km_included: data.new_km, base_fare: data.new_fare, extend_requested_hours: null }));
@@ -3346,7 +3360,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeHourlyRide || hExtendLoading) return;
     setHExtendLoading(true);
     try {
-      const res = await fetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
+      const res = await authFetch(`${API}/api/hourly/reject-extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id }) });
       const data = await res.json();
       if (data.success) {
         setActiveHourlyRide((p: any) => ({ ...p, extend_requested_hours: null }));
@@ -6415,7 +6429,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         { text: 'No', style: 'cancel' },
                         { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
                           try {
-                            const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
+                            const r = await authFetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
                             const d = await r.json();
                             if (d.success) { setActiveHourlyRide(null); setResult('Ride cancelled.'); }
                             else Alert.alert('Error', d.error || 'Cancel failed');
@@ -7330,7 +7344,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     style={{ backgroundColor: C.green, borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginBottom: 12, elevation: 4, shadowColor: C.green, shadowOpacity: 0.35, shadowRadius: 10 }}
                     onPress={async () => {
                       try {
-                        await fetch(`${API}/api/hourly/arrived`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
+                        await authFetch(`${API}/api/hourly/arrived`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) });
                         setHourlyArrived(true);
                         setActiveHourlyRide((prev: any) => prev ? { ...prev, status: 'arrived' } : prev);
                       } catch (_e) { Alert.alert('Error', 'Network error'); }
@@ -7356,7 +7370,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   onPress={() => Alert.alert('Cancel Ride?', "Can't reach the pickup point?", [
                     { text: 'No', style: 'cancel' },
                     { text: 'Yes, Cancel', style: 'destructive', onPress: async () => {
-                      try { const r = await fetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) }); const d = await r.json(); if (d.success) { setActiveHourlyRide(null); setResult('Ride cancelled.'); } else Alert.alert('Error', d.error || 'Cancel failed'); } catch (_e) { Alert.alert('Error', 'Network error'); }
+                      try { const r = await authFetch(`${API}/api/hourly/driver-cancel`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ booking_id: activeHourlyRide.id, driver_phone: phone }) }); const d = await r.json(); if (d.success) { setActiveHourlyRide(null); setResult('Ride cancelled.'); } else Alert.alert('Error', d.error || 'Cancel failed'); } catch (_e) { Alert.alert('Error', 'Network error'); }
                     }},
                   ])}
                   style={{ borderWidth: 1.5, borderColor: C.pink, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 20, alignItems: 'center', marginBottom: 20 }}
@@ -8308,7 +8322,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setSubLoading(true); setSubResult('');
         try {
           const RazorpayCheckout = require('react-native-razorpay').default;
-          const orderRes = await fetch(`${API}/api/subscriptions/create-order`, {
+          const orderRes = await authFetch(`${API}/api/subscriptions/create-order`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, plan_id: subSelectedPlan.id }),
           }).then(r => r.json());
@@ -8329,7 +8343,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             RazorpayCheckout.open(rzpOptions).then(resolve).catch(reject);
           });
 
-          const verRes = await fetch(`${API}/api/subscriptions/verify`, {
+          const verRes = await authFetch(`${API}/api/subscriptions/verify`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               phone,
