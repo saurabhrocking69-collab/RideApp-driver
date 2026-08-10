@@ -518,13 +518,24 @@ const vehLabel = (vt?: string) =>
 const DRIVER_LOCATION_TASK = 'sppero-driver-bg-location';
 const _BG_API = 'https://api.sppero.com';
 
-// Fetch with timeout + 1 retry — handles Jio's packet-drop and slow-DNS issues
+// Fetch with timeout + 1 retry — handles Jio's packet-drop and slow-DNS issues.
+// The token goes on here rather than at each call site: this task runs with the
+// app minimised or the screen locked, and both endpoints it hits now require
+// auth. Because the loop below only returns a response when res.ok, a 401 would
+// come back as null — indistinguishable from "Jio is down" — and the driver
+// would silently stop sending location and stop getting lock-screen ride alerts,
+// with nothing on screen to explain it.
 async function _bgFetch(url: string, opts?: RequestInit, timeoutMs = 8000): Promise<Response | null> {
+  const token = await AsyncStorage.getItem('driverToken').catch(() => null);
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const ctrl = new AbortController();
       const tid = setTimeout(() => ctrl.abort(), timeoutMs);
-      const res = await fetch(url, { ...opts, signal: ctrl.signal });
+      const res = await fetch(url, {
+        ...opts,
+        headers: { ...(opts?.headers || {}), Authorization: `Bearer ${token || ''}` },
+        signal: ctrl.signal,
+      });
       clearTimeout(tid);
       if (res.ok) return res;
     } catch (_e) {
@@ -854,7 +865,7 @@ function App() {
   const loadHeldParcels = async (ph: string) => {
     if (!ph) return;
     try {
-      const d = await apiGet(`/api/parcel/held?phone=${encodeURIComponent(ph)}`, 0, 8000);
+      const d = await authRideGet(`/api/parcel/held?phone=${encodeURIComponent(ph)}`);
       if (!d?._error) setHeldParcels(d.parcels || []);
     } catch (_e) {}
   };
@@ -2768,7 +2779,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeBatch) return false;
     authRidePost('/api/parcel/batch-stop-complete', { ride_id: completedRideId }).catch(() => {});
     try {
-      const bd = await apiGet(`/api/parcel/batch/active?phone=${phone}`, 0, 5000);
+      const bd = await authRideGet(`/api/parcel/batch/active?phone=${phone}`);
       const nextStop = !bd._error && bd.batch ? (bd.stops || []).find((s: any) => !s.done) : null;
       if (nextStop) {
         useDriverStore.setState({ activeRide: nextStop, activeBatch: { id: bd.batch.id, stops: bd.stops } });

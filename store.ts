@@ -3,7 +3,19 @@
 //  File: store.ts (driver app ke App.tsx ke saath)
 // ═══════════════════════════════════════════════
 import { create } from 'zustand';
-import { apiGet } from './api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiAuthGet } from './api';
+
+/* The polling engine lives in its own module, so it never saw App.tsx's
+   authRideGet — and every endpoint it polls now requires a token on the
+   server. Without this the driver's whole ride loop (active ride, pending
+   offer, batch stops) would 401 silently and the app would look asleep.
+   Same shape as App.tsx's helper; kept local rather than exported across
+   files because store.ts must not import from App.tsx (circular). */
+const authGet = async (path: string) => {
+  const token = await AsyncStorage.getItem('driverToken').catch(() => null);
+  return apiAuthGet(path, token || '');
+};
 
 type DriverState = {
   activeRide: any;
@@ -49,7 +61,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
       if (busy) return;
       busy = true;
       try {
-        const ad = await apiGet(`/api/driver/active-ride?phone=${phone}`, 0, 5000);
+        const ad = await authGet(`/api/driver/active-ride?phone=${phone}`);
         if (!ad._error && ad.ride) {
           // /active-ride's own query can return EITHER of a batch's 2
           // simultaneously-active rides (ORDER BY created_at DESC LIMIT 1)
@@ -60,7 +72,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
           // (first not-done) stop instead of blindly trusting the pick
           // /active-ride happened to make.
           if (ad.ride.batch_id) {
-            const bd = await apiGet(`/api/parcel/batch/active?phone=${phone}`, 0, 5000);
+            const bd = await authGet(`/api/parcel/batch/active?phone=${phone}`);
             const currentStop = !bd._error && bd.batch ? (bd.stops || []).find((s: any) => !s.done) : null;
             if (currentStop) {
               set({ activeRide: currentStop, activeBatch: { id: bd.batch.id, stops: bd.stops }, pendingRide: null });
@@ -82,7 +94,7 @@ export const useDriverStore = create<DriverState>((set, get) => ({
         // Driver engaged in hourly ride — don't surface standard ride requests
         if (get().hourlyBusy) { set({ pendingRide: null }); busy = false; return; }
 
-        const pd = await apiGet(`/api/driver/pending-ride?phone=${phone}`, 0, 5000);
+        const pd = await authGet(`/api/driver/pending-ride?phone=${phone}`);
         if (!pd._error) {
           if (pd.suspended) { set({ suspended: true, pendingRide: null }); busy = false; return; }
           set({ suspended: false });
