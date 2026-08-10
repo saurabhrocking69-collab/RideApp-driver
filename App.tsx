@@ -1242,7 +1242,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               }
               // Restore active ride into store so home screen shows it immediately.
               try {
-                const ar = await fetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
+                const ar = await authFetch(`${API}/api/driver/active-ride?phone=${savedPhone}`).then(r => r.json());
                 if (ar.ride) {
                   useDriverStore.setState({ activeRide: ar.ride });
                   setIsOnline(true);
@@ -1652,7 +1652,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (activeTab === 'earnings' && phone) {
       if (!walletLoaded) { loadDriverWallet(phone); loadCommissionHistory(phone); }
       if (!earningsAnalytics) {
-        apiGet(`/api/driver/earnings-analytics/${phone}`).then((d: any) => { if (!d._error) setEarningsAnalytics(d); }).catch(() => {});
+        authRideGet(`/api/driver/earnings-analytics/${phone}`).then((d: any) => { if (!d._error) setEarningsAnalytics(d); }).catch(() => {});
       }
     }
   }, [activeTab]);
@@ -1730,7 +1730,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         const last = new Date(y, mo+1, 0).getDate();
         to = `${y}-${pad(mo+1)}-${pad(last)}`;
       }
-      const r = await fetch(`${API}/api/driver/order-history?phone=${phone}&from=${from}&to=${to}`);
+      const r = await authFetch(`${API}/api/driver/order-history?phone=${phone}&from=${from}&to=${to}`);
       const data = await r.json();
       setOrdersData(data);
     } catch {}
@@ -1758,7 +1758,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const fetchDriverLevel = async (ph: string) => {
     try {
-      const d = await apiGet(`/api/driver/level/${ph}`);
+      const d = await authRideGet(`/api/driver/level/${ph}`);
       if (!d._error && d.level && Array.isArray(d.benefits)) setDriverLevel(d);
     } catch (_e) {}
   };
@@ -1815,7 +1815,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const loadCommissionHistory = async (ph: string) => {
     try {
-      const r = await fetch(`${API}/api/driver/commission-history?phone=${ph}`);
+      const r = await authFetch(`${API}/api/driver/commission-history?phone=${ph}`);
       const d = await r.json();
       setCommissionData({
         pending_commission: d.pending_commission || 0,
@@ -1900,9 +1900,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             });
             // Retry once on failure — handles Jio packet drops
             const body = JSON.stringify({ phone, lat: coords.latitude, lng: coords.longitude });
-            fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
+            authFetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body })
               .catch(() => new Promise(r => setTimeout(r, 2000)).then(() =>
-                fetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).catch(() => {})
+                authFetch(`${API}/api/driver/update-location`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }).catch(() => {})
               ));
           }
         );
@@ -2672,7 +2672,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       // Tell server we're online — retry aggressively in background
       (async () => {
         for (let i = 0; i < 8; i++) {
-          const r = await apiPost('/api/driver/toggle-online', { phone, is_online: true });
+          const r = await authRidePost('/api/driver/toggle-online', { phone, is_online: true });
           if (!r._error) return;
           await new Promise(res => setTimeout(res, 2000));
         }
@@ -2695,7 +2695,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       // Offline update — fire and forget with retry
       (async () => {
         for (let i = 0; i < 5; i++) {
-          const r = await apiPost('/api/driver/toggle-online', { phone, is_online: false });
+          const r = await authRidePost('/api/driver/toggle-online', { phone, is_online: false });
           if (!r._error) return;
           await new Promise(res => setTimeout(res, 2000));
         }
@@ -9120,7 +9120,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   onPress={async () => {
                     setCommPayLoading(true); setCommResult('');
                     try {
-                      const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+                      const r = await authFetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                       const d = await r.json();
                       if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
                       if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); setCommPayLoading(false); return; }
@@ -9128,7 +9128,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
                         name: 'Sppero', description: 'Platform Commission Payment', prefill: { contact: phone }, theme: { color: C.pink },
                       }).then(async (payment: any) => {
-                        const vr = await fetch(`${API}/api/driver/commission-pay-verify`, {
+                        const vr = await authFetch(`${API}/api/driver/commission-pay-verify`, {
                           method: 'POST', headers: { 'Content-Type': 'application/json' },
                           body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                         });
@@ -9351,7 +9351,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               onPress={async () => {
                 setCommPayLoading(true); setCommResult('');
                 try {
-                  const r = await fetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
+                  const r = await authFetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                   const d = await r.json();
                   if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
                   if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); setCommPayLoading(false); return; }
@@ -9359,7 +9359,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
                     name: 'Sppero', description: 'Platform Commission Payment', prefill: { contact: phone }, theme: { color: '#e65100' },
                   }).then(async (payment: any) => {
-                    const vr = await fetch(`${API}/api/driver/commission-pay-verify`, {
+                    const vr = await authFetch(`${API}/api/driver/commission-pay-verify`, {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                     });
