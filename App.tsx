@@ -1053,8 +1053,6 @@ function App() {
   const [dailyGoal, setDailyGoal] = useState(1500);
   const [adminNotif, setAdminNotif] = useState<any>(null);
   const [adminNotifDismissed, setAdminNotifDismissed] = useState('');
-  const [referralInfo, setReferralInfo] = useState<any>(null);
-  const [referralLoaded, setReferralLoaded] = useState(false);
 
   // ── Driver UPI ───────────────────────────────
   const [driverUpiId, setDriverUpiId] = useState('');
@@ -1724,14 +1722,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     } catch {}
     setOrdersLoading(false);
   };
-  const loadReferralInfo = async () => {
-    if (!phone) return;
-    try {
-      const r = await fetch(`${API}/api/referral/my-code?phone=${phone}`);
-      const d = await r.json();
-      if (d.code) { setReferralInfo(d); setReferralLoaded(true); }
-    } catch (_e) {}
-  };
   const openZoneNavigation = (zone: { lat: number; lng: number }) => {
     const url = `google.navigation:q=${zone.lat},${zone.lng}&mode=driving`;
     Linking.openURL(url).catch(() =>
@@ -2316,7 +2306,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Load referral info + favourite count when profile tab opens ─────────
   useEffect(() => {
     if (activeTab === 'profile' && phone) {
-      if (!referralLoaded) loadReferralInfo();
       fetch(`${API}/api/favourites/driver-count?phone=${phone}`)
         .then(r => r.json()).then(d => setFavouriteCount(d.count ?? 0)).catch(() => {});
     }
@@ -5967,26 +5956,26 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {/* Sppero Buddy Recruit Banner */}
           {!activeRide && !rideReq && !activeHourlyRide && (
             <TouchableOpacity activeOpacity={0.92}
-              onPress={() => { const msg = tp('referral_share_msg', { phone: driverInfo?.phone || '' }); Share.share({ message: msg }); }}
+              onPress={() => Linking.openURL('https://sppero.com/partner.html').catch(() => {})}
               style={{ borderRadius: 20, marginBottom: 12, overflow: 'hidden', elevation: 8, shadowColor: C.pink, shadowOpacity: 0.3, shadowRadius: 14 }}>
               <View style={{ backgroundColor: C.pink, padding: 16, flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ flex: 1 }}>
                   <View style={{ backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start', marginBottom: 8 }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 }}>🚗 DRIVER REFERRAL</Text>
+                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '900', letterSpacing: 1.2 }}>🤝 EARN WITH SPPERO</Text>
                   </View>
                   <Text style={{ color: '#fff', fontSize: 14, fontWeight: '700', opacity: 0.9 }}>{t('referral_banner_title')}</Text>
                   <Text style={{ color: '#FFD700', fontSize: 24, fontWeight: '900', lineHeight: 30, marginTop: 2 }}>{t('referral_banner_amt')}</Text>
-                  <View style={{ backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3, alignSelf: 'flex-start', marginTop: 6, borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' }}>
-                    <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>⏳ OFFER COMING SOON</Text>
-                  </View>
-                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 4, lineHeight: 16 }}>{t('referral_banner_sub')}</Text>
+                  {/* The "coming soon" badge is gone: the programme is live, and
+                      a live scheme still advertising itself as forthcoming reads
+                      as a page nobody maintains. */}
+                  <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11, marginTop: 6, lineHeight: 16 }}>{t('referral_banner_sub')}</Text>
                 </View>
                 <View style={{ alignItems: 'center', marginLeft: 12 }}>
                   <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: '#FFD700', marginBottom: 8 }}>
                     <Text style={{ fontSize: 28 }}>🚗</Text>
                   </View>
                   <View style={{ backgroundColor: '#FFD700', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8 }}>
-                    <Text style={{ color: '#111', fontSize: 11, fontWeight: '900' }}>Invite →</Text>
+                    <Text style={{ color: '#111', fontSize: 11, fontWeight: '900' }}>Start →</Text>
                   </View>
                 </View>
               </View>
@@ -9883,39 +9872,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? C.green : C.pink, marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
         </View>
 
-        {/* Referral Section */}
+        {/* Earn with Sppero — the partner programme.
+            Replaces the old code-sharing block, which promised a one-off
+            wallet bonus. Earning is now a share of the commission on every
+            ride the people you bring take, with its own dashboard, bank
+            details and payouts — all of which live on sppero.com. */}
         <View style={{ backgroundColor: '#F8FAFC', borderRadius: 16, padding: 16, marginBottom: 12, elevation: 2, borderWidth: 1, borderColor: '#E2E8F0' }}>
-          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>🎁 Refer & Earn</Text>
-          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12 }}>{t('refer_friends_hint')}</Text>
-          {referralInfo ? (
-            <View>
-              <View style={{ backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14, alignItems: 'center', marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: '#64748B', fontSize: 11, marginBottom: 4, letterSpacing: 1 }}>{t('your_referral_code')}</Text>
-                <Text style={{ color: '#FFD700', fontSize: 28, fontWeight: '900', letterSpacing: 6 }}>{referralInfo.code}</Text>
-              </View>
-              <View style={{ flexDirection: 'row', marginBottom: 10 }}>
-                <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: '#0F172A' }}>{referralInfo.total_referrals}</Text>
-                  <Text style={{ fontSize: 10, color: '#64748B' }}>Referrals</Text>
-                </View>
-                <View style={{ flex: 1, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 20, fontWeight: '800', color: C.green }}>₹{referralInfo.total_earned}</Text>
-                  <Text style={{ fontSize: 10, color: '#64748B' }}>Earned</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                style={{ backgroundColor: C.pink, borderRadius: 10, padding: 12, alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 8 }}
-                onPress={() => Share.share({ message: tp('referral_share_msg2', { code: referralInfo.code }), title: 'Sppero Buddy Referral' })}>
-                <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{t('share_code_btn')}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity
-              style={{ backgroundColor: '#334155', borderRadius: 10, padding: 12, alignItems: 'center' }}
-              onPress={loadReferralInfo}>
-              <Text style={{ color: '#94A3B8', fontSize: 13 }}>🔑 Code Generate Karo</Text>
-            </TouchableOpacity>
-          )}
+          <Text style={{ fontSize: 14, fontWeight: '800', color: '#0F172A', marginBottom: 4 }}>🤝 {t('partner_title')}</Text>
+          <Text style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12, lineHeight: 17 }}>{t('partner_hint')}</Text>
+          <TouchableOpacity
+            style={{ backgroundColor: C.pink, borderRadius: 10, padding: 12, alignItems: 'center', elevation: 4, shadowColor: C.pink, shadowOpacity: 0.35, shadowRadius: 8 }}
+            onPress={() => Linking.openURL('https://sppero.com/partner.html').catch(() => {})}>
+            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{t('partner_btn')}</Text>
+          </TouchableOpacity>
         </View>
 
         {([
