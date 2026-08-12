@@ -967,6 +967,13 @@ function App() {
   const [earningsAnalytics, setEarningsAnalytics] = useState<any>(null);
   const [payoutInput, setPayoutInput] = useState('');
   const [payoutLoading, setPayoutLoading] = useState(false);
+  /* Payout has its own message. It used to render the app-wide `result`
+     string, which is set in ninety-odd places — login, OTP, document uploads,
+     UPI — and shown in ten. So a failure from anywhere at all ended up parked
+     under Payout Request, in red, about something the driver had not done
+     here. That is why an error appeared with nothing having been requested.
+     { kind } drives the styling, so the card never has to guess from an emoji. */
+  const [payoutMsg, setPayoutMsg] = useState<{ kind: 'ok' | 'warn' | 'error'; text: string } | null>(null);
   const [walletLoaded, setWalletLoaded] = useState(false);
 
   // Fare rates data
@@ -1851,16 +1858,27 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
   const requestPayout = async () => {
     const amt = parseFloat(payoutInput);
-    if (!amt || amt < 100) { setResult('❌ Minimum ₹100 required for payout'); return; }
-    if (amt > driverWallet.balance) { setResult('❌ Insufficient wallet balance'); return; }
+    const bal = parseFloat(driverWallet.balance || 0);
+    // Not-yet-eligible is not an error — it is the ordinary state of a wallet
+    // that has not reached the minimum. Amber, and it says what is missing.
+    if (!payoutInput.trim()) { setPayoutMsg({ kind: 'warn', text: 'Enter how much you want to withdraw.' }); return; }
+    if (!amt || amt <= 0)    { setPayoutMsg({ kind: 'warn', text: 'Enter a valid amount.' }); return; }
+    if (amt < 100)           { setPayoutMsg({ kind: 'warn', text: `Minimum withdrawal is ₹100. You entered ₹${amt.toFixed(0)}.` }); return; }
+    if (amt > bal)           { setPayoutMsg({ kind: 'warn', text: `You have ₹${bal.toFixed(0)} available, so ₹${amt.toFixed(0)} cannot be withdrawn yet.` }); return; }
     setPayoutLoading(true);
+    setPayoutMsg(null);
     try {
       const d = await authRidePost('/api/driver/payout', { phone, amount: amt });
       if (d.success) {
-        setResult('✅ ' + (d.message || 'Payout request submitted — admin will process within 24-48 hours'));
+        setPayoutMsg({ kind: 'ok', text: d.message || 'Request sent. Admin usually processes payouts within 24–48 hours.' });
         setPayoutInput('');
-      } else setResult('❌ ' + (d.message || d.error || 'Error'));
-    } catch (_e) { setResult('❌ Server error'); }
+        loadDriverWallet(phone).catch(() => {});
+      } else {
+        setPayoutMsg({ kind: 'error', text: d.message || d.error || 'Could not send the request.' });
+      }
+    } catch (_e) {
+      setPayoutMsg({ kind: 'error', text: 'Could not reach Sppero. Check your connection and try again.' });
+    }
     setPayoutLoading(false);
   };
 
@@ -9204,7 +9222,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 placeholder="Enter amount (₹)"
                 keyboardType="numeric"
                 value={payoutInput}
-                onChangeText={setPayoutInput}
+                onChangeText={(t: string) => { setPayoutInput(t); if (payoutMsg) setPayoutMsg(null); }}
                 placeholderTextColor="#475569"
               />
               <TouchableOpacity onPress={requestPayout}
@@ -9212,11 +9230,30 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>Request</Text>
               </TouchableOpacity>
             </View>
-            {result ? <Text style={{ color: result.includes('✅') ? C.green : C.pink, marginTop: 8, fontWeight: '600' }}>{result}</Text> : null}
+            {payoutMsg ? (
+              <View style={{
+                flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginTop: 10,
+                backgroundColor: payoutMsg.kind === 'ok' ? '#ECFDF5' : payoutMsg.kind === 'warn' ? '#FFFBEB' : '#FEF2F2',
+                borderWidth: 1,
+                borderColor: payoutMsg.kind === 'ok' ? '#A7F3D0' : payoutMsg.kind === 'warn' ? '#FDE68A' : '#FECACA',
+                borderRadius: 10, paddingVertical: 9, paddingHorizontal: 11,
+              }}>
+                <Ionicons
+                  name={payoutMsg.kind === 'ok' ? 'checkmark-circle' : payoutMsg.kind === 'warn' ? 'information-circle' : 'alert-circle'}
+                  size={15}
+                  color={payoutMsg.kind === 'ok' ? '#059669' : payoutMsg.kind === 'warn' ? '#B45309' : '#DC2626'}
+                  style={{ marginTop: 1 }}
+                />
+                <Text style={{
+                  flex: 1, fontSize: 12, lineHeight: 17, fontWeight: '600',
+                  color: payoutMsg.kind === 'ok' ? '#065F46' : payoutMsg.kind === 'warn' ? '#92400E' : '#991B1B',
+                }}>{payoutMsg.text}</Text>
+              </View>
+            ) : null}
           </View>
           <View style={{ flexDirection: 'row', gap: 8, marginBottom: 4 }}>
             {[100, 200, 500, 1000].map(a => (
-              <TouchableOpacity key={a} onPress={() => setPayoutInput(a.toString())}
+              <TouchableOpacity key={a} onPress={() => { setPayoutInput(a.toString()); setPayoutMsg(null); }}
                 style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, paddingVertical: 9, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
                 <Text style={{ color: '#CBD5E1', fontWeight: '700', fontSize: 13 }}>₹{a}</Text>
               </TouchableOpacity>
