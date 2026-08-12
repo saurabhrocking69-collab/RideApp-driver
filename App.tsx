@@ -765,6 +765,13 @@ function App() {
   const preQueueSoundRef = useRef<Audio.Sound | null>(null);
   const [phone, setPhone]           = useState('');
   const [isOnline, setIsOnline]     = useState(false);
+  // Home rules used to be two stacked cards, 18 rows deep, that the driver had
+  // to scroll past every single time. Same rows, one card, two tabs.
+  const [rulesTab, setRulesTab]     = useState<'std' | 'hourly'>('std');
+  // toggleOnline awaits location permission + FCM, which is not instant on a
+  // cold radio. Without this the big button looks dead for a second or two and
+  // drivers tap it again.
+  const [onlineBusy, setOnlineBusy] = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
   // { id, stops } when activeRide is currently a batch's stop — see store.ts
@@ -6675,11 +6682,58 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </View>
           )}
 
-          {isOnline && !rideReq && !activeRide && !activeHourlyRide && !hourlyRideReq && (
-            <View style={s.statusCard}><Text style={s.statusText}>{t('online_status_msg')}</Text></View>
-          )}
-          {!isOnline && (
-            <View style={s.statusCard}><Text style={s.statusText}>{t('offline_status_msg')}</Text></View>
+          {/* ── The duty control ──────────────────────────────────────────
+              This replaces two thin one-line status cards whose only control
+              was a small Switch up in the header. Going on/off duty is the
+              single most-used action on this screen, so it gets a real target
+              and states plainly what the current mode means. The wording is
+              still the same t() strings as before — nothing was dropped. */}
+          {((isOnline && !rideReq && !activeRide && !activeHourlyRide && !hourlyRideReq) || !isOnline) && (
+            <View style={{
+              backgroundColor: isOnline ? 'rgba(16,185,129,0.10)' : 'rgba(148,163,184,0.10)',
+              borderRadius: 20, padding: 16, marginBottom: 16,
+              borderWidth: 1.5, borderColor: isOnline ? 'rgba(16,185,129,0.38)' : 'rgba(148,163,184,0.28)',
+            }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <View style={{
+                  width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center',
+                  backgroundColor: isOnline ? 'rgba(16,185,129,0.18)' : 'rgba(148,163,184,0.16)',
+                }}>
+                  {isOnline
+                    ? <PulseView><View style={{ width: 14, height: 14, borderRadius: 7, backgroundColor: C.online }} /></PulseView>
+                    : <Text style={{ fontSize: 20 }}>💤</Text>}
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '900', letterSpacing: 0.2 }}>
+                    {isOnline ? t('duty_on_title') : t('duty_off_title')}
+                  </Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.62)', fontSize: 12, marginTop: 2, lineHeight: 17 }}>
+                    {isOnline ? t('online_status_msg') : t('offline_status_msg')}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={async () => {
+                  if (onlineBusy) return;
+                  setOnlineBusy(true);
+                  try { await toggleOnline(!isOnline); } finally { setOnlineBusy(false); }
+                }}
+                disabled={onlineBusy}
+                activeOpacity={0.85}
+                style={{
+                  marginTop: 14, borderRadius: 16, paddingVertical: 15, alignItems: 'center',
+                  backgroundColor: onlineBusy ? 'rgba(255,255,255,0.14)' : isOnline ? 'rgba(255,255,255,0.12)' : C.online,
+                  borderWidth: isOnline ? 1.5 : 0, borderColor: 'rgba(255,255,255,0.28)',
+                }}
+              >
+                <Text style={{
+                  color: '#fff', fontSize: 15, fontWeight: '900', letterSpacing: 0.6,
+                }}>
+                  {onlineBusy ? t('duty_wait') : isOnline ? t('duty_go_off') : t('duty_go_on')}
+                </Text>
+              </TouchableOpacity>
+            </View>
           )}
           {(rideReq || activeRide || hourlyRideReq || activeHourlyRide) && (
             <TouchableOpacity onPress={() => setActiveTab('live')} style={{ backgroundColor: 'rgba(16,185,129,0.12)', borderRadius: 14, padding: 14, marginBottom: 12, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1.5, borderColor: 'rgba(16,185,129,0.4)', elevation: 3 }}>
@@ -6691,47 +6745,85 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </TouchableOpacity>
           )}
 
-          {/* Rules & Info */}
-          <View style={{ marginTop: 10 }}>
-              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, marginBottom: 10, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: '#0F172A', fontSize: 14, fontWeight: '800', marginBottom: 10 }}>{t('rules_std_title')}</Text>
-                {[
-                  [t('rule_commission_std_l'), t('rule_commission_std_d')],
-                  [t('rule_accept_std_l'), t('rule_accept_std_d')],
-                  [t('guide_arrive_title'), t('guide_arrive_desc')],
-                  [t('guide_otp_title'), t('guide_otp_desc')],
-                  [t('rule_complete_std_l'), t('rule_complete_std_d')],
-                  [t('rule_cancel_std_l'), t('rule_cancel_std_d')],
-                  [t('guide_rating_title'), t('guide_rating_desc')],
-                  [t('rule_payment_std_l'), t('rule_payment_std_d')],
-                ].map(([icon, text], i) => (
-                  <View key={i} style={{ flexDirection: 'row', marginBottom: 7 }}>
-                    <Text style={{ color: C.pink, fontSize: 12, fontWeight: '700', width: 100 }}>{icon}</Text>
-                    <Text style={{ color: '#555', fontSize: 11, flex: 1, lineHeight: 16 }}>{text}</Text>
-                  </View>
-                ))}
-              </View>
-              <View style={{ backgroundColor: '#F8FAFC', borderRadius: 14, padding: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: C.pink, fontSize: 14, fontWeight: '800', marginBottom: 10 }}>{t('rules_hourly_title')}</Text>
-                {[
-                  [t('rule_commission_h_l'), t('rule_commission_h_d')],
-                  [t('rule_packages_h_l'), t('rule_packages_h_d')],
-                  [t('hguide_otp_title'), t('hguide_otp_desc')],
-                  [t('hguide_lock_title'), t('hguide_lock_desc')],
-                  [t('hguide_end_title'), t('hguide_end_desc')],
-                  [t('rule_extension_h_l'), t('rule_extension_h_d')],
-                  [t('hguide_sched_title'), t('hguide_sched_desc')],
-                  [t('rule_extrakm_h_l'), t('rule_extrakm_h_d')],
-                  [t('rule_escrow_h_l'), t('rule_escrow_h_d')],
-                  [t('rule_misuse_h_l'), t('rule_misuse_h_d')],
-                ].map(([icon, text], i) => (
-                  <View key={i} style={{ flexDirection: 'row', marginBottom: 8 }}>
-                    <Text style={{ color: C.pink, fontSize: 11, fontWeight: '700', width: 105 }}>{icon}</Text>
-                    <Text style={{ color: '#64748B', fontSize: 11, flex: 1, lineHeight: 16 }}>{text}</Text>
-                  </View>
-                ))}
-              </View>
+          {/* ── Rules & Info ──────────────────────────────────────────────
+              Was two stacked cards, 18 rows, always both fully expanded. Same
+              18 rows, same wording — now one card with Standard/Hourly tabs,
+              so the driver reads the set that applies to the work they are
+              actually doing. The old layout also forced every label into a
+              fixed 100px column, which wrapped mid-word in Hindi; labels now
+              sit on their own line above their explanation. */}
+          <View style={{ marginTop: 10, backgroundColor: '#F8FAFC', borderRadius: 18, borderWidth: 1, borderColor: '#E2E8F0', overflow: 'hidden' }}>
+            <View style={{ flexDirection: 'row', backgroundColor: '#EEF2F7', padding: 4, margin: 12, borderRadius: 12 }}>
+              {([['std', t('rules_tab_std')], ['hourly', t('rules_tab_hourly')]] as const).map(([key, label]) => {
+                const on = rulesTab === key;
+                return (
+                  <TouchableOpacity
+                    key={key}
+                    onPress={() => setRulesTab(key)}
+                    activeOpacity={0.8}
+                    style={{
+                      flex: 1, paddingVertical: 9, borderRadius: 9, alignItems: 'center',
+                      backgroundColor: on ? '#fff' : 'transparent',
+                      ...(on ? { elevation: 2, shadowColor: '#0F172A', shadowOpacity: 0.10, shadowRadius: 3, shadowOffset: { width: 0, height: 1 } } : {}),
+                    }}
+                  >
+                    <Text numberOfLines={1} style={{ color: on ? C.pink : '#64748B', fontSize: 11.5, fontWeight: '800' }}>{label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
+
+            <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+              {/* The full section heading the two old cards each carried. */}
+              <Text style={{ color: rulesTab === 'std' ? '#0F172A' : C.pink, fontSize: 13, fontWeight: '800', marginBottom: 12 }}>
+                {rulesTab === 'std' ? t('rules_std_title') : t('rules_hourly_title')}
+              </Text>
+              {(rulesTab === 'std'
+                ? [
+                    [t('rule_commission_std_l'), t('rule_commission_std_d')],
+                    [t('rule_accept_std_l'), t('rule_accept_std_d')],
+                    [t('guide_arrive_title'), t('guide_arrive_desc')],
+                    [t('guide_otp_title'), t('guide_otp_desc')],
+                    [t('rule_complete_std_l'), t('rule_complete_std_d')],
+                    [t('rule_cancel_std_l'), t('rule_cancel_std_d')],
+                    [t('guide_rating_title'), t('guide_rating_desc')],
+                    [t('rule_payment_std_l'), t('rule_payment_std_d')],
+                  ]
+                : [
+                    [t('rule_commission_h_l'), t('rule_commission_h_d')],
+                    [t('rule_packages_h_l'), t('rule_packages_h_d')],
+                    [t('hguide_otp_title'), t('hguide_otp_desc')],
+                    [t('hguide_lock_title'), t('hguide_lock_desc')],
+                    [t('hguide_end_title'), t('hguide_end_desc')],
+                    [t('rule_extension_h_l'), t('rule_extension_h_d')],
+                    [t('hguide_sched_title'), t('hguide_sched_desc')],
+                    [t('rule_extrakm_h_l'), t('rule_extrakm_h_d')],
+                    [t('rule_escrow_h_l'), t('rule_escrow_h_d')],
+                    [t('rule_misuse_h_l'), t('rule_misuse_h_d')],
+                  ]
+              ).map(([label, text], i) => (
+                <View key={`${rulesTab}-${i}`} style={{ flexDirection: 'row', gap: 10, marginBottom: 11 }}>
+                  <View style={{ width: 3, borderRadius: 2, backgroundColor: '#E2E8F0' }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ color: '#0F172A', fontSize: 12, fontWeight: '800', marginBottom: 2 }}>{label}</Text>
+                    <Text style={{ color: '#64748B', fontSize: 11.5, lineHeight: 17 }}>{text}</Text>
+                  </View>
+                </View>
+              ))}
+
+              {/* Rates are per-vehicle and admin-editable, so the rules point at
+                  the live ratecard instead of naming a number that goes stale. */}
+              <TouchableOpacity
+                onPress={() => { setActiveTab('profile'); setDrSubScreen('fare-rates'); }}
+                activeOpacity={0.8}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 2, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E2E8F0' }}
+              >
+                <Text style={{ fontSize: 14 }}>💰</Text>
+                <Text style={{ flex: 1, color: '#0F172A', fontSize: 12, fontWeight: '800' }}>{t('rules_see_rates')}</Text>
+                <Text style={{ color: C.pink, fontSize: 16, fontWeight: '900' }}>›</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </ScrollView>
       </View>
       <View style={s.navFloat}><BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} /></View>
@@ -7096,7 +7188,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ color: C.online, fontSize: 28, fontWeight: '900', lineHeight: 34 }}>₹{netEarn(hourlyRideReq.base_fare, 'hourly')}</Text>
                   {driverSub?.active
                     ? <Text style={{ color: '#86EFAC', fontSize: 9, fontWeight: '700' }}>✅ ₹0 Commission</Text>
-                    : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>{t('commission_deducted_label')}</Text>}
+                    : <Text style={{ color: 'rgba(255,255,255,0.4)', fontSize: 9 }}>{tp('commission_deducted_label', { pct: String(commissionPct('hourly')) })}</Text>}
                 </View>
                 <View style={{ backgroundColor: 'rgba(37,99,235,0.12)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: 'rgba(37,99,235,0.3)', alignItems: 'center', flex: 1 }}>
                   <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 9, fontWeight: '800', letterSpacing: 1 }}>INCLUDED KM</Text>
@@ -9156,8 +9248,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           })()}
 
           <View style={{ backgroundColor: 'rgba(16,185,129,0.08)', borderRadius: 14, padding: 14, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(16,185,129,0.2)' }}>
-            <Text style={{ fontSize: 13, color: C.green, fontWeight: '700', marginBottom: 4 }}>💡 Commission Structure</Text>
-            <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>Standard rides: 15% platform fee{'\n'}Hourly rides: 12% platform fee{'\n'}Early end: dono ki agreement zaroori — proportional payment</Text>
+            <Text style={{ fontSize: 13, color: C.green, fontWeight: '700', marginBottom: 4 }}>💡 Your Commission</Text>
+            {/* The driver's OWN live rate, resolved from fare_settings for their
+                vehicle — not the 15%/12% that used to be typed in here. Those
+                are per-vehicle and admin-editable, so a fixed number was wrong
+                for most drivers and went stale on every rate change. */}
+            <Text style={{ fontSize: 12, color: '#6EE7B7', lineHeight: 18 }}>
+              {driverSub?.active
+                ? 'Ride pack active — abhi aapki rides par ₹0 commission.'
+                : `Standard rides: ${commissionPct('standard')}% platform fee\nHourly rides: ${commissionPct('hourly')}% platform fee`}
+              {'\n'}Early end: dono ki agreement zaroori — proportional payment
+            </Text>
+            <TouchableOpacity onPress={() => { setActiveTab('profile'); setDrSubScreen('fare-rates'); }} style={{ marginTop: 8, alignSelf: 'flex-start' }}>
+              <Text style={{ fontSize: 11.5, color: C.green, fontWeight: '800' }}>Saare rates dekhein ›</Text>
+            </TouchableOpacity>
           </View>
           {/* Pending Commission Card — redesigned */}
           {commissionData.pending_commission > 0 && (
@@ -10165,8 +10269,6 @@ const s = StyleSheet.create({
   statValue:       { fontSize:22, fontWeight:'bold', color:C.text, marginTop:4 },
   statLabel:       { ...T.label, color:C.textDim, marginTop:3 },
   targetCard:      { backgroundColor:C.bgCard, borderRadius:R.sm, padding:SP.md, marginBottom:14, elevation:2, borderWidth:1, borderColor:C.glassBorder },
-  statusCard:      { backgroundColor:C.bgCard, borderRadius:R.sm, padding:SP.md, marginBottom:16, elevation:2, borderWidth:1, borderColor:C.glassBorder },
-  statusText:      { fontSize:14, color:C.textMuted, textAlign:'center' },
   tripCard:        { backgroundColor:C.bgCard, borderRadius:R.md, padding:SP.md, marginBottom:16, borderWidth:2, borderColor:C.pinkBorder, ...SHADOW.lg, shadowColor:C.pink },
   tripBadge:       { backgroundColor:C.online, borderRadius:R.xs, padding:9, marginBottom:12 },
   tripBadgeTxt:    { color:'#fff', textAlign:'center', fontWeight:'bold', fontSize:14 },
