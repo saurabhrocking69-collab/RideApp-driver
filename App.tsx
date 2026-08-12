@@ -1050,7 +1050,7 @@ function App() {
   };
 
   // Commission data
-  const [commissionData, setCommissionData] = useState<{ pending_commission: number; total_commission: number; settled_commission: number; records: any[]; payments: any[] }>({ pending_commission: 0, total_commission: 0, settled_commission: 0, records: [], payments: [] });
+  const [commissionData, setCommissionData] = useState<{ pending_commission: number; unsettled_commission: number; total_commission: number; settled_commission: number; records: any[]; payments: any[] }>({ pending_commission: 0, unsettled_commission: 0, total_commission: 0, settled_commission: 0, records: [], payments: [] });
   const [commPayLoading, setCommPayLoading] = useState(false);
   const [commResult, setCommResult] = useState('');
 
@@ -1830,6 +1830,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const d = await r.json();
       setCommissionData({
         pending_commission: d.pending_commission || 0,
+        unsettled_commission: d.unsettled_commission || 0,
         total_commission: d.total_commission || 0,
         settled_commission: d.settled_commission || 0,
         records: d.records || [],
@@ -9341,7 +9342,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#0F172A', fontSize: 14, fontWeight: '800', marginBottom: 12 }}>Commission Overview</Text>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ color: C.pink, fontSize: 18, fontWeight: '900' }}>₹{commissionData.pending_commission.toFixed(0)}</Text>
+                {/* Summed from the same rides listed below, so this box and
+                    that list always tell the same story. The wallet's own
+                    commission debt is a different number and has its own card
+                    — see pending_commission. */}
+                <Text style={{ color: C.pink, fontSize: 18, fontWeight: '900' }}>₹{commissionData.unsettled_commission.toFixed(0)}</Text>
                 <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Pending</Text>
               </View>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
@@ -9407,8 +9412,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ color: '#475569', marginTop: 8 }}>{t('no_commission_records')}</Text>
             </View>
           ) : commissionData.records.map((rec: any, i: number) => {
-            const statusColor = rec.status === 'collected' || rec.status === 'settled' || rec.status === 'auto_settled' ? C.green : '#F59E0B';
-            const statusLabel = rec.status === 'collected' ? 'Collected' : rec.status === 'settled' ? 'Paid' : rec.status === 'auto_settled' ? 'Auto-Settled' : rec.status === 'cash_owed' ? 'Pending' : rec.status;
+            // Two statuses had no label and fell through to the raw database
+            // string — drivers were shown a bare "pending" and
+            // "advance_settled". advance_settled was also coloured amber, as
+            // though money were still owed on a ride whose commission the
+            // advance already covered.
+            const SETTLED_STATUSES = ['collected', 'settled', 'auto_settled', 'advance_settled'];
+            const statusColor = SETTLED_STATUSES.includes(rec.status) ? C.green : '#F59E0B';
+            const STATUS_LABEL: Record<string, string> = {
+              collected: 'Collected',
+              settled: 'Paid',
+              auto_settled: 'Auto-Settled',
+              advance_settled: 'Covered by advance',
+              cash_owed: 'Due from you',
+              pending: 'Awaiting payment',
+            };
+            const statusLabel = STATUS_LABEL[rec.status] || rec.status;
             return (
               <View key={rec.id || i} style={{ backgroundColor: '#F8FAFC', borderRadius: 12, padding: 14, marginBottom: 8, borderWidth: 1, borderColor: '#E2E8F0', borderLeftWidth: 3, borderLeftColor: statusColor }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
