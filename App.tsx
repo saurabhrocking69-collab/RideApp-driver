@@ -5307,6 +5307,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // dead, and the sub-screen only pops into view later when the driver taps a
   // different tab, because that finally makes this condition false. Hit both
   // the parcel guide and the subscription CTA below.
+  /* Mounted in EVERY tab that can open it, not just Home.
+     It used to live only inside the Home block, so tapping "Delete Account" on
+     the Profile tab set the state with nothing on screen to react to — and the
+     sheet then sprang open by itself the moment the driver went back to Home.
+     Held in one variable so the three mount points cannot drift apart. */
+  const deleteSheet = (
+    <DeleteAccountSheet
+      visible={showDeleteAccount}
+      onClose={() => setShowDeleteAccount(false)}
+      phone={phone}
+      role="driver"
+    />
+  );
+
   if (activeTab === 'home' && driverSubScreen === '') return (
     <KeyboardAvoidingView style={s.screen} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       {/* Full map background */}
@@ -5346,12 +5360,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </View>
       )}
       {/* Zone Alert received banner */}
-      <DeleteAccountSheet
-        visible={showDeleteAccount}
-        onClose={() => setShowDeleteAccount(false)}
-        phone={phone}
-        role="driver"
-      />
+      {deleteSheet}
       <ZoneAlertBanner
         alert={zoneAlert}
         onDismiss={() => setZoneAlert(null)}
@@ -8901,6 +8910,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               })}
             </ScrollView>
           )}
+          {deleteSheet}
           <BottomNav activeTab={activeTab} setActiveTab={(tab: string) => { back(); setActiveTab(tab); }} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
         </View>
       );
@@ -9977,6 +9987,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           <Text style={{ color: C.pink, fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
       </ScrollView>
+      {deleteSheet}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
     </View>
   );
