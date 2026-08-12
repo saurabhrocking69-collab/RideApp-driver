@@ -974,6 +974,10 @@ function App() {
      here. That is why an error appeared with nothing having been requested.
      { kind } drives the styling, so the card never has to guess from an emoji. */
   const [payoutMsg, setPayoutMsg] = useState<{ kind: 'ok' | 'warn' | 'error'; text: string } | null>(null);
+  // Same reasoning as payoutMsg. This field used to read the shared `result`
+  // through a `result.includes('UPI')` filter — a guess at whether a message
+  // was meant for it, which is what you write when a message has no owner.
+  const [upiMsg, setUpiMsg] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null);
   const [walletLoaded, setWalletLoaded] = useState(false);
 
   // Fare rates data
@@ -1710,13 +1714,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try { const r = await fetch(`${API}/api/offers/active?role=driver&phone=${phone}`); const d = await r.json(); setDriverOffers(d.offers || []); } catch (_e) {}
   };
   const saveUpiId = async () => {
-    if (!upiInput.trim()) return;
+    if (!upiInput.trim()) { setUpiMsg({ kind: 'error', text: 'Enter your UPI ID first.' }); return; }
     setUpiSaving(true);
+    setUpiMsg(null);
     try {
       const d = await authRidePost('/api/driver/upi', { phone, upi_id: upiInput.trim() });
-      if (d.success) { setDriverUpiId(d.upi_id); setResult('✅ UPI ID saved!'); }
-      else setResult('❌ ' + (d.error || 'Error'));
-    } catch (_e) { setResult('❌ Server error'); }
+      if (d.success) { setDriverUpiId(d.upi_id); setUpiMsg({ kind: 'ok', text: 'UPI ID saved. Payouts will go here.' }); }
+      else setUpiMsg({ kind: 'error', text: d.error || 'Could not save your UPI ID.' });
+    } catch (_e) {
+      setUpiMsg({ kind: 'error', text: 'Could not reach Sppero. Check your connection and try again.' });
+    }
     setUpiSaving(false);
   };
 
@@ -1856,6 +1863,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setWalletLoaded(true);
     } catch (_e) {}
   };
+  /* The shared `result` string is set in ninety-odd places and read in the
+     login/registration wizard. Inside that wizard sharing it is fine — one
+     step is on screen at a time and each message belongs to the step that
+     raised it. What was never fine is a message OUTLIVING its context: an OTP
+     failure surviving into the app, a step-3 error still sitting there at
+     step 5. That is what leaked into Payout and forced the UPI field to guess
+     with `result.includes('UPI')`.
+
+     Clearing it on every change of screen, wizard step and tab fixes that at
+     the source, without touching all ninety call sites. */
+  useEffect(() => { setResult(''); }, [screen, regStep, activeTab]);
+
   const requestPayout = async () => {
     const amt = parseFloat(payoutInput);
     const bal = parseFloat(driverWallet.balance || 0);
@@ -9960,7 +9979,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ fontSize: 12, color: C.green, fontWeight: '600', flex: 1 }}>{driverUpiId}</Text>
             </View>
           ) : null}
-          {result && result.includes('UPI') ? <Text style={{ color: result.includes('✅') ? C.green : C.pink, marginTop: 6, fontSize: 12 }}>{result}</Text> : null}
+          {upiMsg ? (
+            <Text style={{ color: upiMsg.kind === 'ok' ? C.green : '#DC2626', marginTop: 6, fontSize: 12, fontWeight: '600' }}>
+              {upiMsg.text}
+            </Text>
+          ) : null}
         </View>
 
         {/* Earn with Sppero — the partner programme.
