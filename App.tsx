@@ -902,7 +902,9 @@ function App() {
   const [bankSaving, setBankSaving]     = useState(false);
   const [bankLoaded, setBankLoaded]     = useState(false);
   const [bankEditing, setBankEditing]   = useState(false);
-  const [bankMsg, setBankMsg]           = useState('');
+  // Typed like the others — see bonusMsg. Styling must not depend on a tick
+  // character surviving inside the copy.
+  const [bankMsg, setBankMsg] = useState<{ kind: 'ok' | 'warn' | 'error'; text: string } | null>(null);
   const [showDriverCancelModal, setShowDriverCancelModal] = useState(false);
   const [cancelReason, setCancelReason]         = useState('');
   const [earlyFlagModal, setEarlyFlagModal] = useState<{ dist: string } | null>(null);
@@ -953,7 +955,11 @@ function App() {
   const [bonusHistoryLoaded, setBonusHistoryLoaded] = useState(false);
   const [bonusLoading, setBonusLoading] = useState(false);
   const [bonusClaiming, setBonusClaiming] = useState(false);
-  const [bonusMsg, setBonusMsg] = useState('');
+  /* { kind } rather than a string starting with a tick. The render used to
+     decide red-or-green with bonusMsg.startsWith('✅'), so styling depended on
+     a character inside the copy — change the wording and a success turns red.
+     Same treatment as payoutMsg / upiMsg. */
+  const [bonusMsg, setBonusMsg] = useState<{ kind: 'ok' | 'warn' | 'error'; text: string } | null>(null);
   const [bonusRedeemAmt, setBonusRedeemAmt] = useState('');
   const [bonusRedeemLoading, setBonusRedeemLoading] = useState(false);
   const [driverWallet, setDriverWallet] = useState<any>({ balance: 0, total_earned: 0, total_withdrawn: 0 });
@@ -1063,7 +1069,10 @@ function App() {
   // Commission data
   const [commissionData, setCommissionData] = useState<{ pending_commission: number; unsettled_commission: number; total_commission: number; settled_commission: number; records: any[]; payments: any[] }>({ pending_commission: 0, unsettled_commission: 0, total_commission: 0, settled_commission: 0, records: [], payments: [] });
   const [commPayLoading, setCommPayLoading] = useState(false);
-  const [commResult, setCommResult] = useState('');
+  // Typed. It was styled by sniffing for '✅' or '🚫' inside the text, which
+  // meant a copy edit could silently turn a success red — and a cancelled
+  // payment (not a failure) shared its branch with real errors by accident.
+  const [commResult, setCommResult] = useState<{ kind: 'ok' | 'warn' | 'error'; text: string } | null>(null);
 
   // ── Demand Heatmap + Driver Level + Prediction ────────────
   const [demandZones, setDemandZones] = useState<any[]>([]);
@@ -1806,35 +1815,43 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const claimDailyBonus = async (rule_id: number, tier_index: number) => {
-    setBonusClaiming(true); setBonusMsg('');
+    setBonusClaiming(true); setBonusMsg(null);
     try {
       const res = await authFetch(`${API}/api/bonus/claim-daily`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, rule_id, tier_index }) });
       const d = await res.json();
-      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      setBonusMsg(d.success
+        ? { kind: 'ok', text: d.message || 'Bonus claimed and added to your wallet.' }
+        : { kind: 'error', text: d.error || 'Could not claim this bonus.' });
       if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
-    } catch (_e) { setBonusMsg('❌ Server error'); }
+    } catch (_e) { setBonusMsg({ kind: 'error', text: 'Could not reach Sppero. Check your connection and try again.' }); }
     setBonusClaiming(false);
   };
   const claimStreakBonus = async () => {
-    setBonusClaiming(true); setBonusMsg('');
+    setBonusClaiming(true); setBonusMsg(null);
     try {
       const res = await authFetch(`${API}/api/bonus/claim-streak`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
       const d = await res.json();
-      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      setBonusMsg(d.success
+        ? { kind: 'ok', text: d.message || 'Streak bonus claimed and added to your wallet.' }
+        : { kind: 'error', text: d.error || 'Could not claim your streak bonus.' });
       if (d.success) { loadBonusDash(phone); loadDriverWallet(phone); }
-    } catch (_e) { setBonusMsg('❌ Server error'); }
+    } catch (_e) { setBonusMsg({ kind: 'error', text: 'Could not reach Sppero. Check your connection and try again.' }); }
     setBonusClaiming(false);
   };
   const redeemBonus = async () => {
     const amt = parseFloat(bonusRedeemAmt);
-    if (isNaN(amt) || amt < 50) { setBonusMsg('❌ Minimum ₹50 required to redeem'); return; }
-    setBonusRedeemLoading(true); setBonusMsg('');
+    if (!bonusRedeemAmt.trim()) { setBonusMsg({ kind: 'warn', text: 'Enter how many bonus tokens you want to redeem.' }); return; }
+    if (isNaN(amt) || amt <= 0)  { setBonusMsg({ kind: 'warn', text: 'Enter a valid amount.' }); return; }
+    if (amt < 50)                { setBonusMsg({ kind: 'warn', text: `Minimum redemption is ₹50. You entered ₹${amt.toFixed(0)}.` }); return; }
+    setBonusRedeemLoading(true); setBonusMsg(null);
     try {
       const res = await authFetch(`${API}/api/bonus/redeem`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone, amount: amt }) });
       const d = await res.json();
-      setBonusMsg(d.success ? '✅ ' + d.message : '❌ ' + (d.error || 'Error'));
+      setBonusMsg(d.success
+        ? { kind: 'ok', text: d.message || 'Redeemed. The amount is in your wallet.' }
+        : { kind: 'error', text: d.error || 'Could not redeem right now.' });
       if (d.success) { setBonusRedeemAmt(''); loadBonusDash(phone); loadDriverWallet(phone); }
-    } catch (_e) { setBonusMsg('❌ Server error'); }
+    } catch (_e) { setBonusMsg({ kind: 'error', text: 'Could not reach Sppero. Check your connection and try again.' }); }
     setBonusRedeemLoading(false);
   };
 
@@ -2448,7 +2465,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone); fetchDriverNotifs(data.driver.phone); loadDriverSub(data.driver.phone, data.driver.vehicle_type);
         setScreen(pd2 ? 'home' : 'permissions');
       } else { setDriverInfo(data.driver); }
-    } catch (_e) { setResult('❌ Server error'); }
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -2530,7 +2547,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) setRegStep(99);
       else setResult('❌ ' + (data.error || 'Registration failed'));
-    } catch (_e) { setResult('❌ Server error'); }
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -3019,7 +3036,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await authRidePost('/api/parcel/flag-non-delivery', { ride_id: activeRide.id, driver_phone: phone, reason });
       if (data._error || data.error) setResult('❌ ' + (data.error || data.message || 'Could not send'));
       else setActiveRide({ ...activeRide, return_status: 'pending_decision', delivery_fail_reason: reason });
-    } catch { setResult('❌ Network error'); }
+    } catch { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -3049,7 +3066,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setTripSummary({ fare: '0', payment_method: activeRide.payment_method || 'online', earned: '₹' + earned, fee: '₹0' });
         setActiveRide(null);
       }
-    } catch { setResult('❌ Network error'); }
+    } catch { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -3137,7 +3154,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // Load bank details when bank sub-screen opens
   useEffect(() => {
     if (driverSubScreen === 'bank' && phone) {
-      setBankMsg(''); setBankEditing(false);
+      setBankMsg(null); setBankEditing(false);
       if (!bankLoaded) {
         authRideGet(`/api/driver/bank?phone=${phone}`)
           .then(d => {
@@ -3160,13 +3177,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const saveBank = async () => {
-    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg('❌ Both account number and IFSC are required'); return; }
-    setBankSaving(true); setBankMsg('');
+    if (!bankAccount.trim() || !bankIfsc.trim()) { setBankMsg({ kind: 'warn', text: 'Enter both the account number and the IFSC code.' }); return; }
+    setBankSaving(true); setBankMsg(null);
     try {
       const d = await authRidePost('/api/driver/bank', { phone, bank_account: bankAccount, bank_ifsc: bankIfsc, bank_holder: bankHolder });
-      if (d.success) { setBankMsg('✅ Bank details saved!'); setBankEditing(false); }
-      else setBankMsg('❌ ' + (d.error || 'Error'));
-    } catch (_e) { setBankMsg('❌ Network error'); }
+      if (d.success) { setBankMsg({ kind: 'ok', text: 'Bank details saved. Payouts will go here.' }); setBankEditing(false); }
+      else setBankMsg({ kind: 'error', text: d.error || 'Could not save your bank details.' });
+    } catch (_e) { setBankMsg({ kind: 'error', text: 'Could not reach Sppero. Check your connection and try again.' }); }
     setBankSaving(false);
   };
 
@@ -3310,7 +3327,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) { setActiveHourlyRide({ ...hourlyRideReq, driver_phone: phone, status: 'matched' }); setHourlyRideReq(null); }
       else { setResult('❌ ' + (data.message || 'Accept failed')); setHourlyRideReq(null); }
-    } catch (_e) { setResult('❌ Network error'); }
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -3322,7 +3339,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.success) { setActiveHourlyRide((p: any) => ({ ...p, status: 'active', started_at: new Date().toISOString() })); setHourlyOtpInput(''); setResult(''); }
       else setResult('❌ ' + (data.message || 'Incorrect OTP!'));
-    } catch (_e) { setResult('❌ Network error'); }
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -3345,7 +3362,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       } else if (data.too_early || data.time_locked) {
         setResult(`🔒 ${data.message}`);
       } else setResult('❌ ' + (data.message || 'Could not complete'));
-    } catch (_e) { setResult('❌ Network error'); }
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
 
@@ -3810,7 +3827,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   const data = await res.json();
                   if (data.token) { await AsyncStorage.setItem('driverToken', data.token); setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
                   else setResult('❌ ' + (data.error || 'Incorrect OTP'));
-                } catch (_e) { setResult('❌ Server error'); }
+                } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
                 setLoading(false);
               }}>
               <Text style={s.btnTxt}>{loading ? t('reg_verifying') : t('reg_verify_next')}</Text>
@@ -4628,7 +4645,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           onAccept={() => {
             authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
               .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
-              .catch(() => setResult('❌ Network error'));
+              .catch(() => setResult('❌ Could not reach Sppero. Check your connection and try again.'));
           }}
           onDecline={() => {
             authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
@@ -5240,7 +5257,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               onPress={() => {
                 authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
                   .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
-                  .catch(() => setResult('❌ Network error'));
+                  .catch(() => setResult('❌ Could not reach Sppero. Check your connection and try again.'));
               }}
               style={{ backgroundColor: '#7C3AED', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 7 }}>
               <Text style={{ color: '#fff', fontWeight: '900', fontSize: 12 }}>Queue ✓</Text>
@@ -5443,7 +5460,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           onAccept={() => {
             authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
               .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
-              .catch(() => setResult('❌ Network error'));
+              .catch(() => setResult('❌ Could not reach Sppero. Check your connection and try again.'));
           }}
           onDecline={() => {
             authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
@@ -7525,7 +7542,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             onAccept={() => {
               authRidePost('/api/rides/pre-accept', { ride_id: preQueued.rideId, phone })
                 .then(d => { if (d.success) setPreQueueAccepted(true); else setResult('❌ ' + (d.error || 'Accept failed')); })
-                .catch(() => setResult('❌ Network error'));
+                .catch(() => setResult('❌ Could not reach Sppero. Check your connection and try again.'));
             }}
             onDecline={() => {
               authRidePost('/api/rides/pre-decline', { ride_id: preQueued.rideId, phone })
@@ -7985,11 +8002,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{val}</Text>
                 </View>
               ))}
-              <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(true); }}
+              <TouchableOpacity onPress={() => { setBankMsg(null); setBankEditing(true); }}
                 style={{ backgroundColor: C.green, borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 18 }}>
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14 }}>✏️ Edit Bank Details</Text>
               </TouchableOpacity>
-              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: C.green }}>{bankMsg}</Text> : null}
+              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: C.green }}>{bankMsg.text}</Text> : null}
             </View>
           ) : (
             /* ── Editable form ── */
@@ -8030,12 +8047,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ color: '#fff', fontWeight: '800', fontSize: 15 }}>{bankSaving ? 'Saving...' : '💾 Save Bank Details'}</Text>
               </TouchableOpacity>
               {hasSaved && (
-                <TouchableOpacity onPress={() => { setBankMsg(''); setBankEditing(false); }}
+                <TouchableOpacity onPress={() => { setBankMsg(null); setBankEditing(false); }}
                   style={{ borderWidth: 1, borderColor: '#E2E8F0', borderRadius: 12, padding: 13, alignItems: 'center', marginTop: 10 }}>
                   <Text style={{ color: '#94A3B8', fontWeight: '700', fontSize: 14 }}>Cancel</Text>
                 </TouchableOpacity>
               )}
-              {bankMsg ? <Text style={{ textAlign: 'center', marginTop: 10, fontSize: 13, color: bankMsg.startsWith('✅') ? C.green : C.pink }}>{bankMsg}</Text> : null}
+              {bankMsg ? (
+                <Text style={{
+                  textAlign: 'center', marginTop: 10, fontSize: 13, fontWeight: '600',
+                  color: bankMsg.kind === 'ok' ? C.green : bankMsg.kind === 'warn' ? '#B45309' : '#DC2626',
+                }}>{bankMsg.text}</Text>
+              ) : null}
             </View>
           )}
         </ScrollView>
@@ -9177,11 +9199,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TouchableOpacity
                   disabled={commPayLoading}
                   onPress={async () => {
-                    setCommPayLoading(true); setCommResult('');
+                    setCommPayLoading(true); setCommResult(null);
                     try {
                       const r = await authFetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                       const d = await r.json();
-                      if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                      if (!d.success) { setCommResult({ kind: 'error', text: d.message || d.error || 'Could not start the payment.' }); setCommPayLoading(false); return; }
                       if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); setCommPayLoading(false); return; }
                       RazorpayCheckout.open({
                         key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
@@ -9192,13 +9214,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                           body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                         });
                         const vd = await vr.json();
-                        if (vd.success) { setCommResult('✅ Commission cleared! New rides are now available.'); loadCommissionHistory(phone); }
-                        else setCommResult('❌ Payment verification failed — please contact support');
+                        if (vd.success) { setCommResult({ kind: 'ok', text: 'Commission cleared. Thank you.' }); loadCommissionHistory(phone); }
+                        else setCommResult({ kind: 'error', text: 'We could not confirm that payment. If money left your account, contact support and we will sort it.' });
                         setCommPayLoading(false);
                       }).catch((e: any) => {
                         const desc = String(e?.description || e?.error?.description || '').toLowerCase();
                         const cancelled = e?.code === 0 || e?.code === 'PAYMENT_CANCELLED' || desc.includes('cancel');
-                        setCommResult(cancelled ? '🚫 Payment cancelled — you can try again' : '❌ Payment failed — please try again');
+                        setCommResult(cancelled ? { kind: 'warn', text: 'Payment cancelled. You can try again whenever you like.' } : { kind: 'error', text: 'That payment did not go through. Please try again.' });
                         setCommPayLoading(false);
                       });
                     } catch (_e) { Alert.alert('Error', 'Could not connect to server'); setCommPayLoading(false); }
@@ -9218,11 +9240,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {commResult ? (
                   <View style={{
                     marginTop: 10, borderRadius: 12, padding: 12, borderWidth: 1,
-                    backgroundColor: commResult.includes('✅') ? '#F0FDF4' : commResult.includes('🚫') ? '#FFFBEB' : '#FFF5F5',
-                    borderColor:     commResult.includes('✅') ? '#BBF7D0' : commResult.includes('🚫') ? '#FDE68A' : '#FCA5A5',
+                    backgroundColor: commResult.kind === 'ok' ? '#F0FDF4' : commResult.kind === 'warn' ? '#FFFBEB' : '#FFF5F5',
+                    borderColor:     commResult.kind === 'ok' ? '#BBF7D0' : commResult.kind === 'warn' ? '#FDE68A' : '#FCA5A5',
                   }}>
-                    <Text style={{ color: commResult.includes('✅') ? '#15803D' : commResult.includes('🚫') ? '#92400E' : '#DC2626', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
-                    {commResult.includes('🚫') && (
+                    <Text style={{ color: commResult.kind === 'ok' ? '#15803D' : commResult.kind === 'warn' ? '#92400E' : '#DC2626', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{commResult.text}</Text>
+                    {commResult.kind === 'warn' && (
                       <Text style={{ color: '#92400E', fontSize: 11, textAlign: 'center', marginTop: 4, opacity: 0.8 }}>{t('retry_below_upi')}</Text>
                     )}
                   </View>
@@ -9431,11 +9453,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <TouchableOpacity
               disabled={commPayLoading}
               onPress={async () => {
-                setCommPayLoading(true); setCommResult('');
+                setCommPayLoading(true); setCommResult(null);
                 try {
                   const r = await authFetch(`${API}/api/driver/commission-pay`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone }) });
                   const d = await r.json();
-                  if (!d.success) { setCommResult('❌ ' + (d.message || d.error || 'Error')); setCommPayLoading(false); return; }
+                  if (!d.success) { setCommResult({ kind: 'error', text: d.message || d.error || 'Could not start the payment.' }); setCommPayLoading(false); return; }
                   if (!RazorpayCheckout) { Alert.alert('Error', 'Payment module failed to load. Please restart the app.'); setCommPayLoading(false); return; }
                   RazorpayCheckout.open({
                     key: d.key_id, amount: d.amount, currency: d.currency || 'INR', order_id: d.order_id,
@@ -9446,13 +9468,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       body: JSON.stringify({ phone, razorpay_order_id: payment.razorpay_order_id, razorpay_payment_id: payment.razorpay_payment_id, razorpay_signature: payment.razorpay_signature }),
                     });
                     const vd = await vr.json();
-                    if (vd.success) { setCommResult('✅ Commission paid! Rides are now available.'); loadCommissionHistory(phone); }
-                    else setCommResult('❌ Payment verification failed — please contact support');
+                    if (vd.success) { setCommResult({ kind: 'ok', text: 'Commission paid. Thank you.' }); loadCommissionHistory(phone); }
+                    else setCommResult({ kind: 'error', text: 'We could not confirm that payment. If money left your account, contact support and we will sort it.' });
                     setCommPayLoading(false);
                   }).catch((e: any) => {
                     const desc = String(e?.description || e?.error?.description || '').toLowerCase();
                     const cancelled = e?.code === 0 || e?.code === 'PAYMENT_CANCELLED' || desc.includes('cancel');
-                    setCommResult(cancelled ? '🚫 Payment cancelled — you can try again' : '❌ Payment failed — please try again');
+                    setCommResult(cancelled ? { kind: 'warn', text: 'Payment cancelled. You can try again whenever you like.' } : { kind: 'error', text: 'That payment did not go through. Please try again.' });
                     setCommPayLoading(false);
                   });
                 } catch (_e) { Alert.alert('Error', 'Could not connect to server'); setCommPayLoading(false); }
@@ -9462,9 +9484,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             </TouchableOpacity>
           )}
           {commResult ? (
-            <View style={{ marginBottom: 10, borderRadius: 10, padding: 10, backgroundColor: commResult.includes('✅') ? '#F0FDF4' : commResult.includes('🚫') ? '#FFFBEB' : '#FFF5F5', borderWidth: 1, borderColor: commResult.includes('✅') ? '#BBF7D0' : commResult.includes('🚫') ? '#FDE68A' : '#FCA5A5' }}>
-              <Text style={{ color: commResult.includes('✅') ? '#15803D' : commResult.includes('🚫') ? '#92400E' : '#DC2626', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{commResult}</Text>
-              {commResult.includes('🚫') && <Text style={{ color: '#92400E', fontSize: 11, textAlign: 'center', marginTop: 3, opacity: 0.8 }}>{t('retry_pay_below')}</Text>}
+            <View style={{ marginBottom: 10, borderRadius: 10, padding: 10, backgroundColor: commResult.kind === 'ok' ? '#F0FDF4' : commResult.kind === 'warn' ? '#FFFBEB' : '#FFF5F5', borderWidth: 1, borderColor: commResult.kind === 'ok' ? '#BBF7D0' : commResult.kind === 'warn' ? '#FDE68A' : '#FCA5A5' }}>
+              <Text style={{ color: commResult.kind === 'ok' ? '#15803D' : commResult.kind === 'warn' ? '#92400E' : '#DC2626', fontSize: 13, fontWeight: '700', textAlign: 'center' }}>{commResult.text}</Text>
+              {commResult.kind === 'warn' && <Text style={{ color: '#92400E', fontSize: 11, textAlign: 'center', marginTop: 3, opacity: 0.8 }}>{t('retry_pay_below')}</Text>}
             </View>
           ) : null}
 
@@ -9585,7 +9607,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       <View style={{ backgroundColor: C.pink, paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 28) + 14 : 52, paddingBottom: 20, paddingHorizontal: 18 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
           <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', flex: 1 }}>🎁 Bonus Wallet</Text>
-          <TouchableOpacity onPress={() => { loadBonusDash(phone); setBonusMsg(''); }} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
+          <TouchableOpacity onPress={() => { loadBonusDash(phone); setBonusMsg(null); }} style={{ padding: 8, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 10 }}>
             <Text style={{ fontSize: 16 }}>⟳</Text>
           </TouchableOpacity>
         </View>
@@ -9629,8 +9651,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
         {bonusMsg ? (
-          <View style={{ backgroundColor: bonusMsg.startsWith('✅') ? 'rgba(76,175,80,0.15)' : 'rgba(233,69,96,0.12)', borderRadius: 12, padding: 12, marginBottom: 12 }}>
-            <Text style={{ color: bonusMsg.startsWith('✅') ? '#2e7d32' : '#c62828', fontWeight: '700', fontSize: 13 }}>{bonusMsg}</Text>
+          <View style={{
+            flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginBottom: 12,
+            backgroundColor: bonusMsg.kind === 'ok' ? '#ECFDF5' : bonusMsg.kind === 'warn' ? '#FFFBEB' : '#FEF2F2',
+            borderWidth: 1,
+            borderColor: bonusMsg.kind === 'ok' ? '#A7F3D0' : bonusMsg.kind === 'warn' ? '#FDE68A' : '#FECACA',
+            borderRadius: 12, paddingVertical: 10, paddingHorizontal: 12,
+          }}>
+            <Ionicons
+              name={bonusMsg.kind === 'ok' ? 'checkmark-circle' : bonusMsg.kind === 'warn' ? 'information-circle' : 'alert-circle'}
+              size={16}
+              color={bonusMsg.kind === 'ok' ? '#059669' : bonusMsg.kind === 'warn' ? '#B45309' : '#DC2626'}
+              style={{ marginTop: 1 }}
+            />
+            <Text style={{
+              flex: 1, fontSize: 12.5, lineHeight: 18, fontWeight: '600',
+              color: bonusMsg.kind === 'ok' ? '#065F46' : bonusMsg.kind === 'warn' ? '#92400E' : '#991B1B',
+            }}>{bonusMsg.text}</Text>
           </View>
         ) : null}
 
@@ -10020,7 +10057,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             if (key === 'terms-of-service') { Linking.openURL('https://api.sppero.com/terms'); return; }
             if (key === 'orders') { setOrdersData(null); setOrdersLoading(false); setOrdersPeriod('day'); setOrdersDate(new Date()); setOrdersFilter('all'); }
             if (key === 'subscription') { setSubResult(''); setSubSelectedPlan(null); loadDriverSub(phone, driverInfo?.vehicle_type); }
-            setDrSubScreen(key as any); setBankMsg('');
+            setDrSubScreen(key as any); setBankMsg(null);
           }}>
             <Text style={{ fontSize: 22, marginRight: 14 }}>{icon}</Text>
             <View style={{ flex: 1 }}><Text style={{ fontSize: 15, color: '#0F172A', fontWeight: '500' }}>{title}</Text><Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{sub}</Text></View>
