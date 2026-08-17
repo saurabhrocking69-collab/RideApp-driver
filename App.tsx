@@ -2005,6 +2005,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     active: navActive,
     muted: navMuted,
     phase: navPhase,
+    // Routes the spoken turns on the driver's own vehicle, so the voice agrees
+    // with the line DriverLiveMap draws (which already does this).
+    vehicleType: driverInfo?.vehicle_type || 'auto',
   });
 
   // ── Auto-exit in-app nav mode when ride ends ──

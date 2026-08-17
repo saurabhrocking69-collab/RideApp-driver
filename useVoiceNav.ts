@@ -3,6 +3,16 @@ import * as Speech from 'expo-speech';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
+// Vehicles that are NOT bound to the car road network — they use the lanes and
+// cut-throughs a car is not routed down.
+//
+// This list is duplicated in DriverLiveMap.tsx and the customer app's
+// LiveMap.tsx. All three must stay identical: the customer is quoted a fare on
+// one road network and the driver is sent down another, so a vehicle that is
+// "nimble" in one file and not in another means the driver drives a longer
+// route than the passenger paid for.
+const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
+
 type NavStep = {
   html: string;
   text: string;
@@ -108,7 +118,7 @@ function distLabel(m: number): string {
   return `${Math.round(m)} metre`;
 }
 
-export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, muted = false, phase }: {
+export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, muted = false, phase, vehicleType }: {
   driverLat: number | null;
   driverLng: number | null;
   destLat:   number | null;
@@ -120,6 +130,11 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
   // `active` instead.
   muted?:    boolean;
   phase:     'to_pickup' | 'to_drop';
+  // The driver's OWN vehicle — this decides which road network the spoken turns
+  // are taken from. Omitted or unknown means the car network, which is the
+  // safe default: a car route is always drivable by a two-wheeler, the reverse
+  // is not.
+  vehicleType?: string;
 }) {
   const [steps, setSteps]           = useState<NavStep[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -173,23 +188,36 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
     }
     let cancelled = false;
     let retryTimer: any = null;
-    const url = `https://maps.googleapis.com/maps/api/directions/json?origin=${driverLat},${driverLng}&destination=${destLat},${destLng}&mode=driving&key=${MAPS_KEY}`;
-    fetch(url)
-      .then(r => r.json())
-      .then(data => {
-        if (cancelled) return;
-        const rawSteps = data.routes?.[0]?.legs?.[0]?.steps ?? [];
-        if (rawSteps.length === 0) throw new Error('no route');
-        // Prefer the per-step geometry (finer than overview_polyline, which is
-        // simplified and can cut corners enough to read as 30-40m off-route).
-        const pts: Array<[number, number]> = [];
-        for (const s of rawSteps) {
-          if (s.polyline?.points) pts.push(...decodePolyline(s.polyline.points));
-        }
-        setRoutePts(pts.length ? pts : decodePolyline(data.routes[0].overview_polyline?.points || ''));
-        setRerouting(false);
-        offStrikesRef.current = 0;
-        const parsed: NavStep[] = rawSteps.map((s: any, idx: number) => ({
+    /* ── Which road network the driver is TOLD to drive ─────────────────────
+       These turns used to always come from a car route. On a real Lucknow trip
+       that made a 1.9 km job read as 4.2 km: the car graph forces you out onto
+       Kursi Rd, while an auto takes the lanes. Both maps had already been moved
+       onto two-wheeler routing, so an auto driver was being shown the short way
+       on screen while the voice read out the car detour — the drawn line and
+       the spoken turns disagreed at every junction.
+
+       Cars, and any vehicle we don't recognise, stay on the car route. */
+    const nimble = NIMBLE_VEHICLES.includes(String(vehicleType || ''));
+
+    // One shape out of both APIs. Everything downstream — step advance,
+    // off-route detection, announcements — is untouched by which one answered.
+    type Parsed = { pts: Array<[number, number]>; steps: NavStep[] };
+
+    // Prefer the per-step geometry (finer than the overview polyline, which is
+    // simplified and can cut corners enough to read as 30-40m off-route).
+    const joinSteps = (encs: string[], overview: string): Array<[number, number]> => {
+      const pts: Array<[number, number]> = [];
+      for (const e of encs) if (e) pts.push(...decodePolyline(e));
+      return pts.length ? pts : decodePolyline(overview || '');
+    };
+
+    const parseLegacy = (data: any): Parsed | null => {
+      const rawSteps = data?.routes?.[0]?.legs?.[0]?.steps ?? [];
+      if (rawSteps.length === 0) return null;
+      return {
+        pts: joinSteps(rawSteps.map((s: any) => s.polyline?.points || ''),
+                       data.routes[0].overview_polyline?.points || ''),
+        steps: rawSteps.map((s: any, idx: number) => ({
           html: s.html_instructions,
           text: htmlToSpeak(s.html_instructions),
           maneuver: s.maneuver || '',
@@ -197,13 +225,94 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
           endLat: s.end_location?.lat ?? rawSteps[idx + 1]?.start_location?.lat ?? destLat ?? 0,
           endLng: s.end_location?.lng ?? rawSteps[idx + 1]?.start_location?.lng ?? destLng ?? 0,
           distanceM: s.distance?.value ?? 0,
-        }));
-        setSteps(parsed);
+        })),
+      };
+    };
+
+    const parseRoutes = (data: any): Parsed | null => {
+      const route = data?.routes?.[0];
+      const rawSteps = route?.legs?.[0]?.steps ?? [];
+      if (rawSteps.length === 0) return null;
+      return {
+        pts: joinSteps(rawSteps.map((s: any) => s.polyline?.encodedPolyline || ''),
+                       route.polyline?.encodedPolyline || ''),
+        steps: rawSteps.map((s: any, idx: number) => {
+          const nav  = s.navigationInstruction || {};
+          const end  = s.endLocation?.latLng;
+          const next = rawSteps[idx + 1]?.startLocation?.latLng;
+          // This API sends one instruction per line ("Turn left onto Kursi Rd"
+          // then "Destination will be on the left"). Read as-is the lines run
+          // together into one breathless sentence, so give the voice a stop.
+          const raw = String(nav.instructions || '').replace(/\n+/g, '. ');
+          return {
+            html: raw,
+            text: htmlToSpeak(raw),
+            // TURN_LEFT here vs turn-left in the old API. maneuverIcon() only
+            // knows the old spelling, so without this every turn arrow quietly
+            // falls back to a straight-ahead glyph.
+            maneuver: String(nav.maneuver || '').toLowerCase().replace(/_/g, '-'),
+            endLat: end?.latitude  ?? next?.latitude  ?? destLat ?? 0,
+            endLng: end?.longitude ?? next?.longitude ?? destLng ?? 0,
+            distanceM: s.distanceMeters ?? 0,
+          };
+        }),
+      };
+    };
+
+    const legacyApi = (): Promise<Parsed | null> =>
+      fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${driverLat},${driverLng}&destination=${destLat},${destLng}&mode=driving&key=${MAPS_KEY}`)
+        .then(r => r.json())
+        .then(parseLegacy);
+
+    const routesApi = (): Promise<Parsed | null> =>
+      fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': MAPS_KEY,
+          'X-Goog-FieldMask': 'routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction,routes.legs.steps.startLocation,routes.legs.steps.endLocation,routes.legs.steps.distanceMeters,routes.legs.steps.polyline.encodedPolyline',
+        },
+        body: JSON.stringify({
+          origin:      { location: { latLng: { latitude: driverLat, longitude: driverLng } } },
+          destination: { location: { latLng: { latitude: destLat,   longitude: destLng   } } },
+          travelMode: 'TWO_WHEELER',
+          // This route line is not just drawn — it is what "have I left the
+          // road" is measured against (see OFF_ROUTE_M). The default polyline
+          // is simplified: 59 points where the old API gave 136, with 319m
+          // between consecutive points. Measured on the Lucknow route the
+          // simplification only strays 1.4m from the real road, well inside the
+          // 60m threshold — but that is one straight route, and a chord across
+          // a curve is exactly how a driver gets rerouted off a road they are
+          // still on. HIGH_QUALITY costs nothing beyond a bigger response.
+          polylineQuality: 'HIGH_QUALITY',
+          // Without this it answers in whatever language it likes — a Lucknow
+          // trip came back in Assamese during testing, which the driver would
+          // then have heard read aloud.
+          languageCode: 'en-IN',
+          regionCode: 'IN',
+        }),
+      })
+        .then(r => r.json())
+        .then(parseRoutes)
+        // Never leave a driver mid-trip with no spoken directions. If
+        // two-wheeler routing is unavailable — quota, billing, API not enabled
+        // — the car route is worse but drivable; silence is not.
+        .then(p => p || legacyApi())
+        .catch(() => legacyApi());
+
+    (nimble ? routesApi() : legacyApi())
+      .then(parsed => {
+        if (cancelled) return;
+        if (!parsed) throw new Error('no route');
+        setRoutePts(parsed.pts);
+        setRerouting(false);
+        offStrikesRef.current = 0;
+        setSteps(parsed.steps);
         setCurrentIdx(0);
         announced.current.clear();
-        if (parsed.length > 0) {
+        if (parsed.steps.length > 0) {
           const label = phase === 'to_pickup' ? 'Pickup ki taraf chal rahe hain.' : 'Drop point ki taraf chal rahe hain.';
-          speak(`${label} ${distLabel(parsed[0].distanceM)} mein ${parsed[0].text}`);
+          speak(`${label} ${distLabel(parsed.steps[0].distanceM)} mein ${parsed.steps[0].text}`);
           announced.current.add('0:far');
         }
       })
@@ -219,7 +328,7 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
         }, REROUTE_RETRY_MS);
       });
     return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
-  }, [active, destLat, destLng, phase, routeSeq]);
+  }, [active, destLat, destLng, phase, routeSeq, vehicleType]);
 
   // Advance through steps + announce as the driver approaches each turn.
   useEffect(() => {

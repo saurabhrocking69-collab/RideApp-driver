@@ -197,6 +197,11 @@ function StatusBadge({ status }: { status: RideStatus }) {
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
+/* Vehicles that can use lanes a car cannot. Must stay identical to the same
+   list in the customer app — if the two ever disagree, the fare and the drive
+   are measured on different roads. */
+const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
+
 export interface DriverLiveMapProps {
   pickupCoords?:  { lat: number; lng: number } | null;
   dropCoords?:    { lat: number; lng: number } | null;
@@ -388,27 +393,92 @@ export const DriverLiveMap = memo(function DriverLiveMap({
     }
 
     let cancelled = false;
-    fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving&key=${MAPS_KEY}`)
-      .then(r => r.json())
-      .then(data => {
-        if (cancelled) return;
-        const route = data.routes?.[0];
-        if (!route) return;
-        if (!drawChosen) setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
-        const leg = route.legs?.[0];
-        if (leg) {
-          setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || '');
-          // Pull turn points from the step maneuvers → arrows on the road.
-          const turns = (leg.steps || [])
-            .filter((s: any) => s.maneuver && /turn|roundabout|ramp|fork|merge|uturn/.test(s.maneuver) && s.start_location)
-            .map((s: any) => ({ lat: s.start_location.lat, lng: s.start_location.lng, maneuver: s.maneuver }));
-          setTurnPoints(turns);
-        }
+
+    /* ── Which road network the driver is measured against ──────────────────
+       This used to always ask for a CAR route. On a real Lucknow trip that made
+       a 1.9 km job read as 4.2 km, because the car graph forces you out onto the
+       main road while an auto uses the lanes. Google's two-wheeler routing gives
+       2.8 km for the same pair.
+
+       The customer app was fixed first, and fixing only that would have been
+       worse than leaving both wrong: the fare would have been quoted on 2.8 km
+       while this screen sent the driver 4.2 km. Both ends have to agree. */
+    const nimble = NIMBLE_VEHICLES.includes(String(vehicleType || ''));
+
+    const fmtKm  = (m: number) => m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+    const fmtMin = (s: number) => {
+      const min = Math.round(s / 60);
+      return min >= 60 ? `${Math.floor(min / 60)} hr ${min % 60} min` : `${min} min${min === 1 ? '' : 's'}`;
+    };
+
+    const applyLegacy = (data: any) => {
+      const route = data.routes?.[0];
+      if (!route) return false;
+      if (!drawChosen) setRouteCoords(decodePolyline(route.overview_polyline?.points || ''));
+      const leg = route.legs?.[0];
+      if (leg) {
+        setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || '');
+        const turns = (leg.steps || [])
+          .filter((s: any) => s.maneuver && /turn|roundabout|ramp|fork|merge|uturn/.test(s.maneuver) && s.start_location)
+          .map((s: any) => ({ lat: s.start_location.lat, lng: s.start_location.lng, maneuver: s.maneuver }));
+        setTurnPoints(turns);
+      }
+      return true;
+    };
+
+    const legacyFetch = () =>
+      fetch(`https://maps.googleapis.com/maps/api/directions/json?origin=${origin}&destination=${destination}&mode=driving&key=${MAPS_KEY}`)
+        .then(r => r.json())
+        .then(d => { if (!cancelled) applyLegacy(d); });
+
+    if (nimble) {
+      fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': MAPS_KEY,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline,routes.legs.steps.navigationInstruction,routes.legs.steps.startLocation',
+        },
+        body: JSON.stringify({
+          origin:      { location: { latLng: { latitude: +origin.split(',')[0],      longitude: +origin.split(',')[1] } } },
+          destination: { location: { latLng: { latitude: +destination.split(',')[0], longitude: +destination.split(',')[1] } } },
+          travelMode: 'TWO_WHEELER',
+          // Without this the API answers in whatever it likes — it returned
+          // Assamese for a Lucknow trip during testing.
+          languageCode: 'en-IN',
+          regionCode: 'IN',
+        }),
       })
-      .catch(() => {});
+        .then(r => r.json())
+        .then(d => {
+          if (cancelled) return;
+          const route = d.routes?.[0];
+          if (!route) return legacyFetch();          // quota, billing, API off — still show something
+          if (!drawChosen) setRouteCoords(decodePolyline(route.polyline?.encodedPolyline || ''));
+          setEtaText(fmtMin(parseFloat(String(route.duration || '0'))));
+          setDistText(fmtKm(route.distanceMeters ?? 0));
+          // Routes API maneuvers are TURN_LEFT / ROUNDABOUT_RIGHT; the legacy API
+          // is turn-left / roundabout-right. Same words, different casing — so
+          // normalise before the existing filter, which is written for the old
+          // spelling and would otherwise match nothing and silently drop every
+          // turn arrow.
+          const steps = route.legs?.[0]?.steps || [];
+          const turns = steps
+            .map((s: any) => {
+              const m = String(s.navigationInstruction?.maneuver || '').toLowerCase().replace(/_/g, '-');
+              const ll = s.startLocation?.latLng;
+              return (m && ll) ? { lat: ll.latitude, lng: ll.longitude, maneuver: m } : null;
+            })
+            .filter((t: any) => t && /turn|roundabout|ramp|fork|merge|uturn/.test(t.maneuver));
+          setTurnPoints(turns);
+        })
+        .catch(() => { if (!cancelled) legacyFetch(); });
+    } else {
+      legacyFetch();
+    }
     return () => { cancelled = true; };
   }, [
-    rideStatus, chosenRoutePolyline,
+    rideStatus, chosenRoutePolyline, vehicleType,
     pickupCoords?.lat, pickupCoords?.lng,
     dropCoords?.lat,  dropCoords?.lng,
     // Re-fetch every ~500m of driver movement during active ride
