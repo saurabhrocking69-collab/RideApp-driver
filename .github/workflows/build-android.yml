@@ -1,8 +1,10 @@
 name: Build Android APK
 
+# Manual only. EAS is the shipping path now, and its builds are signed with a
+# different key than this workflow's — so two build systems racing on every
+# push means every install needs an uninstall first, which is exactly the
+# confusion this caused. Kept dispatchable as a fallback if EAS is unavailable.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 # A new push supersedes whatever is still running for the same branch. Without
@@ -44,6 +46,16 @@ jobs:
         run: npx expo prebuild --platform android --clean --no-install
         env:
           EXPO_NO_TELEMETRY: 1
+
+      # Expo's prebuild template signs release with its own debug keystore —
+      # a key that ships inside Expo, so every Expo user on earth holds it and
+      # could sign an "update" for this app. This one is ours and is committed
+      # so the signature is also STABLE: a build signed with a different key
+      # cannot install over the previous one.
+      - name: Sign with the project's own keystore
+        run: |
+          cp .github/debug.keystore android/app/debug.keystore
+          keytool -list -v -keystore android/app/debug.keystore -storepass android | grep -E "Owner|SHA256" | head -2
 
       - name: Force legacy native-lib packaging (extract .so files; fixes crashes on many devices)
         run: echo "expo.useLegacyPackaging=true" >> android/gradle.properties
