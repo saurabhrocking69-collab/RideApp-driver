@@ -32,6 +32,7 @@ import { io, Socket } from 'socket.io-client';
 let _appLang: Lang = 'hi';
 import { C, T, R, SP, SHADOW, DS } from './theme';
 import { shortRideId } from './rideId';
+import { isNimble } from './vehicles';
 
 // Safe dynamic require: react-native-razorpay calls new NativeEventEmitter() at module
 // evaluation time which crashes in RN 0.81+ bridgeless mode if the TurboModule isn't
@@ -2071,20 +2072,62 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Live remaining time/distance during trip (started) ──
   useEffect(() => {
     if (activeRide?.status !== 'started') { setTripRemainingEta(''); return; }
+    /* This bar asked the Distance Matrix API with no `mode`, which means
+       `driving` — a CAR route — whatever the driver rides. It is the same bug
+       that was fixed on both maps and in the voice nav, but this fourth copy
+       was missed, so an auto driver saw the map draw the 2.8 km lane route
+       while this line underneath still read "14 mins · 4.7 km baaki".
+
+       Distance Matrix has no two-wheeler mode at all, so nimble vehicles go to
+       the Routes API. It is one origin and one destination, so computeRoutes
+       is the right call — no need for the matrix endpoint. */
+    const fmtKm  = (m: number) => m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
+    const fmtMin = (s: number) => {
+      const n = Math.round(s / 60);
+      return n >= 60 ? `${Math.floor(n / 60)} hr ${n % 60} min` : `${n} min${n === 1 ? '' : 's'}`;
+    };
+
     const fetchRemaining = async () => {
       const gps = driverGpsRef.current;
       if (!gps || !activeRide?.drop_lat || !activeRide?.drop_lng) return;
-      try {
+
+      const viaMatrix = async () => {
         const res = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${gps.lat},${gps.lng}&destinations=${activeRide.drop_lat},${activeRide.drop_lng}&key=${MAPS_KEY}`);
         const data = await res.json();
         const el = data.rows?.[0]?.elements?.[0];
         if (el?.status === 'OK') setTripRemainingEta(el.duration.text + ' · ' + el.distance.text + ' baaki');
-      } catch (_e) {}
+      };
+
+      try {
+        if (!isNimble(driverInfo?.vehicle_type)) { await viaMatrix(); return; }
+        const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Goog-Api-Key': MAPS_KEY,
+            'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration',
+          },
+          body: JSON.stringify({
+            origin:      { location: { latLng: { latitude: gps.lat, longitude: gps.lng } } },
+            destination: { location: { latLng: { latitude: parseFloat(activeRide.drop_lat), longitude: parseFloat(activeRide.drop_lng) } } },
+            travelMode: 'TWO_WHEELER',
+            languageCode: 'en-IN',
+            regionCode: 'IN',
+          }),
+        });
+        const d = await res.json();
+        const route = d.routes?.[0];
+        // Quota, billing, API off — a car figure beats a blank bar.
+        if (!route) { await viaMatrix(); return; }
+        setTripRemainingEta(`${fmtMin(parseFloat(String(route.duration || '0')))} · ${fmtKm(route.distanceMeters ?? 0)} baaki`);
+      } catch (_e) {
+        try { await viaMatrix(); } catch (_e2) {}
+      }
     };
     fetchRemaining();
     const iv = setInterval(fetchRemaining, 30000);
     return () => clearInterval(iv);
-  }, [activeRide?.status, activeRide?.id]);
+  }, [activeRide?.status, activeRide?.id, driverInfo?.vehicle_type]);
 
   // ── Alarm ringtone: loop while ride request is pending, stop otherwise ───────
   useEffect(() => {

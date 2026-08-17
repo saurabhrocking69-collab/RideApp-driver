@@ -1,17 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Speech from 'expo-speech';
+import { isNimble } from './vehicles';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
-// Vehicles that are NOT bound to the car road network — they use the lanes and
-// cut-throughs a car is not routed down.
-//
-// This list is duplicated in DriverLiveMap.tsx and the customer app's
-// LiveMap.tsx. All three must stay identical: the customer is quoted a fare on
-// one road network and the driver is sent down another, so a vehicle that is
-// "nimble" in one file and not in another means the driver drives a longer
-// route than the passenger paid for.
-const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
 
 type NavStep = {
   html: string;
@@ -197,7 +189,7 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
        the spoken turns disagreed at every junction.
 
        Cars, and any vehicle we don't recognise, stay on the car route. */
-    const nimble = NIMBLE_VEHICLES.includes(String(vehicleType || ''));
+    const nimble = isNimble(vehicleType);
 
     // One shape out of both APIs. Everything downstream — step advance,
     // off-route detection, announcements — is untouched by which one answered.
@@ -312,8 +304,12 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
         announced.current.clear();
         if (parsed.steps.length > 0) {
           const label = phase === 'to_pickup' ? 'Pickup ki taraf chal rahe hain.' : 'Drop point ki taraf chal rahe hain.';
-          speak(`${label} ${distLabel(parsed.steps[0].distanceM)} mein ${parsed.steps[0].text}`);
-          announced.current.add('0:far');
+          // Departure line only — which way to set off. It used to also say
+          // "in <length of step 0>, <step 0's instruction>", i.e. a distance to
+          // the first junction attached to the instruction for the road before
+          // it, and then marked 0:far as spoken — so the first real turn was
+          // never announced at the far tier at all.
+          speak(`${label} ${parsed.steps[0].text}`);
         }
       })
       .catch(() => {
@@ -329,6 +325,23 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
       });
     return () => { cancelled = true; if (retryTimer) clearTimeout(retryTimer); };
   }, [active, destLat, destLng, phase, routeSeq, vehicleType]);
+
+  /* The turn the driver performs AT THE END of step i — which is step i+1's.
+
+     Google's step i carries the manoeuvre you make to BEGIN step i, and its
+     end_location is the junction where the NEXT one happens. So while driving
+     step i, the countdown runs to step i's end but what you do there is step
+     i+1's instruction.
+
+     Pairing step i's distance with step i's own instruction — which is what
+     this did — describes the road already under the wheels. On a real trip
+     that read "50 m … Head southwest toward Forest Rd" with a straight-ahead
+     arrow, while the junction 50 m ahead was a right turn. The driver was
+     being counted down to a turn nobody ever named.
+
+     On the final step there is no next one; its own text is the arrival line
+     ("Destination will be on the left"), which is exactly what should show. */
+  const turnAt = (i: number): NavStep => steps[i + 1] ?? steps[i];
 
   // Advance through steps + announce as the driver approaches each turn.
   useEffect(() => {
@@ -388,7 +401,8 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
       const d = distM(driverLat, driverLng, steps[i].endLat, steps[i].endLng);
       if (isNaN(d) || d >= threshold) return;
       announced.current.add(key);
-      speak(tier === 'near' ? `Abhi ${steps[i].text}` : `${distLabel(d)} mein ${steps[i].text}`);
+      const t = turnAt(i).text;
+      speak(tier === 'near' ? `Abhi ${t}` : `${distLabel(d)} mein ${t}`);
     };
 
     // While rerouting, the on-screen route is known-stale — don't read out
@@ -400,8 +414,9 @@ export function useVoiceNav({ driverLat, driverLng, destLat, destLng, active, mu
     if (dist < 90) announce(idx + 1, 'far', 600);  // prime the following turn
   }, [driverLat, driverLng, steps, active, currentIdx, routePts, rerouting]);
 
-  const currentInstruction = steps[currentIdx]?.text ?? '';
-  const currentManeuver    = steps[currentIdx]?.maneuver ?? '';
+  // Both describe the junction nextDistM is counting down to — see turnAt().
+  const currentInstruction = steps.length ? turnAt(currentIdx).text : '';
+  const currentManeuver    = steps.length ? turnAt(currentIdx).maneuver : '';
 
   return { currentInstruction, currentManeuver, nextDistM, stepCount: steps.length, currentStep: currentIdx, rerouting };
 }

@@ -3,6 +3,7 @@ import { Animated, Linking, View, Text, StyleSheet, TouchableOpacity } from 'rea
 import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GOOGLE } from 'react-native-maps';
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { maneuverIcon } from './maneuverIcon';
+import { isNimble } from './vehicles';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
@@ -200,7 +201,6 @@ function StatusBadge({ status }: { status: RideStatus }) {
 /* Vehicles that can use lanes a car cannot. Must stay identical to the same
    list in the customer app — if the two ever disagree, the fare and the drive
    are measured on different roads. */
-const NIMBLE_VEHICLES = ['bike', 'auto', 'eriksha', 'electric_auto', 'green_bike'];
 
 export interface DriverLiveMapProps {
   pickupCoords?:  { lat: number; lng: number } | null;
@@ -403,7 +403,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
        The customer app was fixed first, and fixing only that would have been
        worse than leaving both wrong: the fare would have been quoted on 2.8 km
        while this screen sent the driver 4.2 km. Both ends have to agree. */
-    const nimble = NIMBLE_VEHICLES.includes(String(vehicleType || ''));
+    const nimble = isNimble(vehicleType);
 
     const fmtKm  = (m: number) => m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
     const fmtMin = (s: number) => {
