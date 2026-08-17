@@ -2462,13 +2462,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   // ── ETA ────────────────────────────────────────
+  // Trip length shown on the incoming ride-offer card. The driver decides
+  // whether to accept on this number, so it has to be the road THEY ride —
+  // an auto driver was being shown the car's 4.2 km for a 2.8 km job.
   const fetchEta = async (origin: string, dest: string) => {
-    try {
+    const viaMatrix = async () => {
       const res  = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(origin)}&destinations=${encodeURIComponent(dest)}&key=${MAPS_KEY}`);
       const data = await res.json();
       const el   = data.rows?.[0]?.elements?.[0];
       if (el?.status === 'OK') setEta(el.duration.text + ' · ' + el.distance.text);
-    } catch (_e) {}
+    };
+    try {
+      if (!isNimble(driverInfo?.vehicle_type)) { await viaMatrix(); return; }
+      const res = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Goog-Api-Key': MAPS_KEY,
+          'X-Goog-FieldMask': 'routes.distanceMeters,routes.duration',
+        },
+        body: JSON.stringify({
+          origin: { address: origin }, destination: { address: dest },
+          travelMode: 'TWO_WHEELER', languageCode: 'en-IN', regionCode: 'IN',
+        }),
+      });
+      const d = await res.json();
+      const r = d.routes?.[0];
+      if (!r?.distanceMeters) { await viaMatrix(); return; }
+      const km  = r.distanceMeters / 1000;
+      const min = Math.round(parseFloat(String(r.duration || '0')) / 60);
+      setEta(`${min} min${min === 1 ? '' : 's'} · ${km >= 1 ? km.toFixed(1) + ' km' : Math.round(km * 1000) + ' m'}`);
+    } catch (_e) {
+      try { await viaMatrix(); } catch (_e2) {}
+    }
   };
 
   // ── Login ──────────────────────────────────────
