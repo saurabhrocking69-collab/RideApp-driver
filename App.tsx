@@ -15,6 +15,7 @@ import { useVoiceNav } from './useVoiceNav';
 import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
 import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBanner';
+import { UpdateBanner } from './UpdateBanner';
 import { DeleteAccountSheet } from './DeleteAccountSheet';
 import { Audio } from 'expo-av';
 import { apiGet, apiPost, apiAuthPost, apiAuthGet } from './api';
@@ -5498,6 +5499,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         alert={zoneAlert}
         onDismiss={() => setZoneAlert(null)}
       />
+      {/* Restart offer is withheld while a trip is live — see UpdateBanner. */}
+      <UpdateBanner busyWithRide={!!activeRide} />
       {/* Zone Alert sender panel */}
       <ZoneAlertSender
         visible={showZoneAlertSender}
