@@ -774,6 +774,14 @@ function App() {
   // cold radio. Without this the big button looks dead for a second or two and
   // drivers tap it again.
   const [onlineBusy, setOnlineBusy] = useState(false);
+  /* Whether the SERVER agrees the driver is online, as opposed to whether the
+     switch on this phone is flipped. The two used to be assumed identical: the
+     switch flipped, the sticky notification said "You'll receive ride
+     requests", and the toggle-online call went out fire-and-forget. If all its
+     retries failed the driver sat there believing they were working, got no
+     requests at all, and had nothing on screen to explain why. For a driver
+     that is not a glitch, it is an evening's earnings. */
+  const [onlineConfirmed, setOnlineConfirmed] = useState(false);
   const [rideReq, setRideReq]       = useState<any>(null);
   const [activeRide, setActiveRide] = useState<any>(null);
   // { id, stops } when activeRide is currently a batch's stop — see store.ts
@@ -1286,6 +1294,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               // + background location whenever the backend says they're online.
               if (data.driver.is_online) {
                 setIsOnline(true);
+                // This answer came FROM the server saying they are online, so
+                // it is itself the confirmation — without this the
+                // not-connected banner would greet every cold start.
+                setOnlineConfirmed(true);
                 startPolling(savedPhone);
                 startBgLocation().catch(() => {});
               }
@@ -2824,13 +2836,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         socketRef.current = s;
         (globalThis as any).__driverSocket = s;
       }
-      // Tell server we're online — retry aggressively in background
+      /* Tell the server we are online, and keep the answer.
+         `!r._error` alone was not enough: _error is only set when the request
+         never completed, so an expired token coming back as 401, or any 4xx/5xx
+         carrying a JSON body, counted as success and the loop stopped happy.
+         An expired driver token is exactly the case that leaves someone online
+         on their own screen and invisible to matching. */
+      setOnlineConfirmed(false);
       (async () => {
         for (let i = 0; i < 8; i++) {
           const r = await authRidePost('/api/driver/toggle-online', { phone, is_online: true });
-          if (!r._error) return;
+          const ok = r && !r._error && !r.error && (r._status == null || r._status < 400);
+          if (ok) { setOnlineConfirmed(true); return; }
           await new Promise(res => setTimeout(res, 2000));
         }
+        // Out of retries. Say so, loudly — the banner stays up until this
+        // succeeds, because until it does no ride can reach this phone.
+        setResult('⚠️ Could not reach Sppero — you are NOT online yet');
       })();
     } else {
       setResult('🔴 Offline');
@@ -2847,11 +2869,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       socketRef.current?.disconnect();
       socketRef.current = null;
       (globalThis as any).__driverSocket = null;
-      // Offline update — fire and forget with retry
+      // Offline update — same success test as above, so a 4xx cannot be read
+      // as "the server has us offline" when it has not.
+      setOnlineConfirmed(false);
       (async () => {
         for (let i = 0; i < 5; i++) {
           const r = await authRidePost('/api/driver/toggle-online', { phone, is_online: false });
-          if (!r._error) return;
+          const ok = r && !r._error && !r.error && (r._status == null || r._status < 400);
+          if (ok) return;
           await new Promise(res => setTimeout(res, 2000));
         }
       })();
@@ -5700,6 +5725,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         </TouchableOpacity>
         <Switch value={isOnline} onValueChange={toggleOnline} trackColor={{ true: C.online, false: C.glassBorder }} thumbColor="#fff" />
       </View>
+
+      {/* ── The switch says online, the server does not ──────────────────────
+          Sits directly under the switch that is lying, because that is the
+          thing being corrected. Without it a driver waits out a whole evening
+          for requests that were never going to arrive, with a green toggle and
+          a notification promising rides the whole time. Tapping retries. */}
+      {isOnline && !onlineConfirmed && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={() => { toggleOnline(false); setTimeout(() => toggleOnline(true), 400); }}
+          style={{
+            flexDirection: 'row', alignItems: 'center', gap: 9,
+            marginHorizontal: 12, marginTop: 8, padding: 12, borderRadius: 12,
+            backgroundColor: 'rgba(245,158,11,0.13)', borderWidth: 1.5, borderColor: 'rgba(245,158,11,0.45)',
+          }}>
+          <Ionicons name="cloud-offline" size={18} color="#F59E0B" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ color: '#F59E0B', fontWeight: '900', fontSize: 12.5 }}>
+              Not connected — no rides can reach you
+            </Text>
+            <Text style={{ color: 'rgba(255,255,255,0.55)', fontSize: 11, marginTop: 2, lineHeight: 15 }}>
+              Sppero has not confirmed you are online. Check your internet, then tap here to try again.
+            </Text>
+          </View>
+          <Ionicons name="refresh" size={17} color="#F59E0B" />
+        </TouchableOpacity>
+      )}
 
       {/* ── Keep-the-parcel-safe notice, after closing an unclaimed delivery ──
           The backend sends this copy with the close response. It matters: the
