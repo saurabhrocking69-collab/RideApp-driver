@@ -52,7 +52,10 @@ export function VoiceNavBar({ instruction, maneuver, nextDistM, phase, onMute, m
 
   const dist    = fmtDist(nextDistM);
   const urgent  = nextDistM > 0 && nextDistM < 100;   // < 100m = turn imminent → red
-  const icon    = maneuver ? maneuverIcon(maneuver) : maneuverIconFromText(instruction);
+  // The instruction goes in with the maneuver: at a roundabout the code says
+  // which way the circle is driven, not which way you leave it, and only the
+  // words know the exit. See maneuverIcon.
+  const icon    = maneuver ? maneuverIcon(maneuver, instruction) : maneuverIconFromText(instruction);
   const isPickup = phase === 'to_pickup';
   const phaseLabel = isPickup ? 'PICKUP KI TARAF' : 'DROP KI TARAF';
 

@@ -278,7 +278,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   const [distText, setDistText] = useState('');
   const [demandZones, setDemandZones] = useState<DemandZone[]>([]);
   // Turn points along the route — a small arrow drawn on the road at each turn.
-  const [turnPoints, setTurnPoints] = useState<{ lat: number; lng: number; maneuver: string }[]>([]);
+  const [turnPoints, setTurnPoints] = useState<{ lat: number; lng: number; maneuver: string; text: string }[]>([]);
 
   // Demand zones when idle
   useEffect(() => {
@@ -420,7 +420,12 @@ export const DriverLiveMap = memo(function DriverLiveMap({
         setEtaText(leg.duration?.text || ''); setDistText(leg.distance?.text || '');
         const turns = (leg.steps || [])
           .filter((s: any) => s.maneuver && /turn|roundabout|ramp|fork|merge|uturn/.test(s.maneuver) && s.start_location)
-          .map((s: any) => ({ lat: s.start_location.lat, lng: s.start_location.lng, maneuver: s.maneuver }));
+          .map((s: any) => ({
+            lat: s.start_location.lat, lng: s.start_location.lng, maneuver: s.maneuver,
+            // Same reason as the Routes API branch above — the exit at a
+            // roundabout only exists in the words.
+            text: String(s.html_instructions || '').replace(/<[^>]+>/g, ' '),
+          }));
         setTurnPoints(turns);
       }
       return true;
@@ -467,7 +472,12 @@ export const DriverLiveMap = memo(function DriverLiveMap({
             .map((s: any) => {
               const m = String(s.navigationInstruction?.maneuver || '').toLowerCase().replace(/_/g, '-');
               const ll = s.startLocation?.latLng;
-              return (m && ll) ? { lat: ll.latitude, lng: ll.longitude, maneuver: m } : null;
+              /* The instruction travels with the maneuver because at a
+                 roundabout the code alone cannot say which way you leave —
+                 ROUNDABOUT_LEFT is the direction the circle is driven, which
+                 in India is every roundabout. Only the words carry the exit. */
+              const txt = String(s.navigationInstruction?.instructions || '').split(String.fromCharCode(10))[0];
+              return (m && ll) ? { lat: ll.latitude, lng: ll.longitude, maneuver: m, text: txt } : null;
             })
             .filter((t: any) => t && /turn|roundabout|ramp|fork|merge|uturn/.test(t.maneuver));
           setTurnPoints(turns);
@@ -615,7 +625,7 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           return (
             <Marker key={`turn-${i}`} coordinate={{ latitude: t.lat, longitude: t.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={isNext ? 999 : 1} tracksViewChanges={isNext}>
               <View style={isNext ? styles.turnBadgeNext : styles.turnBadge}>
-                <MaterialIcons name={maneuverIcon(t.maneuver) as any} size={isNext ? 32 : 20} color={isNext ? '#fff' : NAV_BLUE} />
+                <MaterialIcons name={maneuverIcon(t.maneuver, t.text) as any} size={isNext ? 32 : 20} color={isNext ? '#fff' : NAV_BLUE} />
               </View>
             </Marker>
           );
