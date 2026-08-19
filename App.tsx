@@ -1648,7 +1648,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         } catch (_e2) {}
       }
       if (!token) return;
-      await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
+      /* This one decides whether ride requests reach the phone at all, and its
+         result was never inspected — apiPost does not throw, it returns
+         { _error: true }, so the catch below could not fire either. A single
+         dropped request here and the driver sits online all evening with a
+         green toggle and no offers, because the server has no token to send
+         them to. Same failure the not-connected banner exists for, arriving by
+         a different road. Re-registering a token is harmless, so it retries. */
+      let saved = false;
+      for (let i = 0; i < 4; i++) {
+        const r = await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
+        if (r && !r._error && !r.error && (r._status == null || r._status < 400)) { saved = true; break; }
+        await new Promise(res => setTimeout(res, 1500 * (i + 1)));
+      }
+      if (!saved) console.warn('[fcm] driver token not registered — ride requests cannot be pushed');
       await AsyncStorage.setItem('fcmToken', token).catch(() => {});
     } catch (_e) {}
   };
