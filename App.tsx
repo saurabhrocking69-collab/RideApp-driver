@@ -1167,6 +1167,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (Number.isFinite(n) && n >= 0 && n < 100) return n;
     return kind === 'intercity' ? 10 : kind === 'hourly' ? 12 : 15;
   };
+  /* Whole rupees, always. Running totals are floats — the server sends
+     commission-adjusted earnings like 173.36, and each completed ride adds
+     another fraction — so anything that prints one raw eventually prints
+     something like "₹1326.6399999999999 bacha", which is what the Daily
+     Goal was doing on a real driver's home screen.
+     Rounding here rather than in the arithmetic: the running total stays exact
+     for the maths that reads it, and only the pixels are cleaned up. */
+  const money = (n: any) => Math.round(parseFloat(String(n ?? 0)) || 0).toLocaleString('en-IN');
+
   const netEarn = (fare: any, kind: 'standard' | 'hourly' | 'intercity' = 'standard') => {
     const f = parseFloat(String(fare ?? 0)) || 0;
     return Math.round(f * (1 - commissionPct(kind) / 100));
@@ -5846,13 +5855,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                         {done ? 'Goal Poora!' : 'Daily Goal'}
                       </Text>
                       <Text style={{ fontSize: 11, color: '#64748B' }}>
-                        ₹{earnings} / ₹{dailyGoal}
+                        ₹{money(earnings)} / ₹{money(dailyGoal)}
                       </Text>
                     </View>
                   </View>
                   {!done && (
                     <Text style={{ fontSize: 13, fontWeight: '800', color: C.pink }}>
-                      ₹{left} bacha
+                      ₹{money(left)} bacha
                     </Text>
                   )}
                 </View>
@@ -9610,11 +9619,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
                 {/* Summed from the same rides listed below, so this box and
-                    that list always tell the same story. The wallet's own
-                    commission debt is a different number and has its own card
-                    — see pending_commission. */}
+                    that list always tell the same story.
+
+                    It is NOT what the driver owes, and it used to be labelled
+                    "Pending" — which sat directly above a button reading "Pay
+                    ₹242 Now" while the box said ₹216. Both numbers were right
+                    and the screen still looked broken: one is commission on
+                    rides not yet settled, the other is the wallet debt that
+                    actually gets paid. They move on different events, so they
+                    are allowed to differ — but only if the labels say which is
+                    which. The payable figure has its own card above. */}
                 <Text style={{ color: C.pink, fontSize: 18, fontWeight: '900' }}>₹{commissionData.unsettled_commission.toFixed(0)}</Text>
-                <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Pending</Text>
+                <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>On unsettled rides</Text>
               </View>
               <View style={{ flex: 1, backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, alignItems: 'center', borderWidth: 1, borderColor: '#E2E8F0' }}>
                 <Text style={{ color: C.green, fontSize: 18, fontWeight: '900' }}>₹{commissionData.settled_commission.toFixed(0)}</Text>
