@@ -9641,6 +9641,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ color: '#64748B', fontSize: 10, marginTop: 3, textAlign: 'center' }}>Total</Text>
               </View>
             </View>
+            {/* Why the two figures differ, stated instead of left as a puzzle.
+
+                The wallet debt and the sum of unsettled rides are different
+                quantities and are allowed to move apart: a cash ride sits
+                `pending` until the customer confirms and only becomes debt
+                after that, and an admin penalty from a parcel dispute is added
+                straight to the debt with no ride row behind it
+                (routes/admin.js, dispute resolution).
+
+                So a driver could be asked for ₹242 while the list below
+                explained ₹216, and nothing on the screen said where the other
+                ₹26 came from. Money taken without a line item is the one thing
+                a payments screen must never do. */}
+            {(() => {
+              const owed = commissionData.pending_commission;
+              const rides = commissionData.unsettled_commission;
+              const gap = Math.round((owed - rides) * 100) / 100;
+              if (Math.abs(gap) < 1) return null;
+              return (
+                <Text style={{ fontSize: 11, color: '#64748B', marginTop: 10, lineHeight: 16 }}>
+                  {gap > 0
+                    ? `You owe ₹${money(owed)}. ₹${money(rides)} is from the rides below; ₹${money(gap)} is an adjustment made by Sppero — contact support if that is unexpected.`
+                    : `₹${money(rides)} is listed below, but only ₹${money(owed)} is due right now — the rest becomes due once those customers confirm payment.`}
+                </Text>
+              );
+            })()}
           </View>
 
           {/* Pay button if pending */}
