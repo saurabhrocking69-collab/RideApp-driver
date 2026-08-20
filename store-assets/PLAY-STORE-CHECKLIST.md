@@ -88,7 +88,7 @@ Category: **Utility / Business**. No violence, gambling, drugs, or adult content
 
 ## 6. Before you upload — checklist
 - [ ] Play Console developer account created & verified (₹1,700 one-time)
-- [ ] App created in Play Console, package name `com.saurabhspero.rideappdriver`
+- [ ] App created in Play Console, package name `com.sppero.driver`
 - [ ] Store listing text + icon + feature graphic + screenshots uploaded
 - [ ] Data safety form filled (Section 3 above)
 - [ ] Content rating questionnaire completed (Section 4 above)

@@ -40,7 +40,7 @@ const { withDangerousMod, withAndroidManifest, AndroidConfig } = require('@expo/
 const fs = require('fs');
 const path = require('path');
 
-const PACKAGE = 'com.saurabhspero.rideappdriver';
+const PACKAGE = 'com.sppero.driver';
 const SCHEME = 'spperoalert';
 
 // UI is built in code rather than XML on purpose: no new resource files, so

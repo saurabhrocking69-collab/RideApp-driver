@@ -1684,7 +1684,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           onPress: async () => {
             try {
               await Linking.sendIntent('android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', [
-                { key: 'android.intent.extra.PACKAGE_NAME', value: 'com.saurabhspero.rideappdriver' },
+                { key: 'android.intent.extra.PACKAGE_NAME', value: 'com.sppero.driver' },
               ]);
             } catch (_e) {
               Linking.openSettings();
@@ -3737,7 +3737,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         onPress: async () => {
           try {
             await Linking.sendIntent('android.settings.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS', [
-              { key: 'android.intent.extra.PACKAGE_NAME', value: 'com.saurabhspero.rideappdriver' },
+              { key: 'android.intent.extra.PACKAGE_NAME', value: 'com.sppero.driver' },
             ]);
           } catch (_e) { Linking.openSettings(); }
           await AsyncStorage.setItem('_permBattAck', '1').catch(() => {});
