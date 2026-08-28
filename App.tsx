@@ -45,7 +45,7 @@ const API      = 'https://api.sppero.com';
 /* Google sign-in ka WEB client id - Android ka nahi. Galat rakhne par
    sign-in "chal jaata hai" par idToken null aata hai, bina kisi error ke.
    Khaali chhodne par button dikhta hi nahi. */
-const GOOGLE_WEB_CLIENT_ID = '';
+const GOOGLE_WEB_CLIENT_ID = '249189384237-ur91s85qt9tq8b3hq414hak14j2hcs8g.apps.googleusercontent.com';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
 // Ride-mutation endpoints (accept/arrived/start/complete/cancel/etc.) now
