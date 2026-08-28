@@ -148,7 +148,8 @@
             "useLegacyPackaging": false
           }
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "web": {
       "favicon": "./assets/favicon.png"

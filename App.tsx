@@ -42,6 +42,10 @@ let RazorpayCheckout: any = null;
 try { const _m = require('react-native-razorpay'); RazorpayCheckout = _m?.default || _m || null; } catch (_e) {}
 
 const API      = 'https://api.sppero.com';
+/* Google sign-in ka WEB client id - Android ka nahi. Galat rakhne par
+   sign-in "chal jaata hai" par idToken null aata hai, bina kisi error ke.
+   Khaali chhodne par button dikhta hi nahi. */
+const GOOGLE_WEB_CLIENT_ID = '';
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 
 // Ride-mutation endpoints (accept/arrived/start/complete/cancel/etc.) now
@@ -2564,21 +2568,83 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const verRes = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, otp: otpToUse, name: '' }) });
       const verData = await verRes.json();
       if (!verData.token) { setResult('❌ ' + (verData.error || 'Incorrect OTP')); setLoading(false); return; }
-      await AsyncStorage.setItem('driverToken', verData.token);
+      await afterAuth(verData.token, loginPhone);
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
+    setLoading(false);
+  };
 
-      // Driver info lo
-      const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }) });
-      const data = await res.json();
-      if (!data.success) { setResult('❌ ' + data.message); setLoading(false); return; }
-      if (data.driver.status === 'approved') {
-        const pd2 = await AsyncStorage.getItem('_permsDone').catch(() => null);
-        setPhone(data.driver.phone); setDriverInfo(data.driver); setResult('');
-        await AsyncStorage.setItem('driverPhone', data.driver.phone);
-        await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
-        registerFCM(data.driver.phone);
-        loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone); fetchDriverNotifs(data.driver.phone); loadDriverSub(data.driver.phone, data.driver.vehicle_type);
-        setScreen(pd2 ? 'home' : 'permissions');
-      } else { setDriverInfo(data.driver); }
+  /* Sab kuch jo login ke BAAD hota hai, ek hi jagah.
+
+     OTP wala rasta aur Google wala rasta yahin aakar milte hain. Driver ka
+     apna record phone se dhoondha jaata hai - Google se aaya ho ya OTP se,
+     us ke baad ka kaam bilkul ek jaisa hai: token rakho, driver ka record
+     lo, approved ho to andar, warna uski sthiti dikhao.
+
+     Alag nakal banane ka matlab hota ki kal koi ek hi jagah badle - FCM,
+     subscription, level, notifications - aur doosra rasta chupchaap purana
+     reh jaye. */
+  const afterAuth = async (token: string, phoneNum: string) => {
+    await AsyncStorage.setItem('driverToken', token);
+    const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phoneNum }) });
+    const data = await res.json();
+    if (!data.success) { setResult('❌ ' + data.message); return; }
+    if (data.driver.status === 'approved') {
+      const pd2 = await AsyncStorage.getItem('_permsDone').catch(() => null);
+      setPhone(data.driver.phone); setDriverInfo(data.driver); setResult('');
+      await AsyncStorage.setItem('driverPhone', data.driver.phone);
+      await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
+      registerFCM(data.driver.phone);
+      loadUpiId(data.driver.phone); loadDriverOffers(); fetchDriverLevel(data.driver.phone); fetchDriverNotifs(data.driver.phone); loadDriverSub(data.driver.phone, data.driver.vehicle_type);
+      setScreen(pd2 ? 'home' : 'permissions');
+    } else { setDriverInfo(data.driver); }
+  };
+
+  /* ══ GOOGLE SE SIGN-IN ══
+     Wahi do kadam jo rider app me hain, aur usi wajah se: koi SMS provider
+     nahi hai, aur Google phone number nahi deta.
+
+     Driver ke liye ek baat aur: yahan andar aana driver BAN jaane jaisa
+     nahi hai. Google se pehchan siddh hoti hai; gaadi, licence aur kagaz
+     abhi bhi registration me hi jaate hain. Jiska driver record nahi hai
+     usay uski sthiti dikhti hai, bilkul waise jaise OTP se aane par. */
+  const [gTicket, setGTicket] = useState('');
+
+  const signInWithGoogle = async () => {
+    if (!GOOGLE_WEB_CLIENT_ID) return;
+    setLoading(true); setResult('');
+    try {
+      const GS: any = require('@react-native-google-signin/google-signin');
+      const { GoogleSignin } = GS;
+      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const info: any = await GoogleSignin.signIn();
+      const idToken = info?.data?.idToken || info?.idToken || null;
+      if (!idToken) { setResult('❌ Google sign-in did not complete'); setLoading(false); return; }
+
+      const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
+      const data = await r.json();
+      if (data.token) { await afterAuth(data.token, data.user?.phone || ''); setLoading(false); return; }
+      if (data.needPhone) { setGTicket(data.ticket || ''); setResult('Enter your phone number to finish'); setLoading(false); return; }
+      setResult('❌ ' + (data.error || 'Google sign-in failed'));
+    } catch (e: any) {
+      const code = e?.code || '';
+      // Khud band kar dena nakami nahi hai.
+      if (code === 'SIGN_IN_CANCELLED' || code === '-5' || /cancel/i.test(String(e?.message || ''))) setResult('');
+      else if (code === 'PLAY_SERVICES_NOT_AVAILABLE') setResult('❌ Google Play Services is not available on this phone');
+      else setResult('❌ ' + (e?.message || 'Google sign-in failed'));
+    }
+    setLoading(false);
+  };
+
+  const submitGooglePhone = async () => {
+    if (loginPhone.length !== 10) { setResult('❌ Enter a 10 digit number'); return; }
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/api/auth/google/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: gTicket, phone: loginPhone }) });
+      const data = await r.json();
+      if (data.token) { setGTicket(''); await afterAuth(data.token, loginPhone); setLoading(false); return; }
+      // "Ye number kisi aur ka hai" ek nirdesh hai, nakami nahi - poora dikhao.
+      setResult('❌ ' + (data.error || 'Could not finish sign-in'));
     } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
   };
@@ -4670,6 +4736,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   {loading ? t('login_sending') : t('login_send_otp')}
                 </Text>
               </Bouncy>
+
+              {/* Google, Send OTP ke neeche aur "NEW CAPTAIN?" ke UPAR -
+                  kyoki ye andar aane ka doosra tarika hai, naya banne ka
+                  nahi. Client id na ho to dikhta hi nahi: aisa button jo
+                  dabane par kuch na kare, na hone se bura hai.
+
+                  gTicket set hone ka matlab hai Google ho chuka aur ab sirf
+                  number chahiye - tab wahi button number bhejta hai. */}
+              {!!GOOGLE_WEB_CLIENT_ID && (
+                <Bouncy
+                  onPress={gTicket ? submitGooglePhone : signInWithGoogle}
+                  disabled={loading || (!!gTicket && loginPhone.length !== 10)}
+                  style={{ marginBottom: 18, opacity: loading ? 0.6 : 1 }}>
+                  <View style={{ backgroundColor: '#fff', height: 54, borderRadius: 14, borderWidth: 1.5,
+                                 borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center',
+                                 justifyContent: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#4285F4' }}>G</Text>
+                    <Text style={{ color: '#0F172A', fontSize: 15.5, fontWeight: '800' }}>
+                      {gTicket ? 'Continue with this number' : 'Continue with Google'}
+                    </Text>
+                  </View>
+                </Bouncy>
+              )}
 
               {/* Divider */}
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 18, gap: 12 }}>
