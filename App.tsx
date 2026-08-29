@@ -6197,6 +6197,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ color: '#fff', fontWeight: '800', fontSize: 14, flex: 1 }}>{n.title}</Text>
                   </View>
                   <Text style={{ color: '#94A3B8', fontSize: 13, lineHeight: 19 }}>{n.message || n.body}</Text>
+                  {/* Poster.
+
+                      Admin panel poster ke saath broadcast bhejta hai, server use
+                      notifications row me image_url ke roop me rakhta hai, aur
+                      rider app use dikhata bhi hai - par ye app use padhta hi nahi
+                      tha. Nateeja: har poster aadhe logon tak pahunchta tha, aur
+                      bhejne wale ko ye kabhi pata nahi chalta.
+
+                      resizeMode "cover" 16:9 ke saath, taaki lamba poster poore
+                      panne ko na kha jaye. */}
+                  {!!n.image_url && (
+                    <Image
+                      source={{ uri: n.image_url }}
+                      style={{ width: '100%', aspectRatio: 16 / 9, borderRadius: 10, marginTop: 10, backgroundColor: '#0F172A' }}
+                      resizeMode="cover"
+                    />
+                  )}
                   <Text style={{ color: '#475569', fontSize: 11, marginTop: 6 }}>
                     {new Date(n.created_at).toLocaleString('hi-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </Text>
