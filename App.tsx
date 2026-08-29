@@ -1811,7 +1811,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         to = `${y}-${pad(mo+1)}-${pad(last)}`;
       }
       const r = await authFetch(`${API}/api/driver/order-history?phone=${phone}&from=${from}&to=${to}`);
-      const data = await r.json();
+      const data = await readJson(r);
       setOrdersData(data);
     } catch {}
     setOrdersLoading(false);
@@ -2629,6 +2629,22 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
      ka apna login nahi chhedta), aur uske baad soochi phir se aati hai.
 
      Ye baat login aur registration dono ko chahiye, isliye ek jagah. */
+  /* Jawab jab jawab hi na ho.
+
+     Naapa gaya: prod par /api/auth/google 404 de raha tha, aur 404 ka jawab
+     HTML ka "Cannot POST" panna hai. r.json() uspar phat jaata hai, aur
+     catch aadmi ko "Network request failed" dikha deta hai - jabki uska
+     internet theek tha, raasta hi nahi tha.
+
+     Ab jawab pehle text me liya jaata hai aur tab padha jaata hai. Na pade to
+     wahi kaha jaata hai jo sach hai. */
+  const readJson = async (r: Response): Promise<any> => {
+    const t = await r.text();
+    try { return JSON.parse(t); }
+    catch (_e) { return { _badReply: true, _status: r.status,
+      error: 'Sppero abhi jawab nahi de pa raha — thodi der me try karo' }; }
+  };
+
   const googleIdToken = async (): Promise<string | null> => {
     const GS: any = require('@react-native-google-signin/google-signin');
     const { GoogleSignin } = GS;
@@ -2656,7 +2672,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (!idToken) { setResult('❌ Google sign-in did not complete'); setLoading(false); return; }
 
       const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
-      const data = await r.json();
+      const data = await readJson(r);
       if (data.token) { await afterAuth(data.token, data.user?.phone || '', 'google'); setLoading(false); return; }
       if (data.needPhone) { setGTicket(data.ticket || ''); setResult('Enter your phone number to finish'); setLoading(false); return; }
       setResult('❌ ' + (data.error || 'Google sign-in failed'));
@@ -2690,7 +2706,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (!idToken) { setResult('❌ Google sign-in did not complete'); setLoading(false); return; }
 
       const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
-      const data = await r.json();
+      const data = await readJson(r);
 
       if (data.token) {
         /* Ye Google khaata pehle se kisi number se juda hai. Wahi number
@@ -2728,7 +2744,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setLoading(true);
     try {
       const r = await fetch(`${API}/api/auth/google/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: gRegTicket, phone: regData.phone }) });
-      const data = await r.json();
+      const data = await readJson(r);
       if (data.token) {
         await AsyncStorage.setItem('driverToken', data.token);
         setGRegTicket(''); setResult(''); setLoginOtpSent(false); setRegStep(2);
@@ -2750,7 +2766,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setLoading(true);
     try {
       const r = await fetch(`${API}/api/auth/google/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: gTicket, phone: loginPhone }) });
-      const data = await r.json();
+      const data = await readJson(r);
       if (data.token) { setGTicket(''); await afterAuth(data.token, loginPhone, 'google'); setLoading(false); return; }
       // "Ye number kisi aur ka hai" ek nirdesh hai, nakami nahi - poora dikhao,
       // aur doosre Google khaate se aane ka raasta bhi khola rakho.
@@ -3617,7 +3633,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     else return;
     try {
       const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-      const data = await r.json();
+      const data = await readJson(r);
       if (!data.success) { Alert.alert('Call', data.error || 'Could not place the call'); return; }
       if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
       else if (data.method === 'exotel') Alert.alert('📞 Calling', 'Calling the customer...');
