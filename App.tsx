@@ -2620,16 +2620,39 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
      usay uski sthiti dikhti hai, bilkul waise jaise OTP se aane par. */
   const [gTicket, setGTicket] = useState('');
 
+  /* Khaate ki soochi har baar.
+
+     signIn() akela GoogleSignin ka yaad rakha hua khaata chupchaap laut deta
+     hai - na soochi, na error. Isliye jo aadmi doosre email se aana chahta
+     hai wo pehle wale par hi atak jaata hai, aur bar-bar wahi mana sunta
+     hai. signOut() sirf is app ka yaad rakha hua khaata bhulata hai (Google
+     ka apna login nahi chhedta), aur uske baad soochi phir se aati hai.
+
+     Ye baat login aur registration dono ko chahiye, isliye ek jagah. */
+  const googleIdToken = async (): Promise<string | null> => {
+    const GS: any = require('@react-native-google-signin/google-signin');
+    const { GoogleSignin } = GS;
+    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
+    await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+    try { await GoogleSignin.signOut(); } catch (_e) {}
+    const info: any = await GoogleSignin.signIn();
+    return info?.data?.idToken || info?.idToken || null;
+  };
+
+  /* Number kisi aur ka nikla. Ye nakami nahi hai - par aage ka raasta batana
+     zaroori hai, warna aadmi wahi number dobara bhejta rehta hai. */
+  const [gTaken, setGTaken] = useState(false);
+
+  const tryAnotherGoogle = async (forReg: boolean) => {
+    setGTaken(false); setGTicket(''); setGRegTicket(''); setResult('');
+    if (forReg) await googleForRegistration(); else await signInWithGoogle();
+  };
+
   const signInWithGoogle = async () => {
     if (!GOOGLE_WEB_CLIENT_ID) return;
     setLoading(true); setResult('');
     try {
-      const GS: any = require('@react-native-google-signin/google-signin');
-      const { GoogleSignin } = GS;
-      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const info: any = await GoogleSignin.signIn();
-      const idToken = info?.data?.idToken || info?.idToken || null;
+      const idToken = await googleIdToken();
       if (!idToken) { setResult('❌ Google sign-in did not complete'); setLoading(false); return; }
 
       const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
@@ -2663,12 +2686,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!GOOGLE_WEB_CLIENT_ID) return;
     setLoading(true); setResult('');
     try {
-      const GS: any = require('@react-native-google-signin/google-signin');
-      const { GoogleSignin } = GS;
-      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
-      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
-      const info: any = await GoogleSignin.signIn();
-      const idToken = info?.data?.idToken || info?.idToken || null;
+      const idToken = await googleIdToken();
       if (!idToken) { setResult('❌ Google sign-in did not complete'); setLoading(false); return; }
 
       const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
@@ -2718,7 +2736,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       }
       /* "Ye number kisi aur ka hai" yahan khaas maayne rakhta hai: agar wo
          number pehle se kisi ka hai to naya captain uspar register nahi kar
-         sakta. Poora sandesh dikhaya jaata hai. */
+         sakta. Poora sandesh dikhaya jaata hai - aur uske saath doosre Google
+         khaate se aane ka button, kyoki warna aadmi ke paas is number ko
+         dobara bhejne ke alawa kuch bachta hi nahi. */
+      if (data.phone_taken) setGTaken(true);
       setResult('❌ ' + (data.error || 'Could not continue'));
     } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
@@ -2731,7 +2752,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const r = await fetch(`${API}/api/auth/google/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: gTicket, phone: loginPhone }) });
       const data = await r.json();
       if (data.token) { setGTicket(''); await afterAuth(data.token, loginPhone, 'google'); setLoading(false); return; }
-      // "Ye number kisi aur ka hai" ek nirdesh hai, nakami nahi - poora dikhao.
+      // "Ye number kisi aur ka hai" ek nirdesh hai, nakami nahi - poora dikhao,
+      // aur doosre Google khaate se aane ka raasta bhi khola rakho.
+      if (data.phone_taken) setGTaken(true);
       setResult('❌ ' + (data.error || 'Could not finish sign-in'));
     } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
     setLoading(false);
@@ -4088,6 +4111,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     </Text>
                   </View>
                 </TouchableOpacity>
+
+                {/* Wahi raasta jo login par hai: number kisi aur ka nikla to
+                    doosre Google khaate se aana. */}
+                {!!gTaken && (
+                  <TouchableOpacity onPress={() => tryAnotherGoogle(true)} disabled={loading}
+                                    style={{ paddingVertical: 14 }}>
+                    <Text style={{ color: '#4285F4', fontSize: 14, fontWeight: '800', textAlign: 'center' }}>
+                      Use a different Google account
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </>
             )}
           </View>
@@ -4880,6 +4914,19 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                       {gTicket ? 'Continue with this number' : 'Continue with Google'}
                     </Text>
                   </View>
+                </Bouncy>
+              )}
+
+              {/* Number pehle se kisi ka hai. Uper laal me wajah likhi hai; yahan
+                  nikalne ka raasta - warna wahi button wahi number dobara
+                  bhejta rehta hai aur Google par wapas jaane ka koi tarika
+                  nahi bachta. */}
+              {!!gTaken && (
+                <Bouncy onPress={() => tryAnotherGoogle(false)} disabled={loading}
+                        style={{ marginTop: -8, marginBottom: 18 }}>
+                  <Text style={{ color: '#4285F4', fontSize: 14, fontWeight: '800', textAlign: 'center' }}>
+                    Use a different Google account
+                  </Text>
                 </Bouncy>
               )}
 
