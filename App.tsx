@@ -68,16 +68,25 @@ function notifyAuthExpired() {
   _authAlertShownAt = now;
   Alert.alert('Session expired', 'Please log out and log in again to continue.');
 }
+/* "Session expired" sirf tab jab sach me koi session tha.
+
+   Token na hone par bhi ye popup chal jaata tha. Login ke theen beech - purana
+   session ja chuka, naya bana nahi - peeche chalti koi call bina token jaati
+   hai, aur server par pehra chaalu hone ke baad wo ab 401 laut-ti hai. Nateeja:
+   login safal hone ke theek baad "Session expired" ka popup.
+
+   Bina token wale 401 ka matlab "aap logged out ho" hai, "session khatam" nahi.
+   Pehli baat par kuch kehna hi nahi chahiye. */
 async function authRidePost(path: string, body: any) {
   const token = await AsyncStorage.getItem('driverToken').catch(() => null);
   const res = await apiAuthPost(path, body, token || '');
-  if (res?._authExpired) notifyAuthExpired();
+  if (res?._authExpired && token) notifyAuthExpired();
   return res;
 }
 async function authRideGet(path: string) {
   const token = await AsyncStorage.getItem('driverToken').catch(() => null);
   const res = await apiAuthGet(path, token || '');
-  if (res?._authExpired) notifyAuthExpired();
+  if (res?._authExpired && token) notifyAuthExpired();
   return res;
 }
 
