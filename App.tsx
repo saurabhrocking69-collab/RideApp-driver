@@ -7546,7 +7546,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     <Text style={{ color: C.plum, fontSize: 13, fontWeight: '900' }}>
                       {String(rideReq?.package_size || 'small').toUpperCase()} package
                       <Text style={{ color: C.textDim, fontWeight: '600', fontSize: 11 }}>
-                        {' '}({({ small: 'up to 2kg', medium: 'up to 10kg', large: 'up to 25kg' } as any)[rideReq?.package_size || 'small']})
+                        {' '}({({ small: 'up to 5kg', medium: 'up to 20kg', large: 'up to 40kg' } as any)[rideReq?.package_size || 'small']})
                       </Text>
                     </Text>
                   </View>
