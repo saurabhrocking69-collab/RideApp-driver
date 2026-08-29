@@ -1203,7 +1203,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   };
 
   const [favouriteCount, setFavouriteCount] = useState<number | null>(null);
-  const [devOtp, setDevOtp]         = useState('');
   // Login banner animations
   const [loginCaptionIdx, setLoginCaptionIdx] = useState(0);
   const loginGlowAnim     = useRef(new Animated.Value(0.3)).current;
@@ -2547,7 +2546,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       clearTimeout(timer);
       const otpData = await otpRes.json();
       if (otpData.error) { setResult('❌ ' + otpData.error); setLoading(false); return; }
-      if (otpData.otp) setDevOtp(otpData.otp);
       setLoginOtpSent(true);
       setLoginResendTimer(60); setLoginCanResend(false);
       setResult('');
@@ -4051,7 +4049,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   clearTimeout(t2);
                   const data = await res.json();
                   if (data.error) { setResult('❌ ' + data.error); }
-                  else { if (data.otp) setDevOtp(data.otp); setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
+                  else { setLoginOtpSent(true); setLoginResendTimer(60); setLoginCanResend(false); }
                 } catch (_e: any) {
                   const isTo = _e?.name === 'AbortError';
                   setResult(`❌ ${isTo ? 'Connection timeout' : (_e?.message || 'Network error')} — try using Wi-Fi`);
@@ -4111,22 +4109,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               ))}
             </View>
             {/* Test OTP banner */}
-            {devOtp ? (
-              <TouchableOpacity
-                onPress={() => {
-                  const digits = devOtp.split('');
-                  setLoginOtpDigits(digits);
-                  setLoginOtp(devOtp);
-                }}
-                style={{ backgroundColor: '#1e3a5f', borderRadius: 10, padding: 12, marginBottom: 12, flexDirection: 'row', alignItems: 'center' }}>
-                <Text style={{ fontSize: 16, marginRight: 8 }}>🧪</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: '#7dd3fc', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
-                  <Text style={{ color: '#fff', fontSize: 22, fontWeight: 'bold', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
-                </View>
-                <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
-              </TouchableOpacity>
-            ) : null}
+            {/* TEST OTP ka dabba yahan tha - hata diya.
+                  Wo OTP screen par likh deta tha, aur usse pehle app ki
+                  memory me rakhta tha. Kisi ke haath me phone aane par wo
+                  bina kuch kiye login ka rasta ban jaata. Server test number
+                  par ab bhi OTP lautata hai (TEST_OTP_PHONES) - app use
+                  chhuti hi nahi. */}
             {result ? <Text style={s.err}>{result}</Text> : null}
             <TouchableOpacity style={[s.btn, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.5 }]}
               disabled={loading || loginOtpDigits.join('').length < 6}
@@ -4136,7 +4124,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 try {
                   const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
                   const data = await res.json();
-                  if (data.token) { await AsyncStorage.setItem('driverToken', data.token); setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setDevOtp(''); setRegStep(2); }
+                  if (data.token) { await AsyncStorage.setItem('driverToken', data.token); setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setRegStep(2); }
                   else setResult('❌ ' + (data.error || 'Incorrect OTP'));
                 } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
                 setLoading(false);
@@ -4939,16 +4927,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 ))}
               </View>
 
-              {devOtp ? (
-                <TouchableOpacity onPress={() => { const d = devOtp.split(''); setLoginOtpDigits(d); setLoginOtp(devOtp); }} style={{ backgroundColor: '#1e3a5f', borderRadius: 12, padding: 12, marginBottom: 14, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <Text style={{ fontSize: 16 }}>🧪</Text>
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: '#7dd3fc', fontSize: 10, fontWeight: '800', letterSpacing: 1 }}>TEST OTP (tap to fill)</Text>
-                    <Text style={{ color: '#fff', fontSize: 22, fontWeight: '900', letterSpacing: 8, marginTop: 2 }}>{devOtp}</Text>
-                  </View>
-                  <Text style={{ color: '#7dd3fc', fontSize: 11 }}>Auto-fill →</Text>
-                </TouchableOpacity>
-              ) : null}
+              {/* TEST OTP ka dabba yahan tha - hata diya.
+                  Wo OTP screen par likh deta tha, aur usse pehle app ki
+                  memory me rakhta tha. Kisi ke haath me phone aane par wo
+                  bina kuch kiye login ka rasta ban jaata. Server test number
+                  par ab bhi OTP lautata hai (TEST_OTP_PHONES) - app use
+                  chhuti hi nahi. */}
 
               {result ? <Text style={{ color: '#EF4444', fontSize: 12, marginBottom: 12, fontWeight: '600' }}>{result}</Text> : null}
 

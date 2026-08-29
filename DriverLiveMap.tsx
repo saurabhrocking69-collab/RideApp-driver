@@ -68,6 +68,60 @@ function distanceMeters(lat1: number, lng1: number, lat2: number, lng2: number):
   return Math.sqrt(dLat * dLat + x * x) * R;
 }
 
+/* Kya sadak yahan SACH ME mudti hai?
+
+   Google ka maneuver batata hai ki driver ko kya karna hai ("Lohia Path par
+   bane rehne ke liye daayen chalein"), na ki sadak kitni mudti hai. Naapa
+   gaya: ek asli raaste par TURN_RIGHT ka asli kon +8.5 degree tha aur
+   TURN_LEFT ka -2.8 - dono seedhi sadak. Un par mota muda hua tir banana
+   driver ko wahi dikhata hai jo galat lagta hai.
+
+   Isliye kon polyline se khud naapa jaata hai: mod se pehle wali disha aur
+   uske baad wali disha ka antar. 15 degree se kam ko seedha maana jaata hai
+   - itna to lane badalne me bhi mud jaata hai.
+
+   Shabd nahi badalte. Google ka nirdesh sach hai; sirf uska chitra galat
+   tha. */
+const TURN_MIN_DEG = 15;
+
+function angleBetween(a: {lat:number;lng:number}, b: {lat:number;lng:number},
+                      c: {lat:number;lng:number}): number {
+  const inB  = computeBearing(a.lat, a.lng, b.lat, b.lng);
+  const outB = computeBearing(b.lat, b.lng, c.lat, c.lng);
+  return ((outB - inB + 540) % 360) - 180;   // +daayen, -baayen
+}
+
+/* Route ke bindu me se wo dhoondho jo is mod ke sabse paas hai, aur uske
+   dono taraf kaafi door ke bindu se kon naapo. Paas ke bindu lene par GPS ka
+   shor hi kon ban jaata hai. */
+function realTurnDegrees(pts: {latitude:number;longitude:number}[],
+                         lat: number, lng: number): number | null {
+  if (pts.length < 3) return null;
+  let best = -1, bestD = Infinity;
+  for (let i = 0; i < pts.length; i++) {
+    const d = (pts[i].latitude - lat) ** 2 + (pts[i].longitude - lng) ** 2;
+    if (d < bestD) { bestD = d; best = i; }
+  }
+  // ~25 metre door ke bindu, taaki ek-do metre ka shor kon na banaye
+  const STEP_M = 25;
+  const pick = (from: number, dir: number) => {
+    let acc = 0, i = from;
+    while (i + dir >= 0 && i + dir < pts.length) {
+      const a = pts[i], b = pts[i + dir];
+      acc += distanceMeters(a.latitude, a.longitude, b.latitude, b.longitude);
+      i += dir;
+      if (acc >= STEP_M) break;
+    }
+    return i === from ? null : pts[i];
+  };
+  const before = pick(best, -1), after = pick(best, +1);
+  if (!before || !after) return null;
+  return angleBetween(
+    { lat: before.latitude, lng: before.longitude },
+    { lat: pts[best].latitude, lng: pts[best].longitude },
+    { lat: after.latitude,  lng: after.longitude });
+}
+
 // ── Compass bearing ───────────────────────────────────────────────────────────
 function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const toR = (d: number) => d * Math.PI / 180;
@@ -541,6 +595,16 @@ export const DriverLiveMap = memo(function DriverLiveMap({
 
   // The next upcoming turn = the turn point nearest to the driver right now.
   // Highlighted in pink so the driver instantly sees which turn is coming.
+  /* Google ka maneuver + sadak ki asli jyaamiti, dono. */
+  const turnGlyph = (t: { lat: number; lng: number; maneuver: string; text: string }) => {
+    const icon = maneuverIcon(t.maneuver, t.text);
+    // Roundabout aur u-turn ka chitra kon se nahi aata - unhe chhua nahi jaata
+    if (icon.startsWith('roundabout') || icon.startsWith('u-turn') || icon === 'straight') return icon;
+    const deg = realTurnDegrees(routeCoords, t.lat, t.lng);
+    if (deg == null) return icon;                       // naap nahi paye - Google par bharosa
+    return Math.abs(deg) < TURN_MIN_DEG ? 'straight' : icon;
+  };
+
   const nextTurnIdx = useMemo(() => {
     if (driverLat == null || driverLng == null || turnPoints.length === 0) return -1;
     let best = -1, bestD = Infinity;
@@ -620,12 +684,19 @@ export const DriverLiveMap = memo(function DriverLiveMap({
 
         {/* Turn arrows — directional badge on the road at each turn. The NEXT
             upcoming turn is highlighted (bigger + pink) so it stands out. */}
+        {/* Tir ka chitra: Google ka maneuver, par sirf tab jab sadak
+            SACH ME mudti ho. Naapa gaya - ek asli raaste par TURN_RIGHT ka
+            asli kon +8.5 degree tha. Us par muda hua tir banana driver ko
+            seedhi sadak par "daayen mudo" dikhata hai.
+
+            Kon na nikal paye (route ke bindu kam ho) to Google par hi
+            bharosa - kuch na dikhane se ek shayad-sahi tir behtar hai. */}
         {routeCoords.length > 1 && turnPoints.slice(0, 14).map((t, i) => {
           const isNext = i === nextTurnIdx;
           return (
             <Marker key={`turn-${i}`} coordinate={{ latitude: t.lat, longitude: t.lng }} anchor={{ x: 0.5, y: 0.5 }} zIndex={isNext ? 999 : 1} tracksViewChanges={isNext}>
               <View style={isNext ? styles.turnBadgeNext : styles.turnBadge}>
-                <MaterialIcons name={maneuverIcon(t.maneuver, t.text) as any} size={isNext ? 32 : 20} color={isNext ? '#fff' : NAV_BLUE} />
+                <MaterialIcons name={turnGlyph(t) as any} size={isNext ? 32 : 20} color={isNext ? '#fff' : NAV_BLUE} />
               </View>
             </Marker>
           );
