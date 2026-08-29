@@ -127,6 +127,28 @@ function buildLine(): string {
   return 'Sppero Captain · update ' + id + (when ? ' · ' + when : '');
 }
 
+/* Token me likha number - kyoki wahi sach hai.
+
+   Server har phone wale endpoint par token ke number se milaan karta hai. App
+   apna number alag se AsyncStorage me rakhta hai, aur wo do alag ho sakte
+   hain - rider app me aisa hua bhi tha: ek khaate me jaane ki koshish me ek
+   number type hua, server ne mana kiya, phir doosre Google khaate se andar
+   gaye, aur storage me naam naye khaate ka aur number purani koshish ka jam
+   kar reh gaya. Uske baad har poochh galat number ke saath jaati thi aur 403
+   laut-ti thi.
+
+   Ek baar aisi haalat ban jaye to wo apne aap theek nahi hoti - aadmi logout
+   kare tab hi. Isliye shuruat me hi token se milaan kar liya jaata hai. */
+function decodeJwtPhone(token: string): string | null {
+  try {
+    const payload = token.split('.')[1];
+    const padded = payload + '==='.slice((payload.length + 3) % 4);
+    const json = JSON.parse(atob(padded.replace(/-/g, '+').replace(/_/g, '/')));
+    const p = String(json.phone || '').replace(/[^0-9]/g, '');
+    return p.length >= 10 ? p.slice(-10) : null;
+  } catch { return null; }
+}
+
 function decodeJwtExp(token: string): number | null {
   try {
     const payload = token.split('.')[1];
@@ -1306,8 +1328,18 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       let navTo: Screen = 'login';
       try {
-        const savedPhone = await AsyncStorage.getItem('driverPhone');
+        let savedPhone = await AsyncStorage.getItem('driverPhone');
         const savedInfo  = await AsyncStorage.getItem('driverInfo');
+        // Token aur storage ka number alag ho to TOKEN sahi hai - warna har
+        // poochh 403 laut-ti hai aur screen khaali dikhti hai.
+        if (savedPhone) {
+          const tk = await AsyncStorage.getItem('driverToken').catch(() => null);
+          const tkPhone = tk ? decodeJwtPhone(tk) : null;
+          if (tkPhone && tkPhone !== String(savedPhone).replace(/[^0-9]/g, '').slice(-10)) {
+            savedPhone = tkPhone;
+            await AsyncStorage.setItem('driverPhone', tkPhone).catch(() => {});
+          }
+        }
         if (savedPhone) {
           setPhone(savedPhone);
           checkAndRefreshDriverToken().catch(() => {});
