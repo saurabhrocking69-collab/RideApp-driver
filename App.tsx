@@ -8,6 +8,7 @@ import * as Location from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Updates from 'expo-updates';
 import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
 import { DriverLiveMap } from './DriverLiveMap';
@@ -97,6 +98,26 @@ async function authFetch(url: string, opts: any = {}) {
 // Reads the `exp` claim out of a JWT without verifying it (verification is
 // the server's job) — just enough to know whether it's expired or getting
 // close, for the silent-refresh check below.
+/* Kaun sa build chal raha hai - sirf expo-updates se.
+
+   expo-constants seedhi dependency nahi hai, aur use jodne par fingerprint
+   hil jaata: line jud jaati par OTA se pahunchti hi nahi, kyoki naya
+   fingerprint purane build tak jaata hi nahi. Matlab hi ulta ho jaata.
+
+   Tareekh version se zyada kaam ki hai - "kal shaam ka" se turant pata chal
+   jaata hai ki aaj wala update aaya ya nahi. */
+function buildLine(): string {
+  let id = '', when = '';
+  try {
+    id = String((Updates as any).updateId || '').slice(0, 8);
+    const d = (Updates as any).createdAt;
+    if (d) when = new Date(d).toLocaleString('en-IN',
+      { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  } catch (_e) {}
+  if (!id) return 'Sppero Captain · build ka apna version';
+  return 'Sppero Captain · update ' + id + (when ? ' · ' + when : '');
+}
+
 function decodeJwtExp(token: string): number | null {
   try {
     const payload = token.split('.')[1];
@@ -10640,6 +10661,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         }}>
           <Text style={{ color: C.pink, fontWeight: 'bold', fontSize: 15 }}>🚪 Logout</Text>
         </Bouncy>
+
+        {/* Kaun sa build chal raha hai. Sawal har OTA ke baad aata hai -
+            "update pahuncha bhi ya nahi?" - aur ab tak app me uska koi jawab
+            tha hi nahi. Strip ka na dikhna dono matlab de sakta hai: update
+            aaya hi nahi, ya aa kar lag chuka. Ye line farq bata deti hai.
+            English me, house rule ke hisaab se - ye toggle wala UI nahi hai. */}
+        <Text style={{ textAlign: 'center', color: '#94A3B8', fontSize: 11,
+                       marginTop: 12, marginBottom: 6 }}>
+          {buildLine()}
+        </Text>
       </ScrollView>
       {deleteSheet}
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} rideReq={rideReq} hourlyRideReq={hourlyRideReq} activeRide={activeRide} activeHourlyRide={activeHourlyRide} />
