@@ -2087,7 +2087,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const iv = setInterval(() => {
       const gps = driverGpsRef.current;
       if (!gps) return;
-      apiPost(`/api/rides/${activeRide.id}/driver-location`, {
+      // Apni jagah, apni ride par - token ke saath.
+      authRidePost(`/api/rides/${activeRide.id}/driver-location`, {
         lat: gps.lat ?? gps.latitude,
         lng: gps.lng ?? gps.longitude,
         phone,
@@ -2316,7 +2317,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const iv = setInterval(async () => {
       if (stopped) return;
       try {
-        const d = await fetch(`${API}/api/rides/extension-pending?phone=${phone}`).then(r => r.json());
+        const d = await authFetch(`${API}/api/rides/extension-pending?phone=${phone}`).then(r => r.json());
         if (d.extension) {
           setExtRequest(d.extension);
           setExtRespSec(d.extension.seconds_left ?? 60);
@@ -2351,10 +2352,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 12000);
     try {
-      const res = await fetch(`${API}/api/rides/extension-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extId }), signal: ctrl.signal });
+      const res = await authFetch(`${API}/api/rides/extension-accept`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extId }), signal: ctrl.signal });
       const data = await res.json();
       if (data.success) {
-        const rideRes = await fetch(`${API}/api/rides/status/${data.new_ride_id}`, { signal: ctrl.signal }).then(r => r.json()).catch(() => ({}));
+        const rideRes = await authFetch(`${API}/api/rides/status/${data.new_ride_id}`, { signal: ctrl.signal }).then(r => r.json()).catch(() => ({}));
         const newRide = rideRes.ride || { id: data.new_ride_id, drop_location: extDrop, fare: extFare, status: 'matched', payment_method: 'wallet' };
         setActiveRide({ ...newRide, id: data.new_ride_id });
         setExtRequest(null); setTripSummary(null);
@@ -2366,7 +2367,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const rejectExtension = async () => {
     if (!extRequest) return;
-    try { await fetch(`${API}/api/rides/extension-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extRequest.id }) }); } catch (_e) {}
+    try { await authFetch(`${API}/api/rides/extension-reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ extension_id: extRequest.id }) }); } catch (_e) {}
     setExtRequest(null);
   };
 
@@ -2905,7 +2906,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         s.on('paymentConfirmed', async (data: any) => {
           if (data.status !== 'completed') return;
           try {
-            const res = await fetch(`${API}/api/rides/payment-status/${data.ride_id}`);
+            const res = await authFetch(`${API}/api/rides/payment-status/${data.ride_id}`);
             const d = await res.json();
             if (d.payment_status === 'completed') {
               const fare = d.net_fare != null ? parseFloat(d.net_fare) : Math.max(0, parseFloat(d.fare || 0) - parseFloat(d.discount || 0));
@@ -3219,7 +3220,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setLoading(true);
       try {
       const completeToken = await AsyncStorage.getItem('driverToken').catch(() => null);
-      const res = await fetch(`${API}/api/rides/complete`, {
+      const res = await authFetch(`${API}/api/rides/complete`, {
         method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${completeToken || ''}` },
         body: JSON.stringify({
           ride_id: rideId, driver_phone: phone, driver_lat: curLat, driver_lng: curLng,
@@ -3448,7 +3449,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const rateCustomer = async () => {
     if (!custRatingStars || !paymentRideId) return;
     try {
-      await fetch(`${API}/api/rides/rate-customer`, {
+      await authFetch(`${API}/api/rides/rate-customer`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ride_id: paymentRideId, driver_phone: phone, rating: custRatingStars }),
       });
@@ -3484,7 +3485,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const rideId = rideIdArg || paymentRideIdRef.current;
     if (!rideId) return;
     try {
-      const data = await apiGet(`/api/rides/payment-status/${rideId}`, 0, 5000);
+      const data = await authRideGet(`/api/rides/payment-status/${rideId}`);
       if (data._error) return;
       if (data.payment_status === 'completed') {
         setPaymentMethod(data.payment_method);
@@ -3521,7 +3522,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const confirmDirectPayment = async (method: 'cash' | 'upi_direct') => {
     setLoading(true);
     try {
-      const res = await apiPost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
+      // Token ke saath: ye paise ki pushti hai, aur sirf usi driver ki
+      // baat honi chahiye jisne ride chalayi.
+      const res = await authRidePost('/api/rides/cash-confirm', { ride_id: paymentRideId, phone, payment_method: method });
       if (res?._error || (!res?.success && res?.error)) {
         setResult('❌ ' + (res?.error || res?.message || 'Payment could not be confirmed — please retry'));
         setLoading(false);
@@ -5109,7 +5112,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               { text: 'Cancel', style: 'cancel' },
               { text: 'Yes, Report It', style: 'destructive', onPress: async () => {
                 try {
-                  const res = await fetch(`${API}/api/rides/payment-not-received`, {
+                  const res = await authFetch(`${API}/api/rides/payment-not-received`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ ride_id: paymentRideId, driver_phone: phone }),
