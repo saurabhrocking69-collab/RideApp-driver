@@ -2583,11 +2583,23 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
      Alag nakal banane ka matlab hota ki kal koi ek hi jagah badle - FCM,
      subscription, level, notifications - aur doosra rasta chupchaap purana
      reh jaye. */
-  const afterAuth = async (token: string, phoneNum: string) => {
+  const afterAuth = async (token: string, phoneNum: string, via: 'otp' | 'google' = 'otp') => {
     await AsyncStorage.setItem('driverToken', token);
     const res = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: phoneNum }) });
     const data = await res.json();
-    if (!data.success) { setResult('❌ ' + data.message); return; }
+    if (!data.success) {
+      /* Server ka jawab sach hai - is number ka koi driver record nahi. Par
+         Google se aane par wo galat padha jaata hai: khaana khaali hai aur
+         laal likha hai "ye number registered nahi", jabki aadmi ne koi number
+         daala hi nahi tha. Aisa lagta hai Google ka button tut gaya.
+
+         Google se aaya to sign-in KAAMYAB hua hai; jo nahi hai wo driver ka
+         khaata hai. Wahi kaha jaata hai, aur agla kadam bhi. */
+      setResult(via === 'google'
+        ? '✅ Signed in as ' + (phoneNum || 'your Google account') + ' — but there is no Captain account for this number yet. Tap "Become Sppero Buddy" below to register.'
+        : '❌ ' + data.message);
+      return;
+    }
     if (data.driver.status === 'approved') {
       const pd2 = await AsyncStorage.getItem('_permsDone').catch(() => null);
       setPhone(data.driver.phone); setDriverInfo(data.driver); setResult('');
@@ -2623,7 +2635,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
       const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
       const data = await r.json();
-      if (data.token) { await afterAuth(data.token, data.user?.phone || ''); setLoading(false); return; }
+      if (data.token) { await afterAuth(data.token, data.user?.phone || '', 'google'); setLoading(false); return; }
       if (data.needPhone) { setGTicket(data.ticket || ''); setResult('Enter your phone number to finish'); setLoading(false); return; }
       setResult('❌ ' + (data.error || 'Google sign-in failed'));
     } catch (e: any) {
@@ -2642,7 +2654,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const r = await fetch(`${API}/api/auth/google/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: gTicket, phone: loginPhone }) });
       const data = await r.json();
-      if (data.token) { setGTicket(''); await afterAuth(data.token, loginPhone); setLoading(false); return; }
+      if (data.token) { setGTicket(''); await afterAuth(data.token, loginPhone, 'google'); setLoading(false); return; }
       // "Ye number kisi aur ka hai" ek nirdesh hai, nakami nahi - poora dikhao.
       setResult('❌ ' + (data.error || 'Could not finish sign-in'));
     } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
