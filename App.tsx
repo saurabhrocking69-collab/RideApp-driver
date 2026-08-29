@@ -1875,7 +1875,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const fetchDriverNotifs = async (ph: string) => {
     try {
-      const d = await apiGet(`/api/notifications?target=${ph}&role=driver`);
+      /* Token ke saath. Ye raasta abhi sirf query me likha number dekh kar
+         jawab de deta hai - yaani koi bhi number badal kar kisi aur ke sandesh
+         padh sakta hai. Token bhejna abhi bilkul harmless hai (server maangta
+         nahi), par uske hote hi server query ka number nazarandaz karke token
+         wala number use karta hai. */
+      const d = await authRideGet(`/api/notifications?target=${ph}&role=driver`);
       if (d.notifications && Array.isArray(d.notifications)) {
         setDriverNotifs(d.notifications);
         setNotifUnread(d.notifications.length);
@@ -2494,7 +2499,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
     const fetchNotif = async () => {
       try {
-        const r = await fetch(`${API}/api/notifications/latest?phone=${phone}`);
+        // Wahi baat - 30 second wala poller bhi token ke saath.
+        const r = await authFetch(`${API}/api/notifications/latest?phone=${phone}`);
         const d = await r.json();
         if (d.notification) setAdminNotif(d.notification);
       } catch (_e) {}
