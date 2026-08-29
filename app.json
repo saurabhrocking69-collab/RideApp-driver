@@ -49,7 +49,9 @@
         "WAKE_LOCK",
         "FOREGROUND_SERVICE",
         "FOREGROUND_SERVICE_LOCATION",
-        "USE_FULL_SCREEN_INTENT"
+        "USE_FULL_SCREEN_INTENT",
+        "READ_PHONE_NUMBERS",
+        "READ_PHONE_STATE"
       ],
       "config": {
         "googleMaps": {

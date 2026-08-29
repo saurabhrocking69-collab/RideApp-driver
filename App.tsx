@@ -2648,6 +2648,83 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setLoading(false);
   };
 
+  /* Registration me Google.
+
+     Login wale Google se ye alag hai aur alag hona chahiye: wahan maksad
+     hai "andar aao", yahan hai "ye kadam paar karo". Naya captain OTP ke
+     deewar par hi ruk jaata hai - koi SMS provider nahi hai - aur usse aage
+     ka poora registration (gaadi, licence, kagaz) shuru hi nahi hota.
+
+     Google se number saabit nahi hota, isliye number phir bhi type karna
+     padta hai. Jo cheez bachti hai wo OTP hai - aur aaj wahi kaam nahi
+     karta. Number milte hi seedhe agla kadam. */
+  const [gRegTicket, setGRegTicket] = useState('');
+
+  const googleForRegistration = async () => {
+    if (!GOOGLE_WEB_CLIENT_ID) return;
+    setLoading(true); setResult('');
+    try {
+      const GS: any = require('@react-native-google-signin/google-signin');
+      const { GoogleSignin } = GS;
+      GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID, offlineAccess: false });
+      await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
+      const info: any = await GoogleSignin.signIn();
+      const idToken = info?.data?.idToken || info?.idToken || null;
+      if (!idToken) { setResult('❌ Google sign-in did not complete'); setLoading(false); return; }
+
+      const r = await fetch(`${API}/api/auth/google`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken }) });
+      const data = await r.json();
+
+      if (data.token) {
+        /* Ye Google khaata pehle se kisi number se juda hai. Wahi number
+           registration me le jaao - dobara poochna aadmi se wo cheez
+           poochna hai jo hume pehle se pata hai. */
+        await AsyncStorage.setItem('driverToken', data.token);
+        const ph = data.user?.phone || '';
+        if (/^[0-9]{10}$/.test(ph)) {
+          updateReg('phone', ph);
+          setResult(''); setLoginOtpSent(false); setRegStep(2);
+        } else {
+          setGRegTicket(''); setResult('Enter your mobile number to continue');
+        }
+        setLoading(false); return;
+      }
+      if (data.needPhone) {
+        // Naya Google khaata - number chahiye, aur wahi khaana pehle se
+        // saamne hai. Bas button ka kaam badal jaata hai.
+        setGRegTicket(data.ticket || '');
+        setResult('Enter your mobile number to continue');
+        setLoading(false); return;
+      }
+      setResult('❌ ' + (data.error || 'Google sign-in failed'));
+    } catch (e: any) {
+      const code = e?.code || '';
+      if (code === 'SIGN_IN_CANCELLED' || code === '-5' || /cancel/i.test(String(e?.message || ''))) setResult('');
+      else if (code === 'PLAY_SERVICES_NOT_AVAILABLE') setResult('❌ Google Play Services is not available on this phone');
+      else setResult('❌ ' + (e?.message || 'Google sign-in failed'));
+    }
+    setLoading(false);
+  };
+
+  const submitGoogleRegPhone = async () => {
+    if (regData.phone.length !== 10) { setResult('❌ Enter a 10 digit number'); return; }
+    setLoading(true);
+    try {
+      const r = await fetch(`${API}/api/auth/google/phone`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ticket: gRegTicket, phone: regData.phone }) });
+      const data = await r.json();
+      if (data.token) {
+        await AsyncStorage.setItem('driverToken', data.token);
+        setGRegTicket(''); setResult(''); setLoginOtpSent(false); setRegStep(2);
+        setLoading(false); return;
+      }
+      /* "Ye number kisi aur ka hai" yahan khaas maayne rakhta hai: agar wo
+         number pehle se kisi ka hai to naya captain uspar register nahi kar
+         sakta. Poora sandesh dikhaya jaata hai. */
+      setResult('❌ ' + (data.error || 'Could not continue'));
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
+    setLoading(false);
+  };
+
   const submitGooglePhone = async () => {
     if (loginPhone.length !== 10) { setResult('❌ Enter a 10 digit number'); return; }
     setLoading(true);
@@ -3983,6 +4060,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               }}>
               <Text style={s.btnTxt}>{loading ? t('reg_otp_sending') : t('reg_send_otp_btn')}</Text>
             </TouchableOpacity>
+
+            {/* Google, OTP ke neeche - kyoki OTP ka deewar yahan bhi wahi
+                hai. Bina SMS provider ke naya captain is kadam se aage badh
+                hi nahi sakta.
+
+                gRegTicket set ho to wahi button number bhejta hai: khaana
+                pehle se upar hai, sirf button ka kaam badal jaata hai. */}
+            {!!GOOGLE_WEB_CLIENT_ID && (
+              <>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 16, marginBottom: 14, gap: 12 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#F1F5F9' }} />
+                  <Text style={{ color: '#CBD5E1', fontSize: 11, fontWeight: '700', letterSpacing: 1 }}>OR</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: '#F1F5F9' }} />
+                </View>
+                <TouchableOpacity
+                  onPress={gRegTicket ? submitGoogleRegPhone : googleForRegistration}
+                  disabled={loading || (!!gRegTicket && regData.phone.length !== 10)}
+                  style={{ opacity: loading ? 0.6 : 1 }}>
+                  <View style={{ backgroundColor: '#fff', height: 54, borderRadius: 14, borderWidth: 1.5,
+                                 borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center',
+                                 justifyContent: 'center', gap: 10 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '900', color: '#4285F4' }}>G</Text>
+                    <Text style={{ color: '#0F172A', fontSize: 15.5, fontWeight: '800' }}>
+                      {gRegTicket ? 'Continue with this number' : 'Continue with Google'}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         ) : (
           <View>
@@ -4589,24 +4695,38 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <View style={{ position: 'absolute', bottom: 0, right: '8%', width: 2, height: 72, backgroundColor: 'rgba(245,197,24,0.35)', transform: [{ skewX: '8deg' }] }} />
             </View>
 
-            {/* Car + glow ring */}
-            <View style={{ position: 'absolute', bottom: 68, left: 0, right: 0, alignItems: 'center' }}>
-              <Animated.View style={{
-                width: 130, height: 130, borderRadius: 65,
-                backgroundColor: 'rgba(233,30,99,0.07)',
-                alignItems: 'center', justifyContent: 'center',
-                opacity: loginGlowAnim,
-                transform: [{ scale: loginGlowAnim.interpolate({ inputRange: [0.25, 1], outputRange: [1, 1.12] }) }],
-              }}>
-                <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: 'rgba(233,30,99,0.14)', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(233,30,99,0.5)', elevation: 12, shadowColor: C.pink, shadowOpacity: 0.6, shadowRadius: 16 }}>
-                  <Ionicons name="car-sport" size={44} color={C.pink} />
-                </View>
-              </Animated.View>
-              {/* Headlight beams */}
-              <View style={{ position: 'absolute', bottom: 10, left: '52%', width: 60, height: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, transform: [{ rotate: '-5deg' }] }} />
-              <View style={{ position: 'absolute', bottom: 10, right: '52%', width: 60, height: 3, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 2, transform: [{ rotate: '5deg' }] }} />
-              {/* Shadow under car */}
-              <View style={{ width: 80, height: 6, borderRadius: 3, backgroundColor: 'rgba(233,30,99,0.25)', marginTop: -6 }} />
+            {/* Ek asli Sppero Buddy, apne phone par - "Customer is waiting"
+                aur din ki kamai. Yahan pehle ek Ionicons ki car ek gulabi
+                halke ke andar thi; wo saja thi, aur ye wo cheez dikhati hai
+                jiske liye aadmi captain banta hai.
+
+                Fade TASVEER me hi paka hua hai (upar, neeche aur dono
+                kinare #08080F me ghulte hue) - expo-linear-gradient is app
+                me hai hi nahi, aur sirf ek fade ke liye use laana APK me ek
+                aur native module jodna hota.
+
+                Tasveer me kamai ka aankda Rs 1240.50 hai - dukan ke apne
+                "Rs 800+ per day avg" ke saath mel khata hua. Jo rachna aayi
+                thi usme Rs 7012.50 likha tha: nau guna, aur wo bhi us panne
+                par jahan naye captain bharti hote hain. */}
+            {/* Unchai PRATISHAT me, tay pixel me nahi.
+
+                Ye banner flex:1 hai - uski unchai wo hai jo login card ke
+                baad bachti hai, aur wo phone ke hisaab se badalti hai. Ek
+                tay unchai (211pt) chhote phone par banner se BAHAR nikal
+                jaati aur upar wali caption se takrati. 56% har naap par
+                apne aap baith jaata hai.
+
+                cover, contain nahi: kinare tasveer me hi #08080F me ghule
+                hain, to thoda kat jaana dikhta nahi - jabki contain se
+                dono taraf khaali patti reh jaati. */}
+            <View style={{ position: 'absolute', bottom: 92, left: 0, right: 0, height: '56%' }} pointerEvents="none">
+              <Image
+                source={require('./assets/login-hero.jpg')}
+                style={{ width: '100%', height: '100%' }}
+                resizeMode="cover"
+                accessibilityLabel="A Sppero Buddy in his car, checking a waiting ride and the day's earnings"
+              />
             </View>
 
             {/* Sppero brand top */}
