@@ -2973,7 +2973,20 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   const doUpload = async (field: string, base64: string) => {
     setUploading(field);
     try {
-      const up   = await fetch(`${API}/api/upload`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: `data:image/jpeg;base64,${base64}` }) });
+      /* Token bhi bhejo - ye call abhi tak bilkul khuli thi.
+
+         Backend par ab uploadGuard hai; pehchan ki jaanch UPLOAD_AUTH_ENFORCE
+         ke peeche hai taaki purani apps ekdum se na tuten. Ye line usse pehle
+         jaani chahiye, warna switch chalu karte hi registration ruk jayega.
+
+         Token yahan hamesha hota hai: verifyRegOtp (regStep 1) use rakh deta
+         hai, aur tasveerein regStep 3/4/5 par chadhti hain. */
+      const tok  = await AsyncStorage.getItem('driverToken').catch(() => null);
+      const up   = await fetch(`${API}/api/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(tok ? { Authorization: `Bearer ${tok}` } : {}) },
+        body: JSON.stringify({ image: `data:image/jpeg;base64,${base64}` }),
+      });
       const data = await up.json();
       if (data.success) setRegData((p: any) => ({ ...p, [field]: data.url }));
       else setResult('❌ Upload failed');
