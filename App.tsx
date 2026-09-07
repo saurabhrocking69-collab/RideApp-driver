@@ -2611,7 +2611,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     try {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 15000);
-      const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone }), signal: ctrl.signal });
+      const otpRes = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: loginPhone, app: 'driver' }), signal: ctrl.signal });
       clearTimeout(timer);
       const otpData = await otpRes.json();
       if (otpData.error) { setResult('❌ ' + otpData.error); setLoading(false); return; }
@@ -4175,7 +4175,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 try {
                   const ctrl2 = new AbortController();
                   const t2 = setTimeout(() => ctrl2.abort(), 15000);
-                  const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }), signal: ctrl2.signal });
+                  const res = await fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, app: 'driver' }), signal: ctrl2.signal });
                   clearTimeout(t2);
                   const data = await res.json();
                   if (data.error) { setResult('❌ ' + data.error); }
@@ -4284,7 +4284,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {/* Resend */}
             <View style={{ alignItems: 'center', marginTop: 16 }}>
               {loginCanResend ? (
-                <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setResult(''); fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone }) }); setLoginResendTimer(60); setLoginCanResend(false); }}>
+                <TouchableOpacity onPress={() => { setLoginOtpDigits(['','','','','','']); setResult(''); fetch(`${API}/api/auth/send-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, app: 'driver' }) }); setLoginResendTimer(60); setLoginCanResend(false); }}>
                   <Text style={{ color: C.pink, fontWeight: 'bold' }}>{t('login_resend')}</Text>
                 </TouchableOpacity>
               ) : (
