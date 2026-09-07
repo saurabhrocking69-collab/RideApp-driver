@@ -2555,6 +2555,8 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   // ── Load referral info + favourite count when profile tab opens ─────────
   useEffect(() => {
     if (activeTab === 'profile' && phone) {
+      // Google juda hai ya nahi - warna pankti hamesha "jodein" kehti rahegi.
+      loadGoogleLink();
       fetch(`${API}/api/favourites/driver-count?phone=${phone}`)
         .then(r => r.json()).then(d => setFavouriteCount(d.count ?? 0)).catch(() => {});
     }
@@ -2769,6 +2771,41 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   /* Number kisi aur ka nikla. Ye nakami nahi hai - par aage ka raasta batana
      zaroori hai, warna aadmi wahi number dobara bhejta rehta hai. */
   const [gTaken, setGTaken] = useState(false);
+
+  /* Apne khaate se Google jodna.
+
+     Driver ke liye ye rider se zyada zaroori hai: uska SMS na aaye to uski
+     kamai rukti hai. Jud jaane ke baad Google se aane par na number poochha
+     jaata hai na SMS jaata hai.
+
+     Yahan OTP ki zaroorat nahi - jodne wala pehle se apne khaate me hai
+     (token), aur Google ne uska email sabit kiya hai. Dono taraf sabut hai. */
+  const [googleLinked, setGoogleLinked] = useState<boolean | null>(null);
+  const [googleLinkedEmail, setGoogleLinkedEmail] = useState<string | null>(null);
+
+  const loadGoogleLink = async () => {
+    try {
+      const d = await authRideGet('/api/auth/google-link');
+      if (d && !d._error) { setGoogleLinked(!!d.linked); setGoogleLinkedEmail(d.email || null); }
+    } catch (_e) {}
+  };
+
+  const linkGoogleAccount = async () => {
+    if (!GOOGLE_WEB_CLIENT_ID) return;
+    try {
+      const idToken = await googleIdToken();
+      if (!idToken) { Alert.alert('Nahi jud paya', 'Google sign-in poora nahi hua'); return; }
+      const d = await authRidePost('/api/auth/link-google', { idToken });
+      if (d?._error) { Alert.alert('Nahi jud paya', d.message || 'Server tak nahi pahunche'); return; }
+      if (!d?.success) { Alert.alert('Nahi jud paya', d?.error || 'Jud nahi paya'); return; }
+      setGoogleLinked(true); setGoogleLinkedEmail(d.email || null);
+      Alert.alert('Ho gaya', 'Ab aap Google se seedha login kar sakte hain — SMS ki zaroorat nahi.');
+    } catch (e: any) {
+      const code = e?.code || '';
+      if (code === 'SIGN_IN_CANCELLED' || /cancel/i.test(String(e?.message || ''))) return;
+      Alert.alert('Nahi jud paya', e?.message || 'Google se nahi jud paya');
+    }
+  };
 
   const tryAnotherGoogle = async (forReg: boolean) => {
     setGTaken(false); setGTicket(''); setGRegTicket(''); setResult('');
@@ -10754,6 +10791,29 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <Text style={{ color: '#fff', fontWeight: '800', fontSize: 13 }}>{t('partner_btn')}</Text>
           </TouchableOpacity>
         </View>
+
+        {/* Google jodne wali pankti soochi se BAAHAR hai: wo soochi har row ko ek
+            sub-screen par bhejti hai, aur ye row screen nahi kholti - ye kaam
+            karti hai. Use us soochi me ghusane ke liye poora dhaancha todna
+            padta. */}
+        {!!GOOGLE_WEB_CLIENT_ID && (
+          <Bouncy style={s.menuItem} onPress={() => {
+            if (googleLinked) { Alert.alert('Google juda hai', googleLinkedEmail || 'Aap Google se login kar sakte hain.'); return; }
+            linkGoogleAccount();
+          }}>
+            <Text style={{ fontSize: 22, marginRight: 14 }}>{googleLinked ? '✅' : '\u{1F517}'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 15, color: '#0F172A', fontWeight: '500' }}>
+                {googleLinked ? 'Google juda hai' : 'Google jodein'}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>
+                {googleLinked ? (googleLinkedEmail || 'Google se login kar sakte hain')
+                              : 'SMS na aaye tab bhi login ho jayega'}
+              </Text>
+            </View>
+            <Text style={{ fontSize: 20, color: '#475569' }}>{'›'}</Text>
+          </Bouncy>
+        )}
 
         {([
           ['🎯', 'Subscription', 'Zero commission ride packs', 'subscription'],
