@@ -2846,8 +2846,28 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   // Login OTP digit handler
   const handleLoginOtpChange = (text: string, index: number) => {
+    const digits = text.replace(/[^0-9]/g, '');
     const newDigits = [...loginOtpDigits];
-    newDigits[index] = text.replace(/[^0-9]/g, '').slice(-1);
+
+    /* Poora code ek saath bhi aa sakta hai.
+
+       Pehle yahan sirf `.slice(-1)` tha - har haal me aakhri ank. Ek ank type
+       karne par theek, par jab keyboard SMS padh kar poora "628157" bhar deta
+       hai (ya koi clipboard se chipkata hai) to pehle khaane me sirf "7"
+       bachta tha. Yaani autofill lagane se pehle YE theek karna zaroori tha -
+       warna wo sirf galat code bharne ka ek naya tarika hota. */
+    if (digits.length > 1) {
+      for (let k = 0; k < digits.length && index + k < 6; k++) newDigits[index + k] = digits[k];
+      setLoginOtpDigits(newDigits);
+      setLoginOtp(newDigits.join(''));
+      loginOtpRefs.current[Math.min(index + digits.length, 6) - 1]?.focus();
+      if (newDigits.filter(d => d !== '').length === 6) {
+        setTimeout(() => verifyLoginOtp(newDigits.join('')), 300);
+      }
+      return;
+    }
+
+    newDigits[index] = digits.slice(-1);
     setLoginOtpDigits(newDigits);
     setLoginOtp(newDigits.join(''));
     if (text && index < 5) loginOtpRefs.current[index + 1]?.focus();
@@ -4223,7 +4243,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <TextInput key={i}
                   ref={(ref) => { loginOtpRefs.current[i] = ref; }}
                   style={{ width: 44, height: 54, borderRadius: 12, textAlign: 'center', fontSize: 22, fontWeight: 'bold', borderWidth: 2.5, borderColor: digit ? '#F5C518' : '#E2E8F0', backgroundColor: digit ? 'rgba(245,197,24,0.15)' : '#F8FAFC', color: '#0F172A' }}
-                  keyboardType="number-pad" maxLength={1} value={digit}
+                  keyboardType="number-pad"
+                  /* Pehla khaana poora code le sakta hai - maxLength 1 rakhne
+                     par Android ka autofill 6 ank bhejta hai aur wo pehle hi
+                     kat kar 1 ka reh jaata, onChangeText tak pahunchta hi
+                     nahi. Keyboard par "628157" ka sujhaav aata hai, ek tap me
+                     bhar jaata hai - bina kisi permission ke. */
+                  maxLength={i === 0 ? 6 : 1} value={digit}
+                  autoComplete={i === 0 ? 'sms-otp' : 'off'}
+                  textContentType={i === 0 ? 'oneTimeCode' : 'none'}
+                  importantForAutofill={i === 0 ? 'yes' : 'no'}
                   onChangeText={(t) => handleLoginOtpChange(t, i)}
                   onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
                 />
@@ -5054,7 +5083,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                     key={i}
                     ref={(ref) => { loginOtpRefs.current[i] = ref; }}
                     style={{ width: 44, height: 56, borderRadius: 14, textAlign: 'center', fontSize: 24, fontWeight: '900', borderWidth: 2.5, borderColor: digit ? C.pink : '#E2E8F0', backgroundColor: digit ? 'rgba(233,30,99,0.06)' : '#F8FAFC', color: '#0F172A', elevation: digit ? 4 : 0, shadowColor: C.pink, shadowOpacity: digit ? 0.25 : 0, shadowRadius: 6 }}
-                    keyboardType="number-pad" maxLength={1} value={digit}
+                  keyboardType="number-pad"
+                    /* Pehla khaana poora code le sakta hai - maxLength 1 rakhne
+                       par Android ka autofill 6 ank bhejta hai aur wo pehle hi
+                       kat kar 1 ka reh jaata, onChangeText tak pahunchta hi
+                       nahi. Keyboard par "628157" ka sujhaav aata hai, ek tap me
+                       bhar jaata hai - bina kisi permission ke. */
+                    maxLength={i === 0 ? 6 : 1} value={digit}
+                    autoComplete={i === 0 ? 'sms-otp' : 'off'}
+                    textContentType={i === 0 ? 'oneTimeCode' : 'none'}
+                    importantForAutofill={i === 0 ? 'yes' : 'no'}
                     onChangeText={(t) => handleLoginOtpChange(t, i)}
                     onKeyPress={({ nativeEvent }) => handleLoginOtpKeyPress(nativeEvent.key, i)}
                   />
