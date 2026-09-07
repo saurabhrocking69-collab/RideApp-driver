@@ -9,7 +9,6 @@ import * as TaskManager from 'expo-task-manager';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Updates from 'expo-updates';
-import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
 import { DriverLiveMap } from './DriverLiveMap';
 import { VehicleArt } from './VehicleArt';
@@ -180,76 +179,6 @@ async function checkAndRefreshDriverToken() {
       .catch(() => {});
   }
 }
-
-const MapWebView = ({ pickupCoords, dropCoords, driverLat, driverLng, customerLat, customerLng, height = 220 }: any) => {
-  const centerLat = pickupCoords?.lat || driverLat || 26.8467;
-  const centerLng = pickupCoords?.lng || driverLng || 80.9462;
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<style>* { margin: 0; padding: 0; } html, body, #map { height: 100%; width: 100%; } #map { background: #e8eaed; }</style>
-</head>
-<body>
-<div id="map"></div>
-<script>
-  function initMap() {
-    const map = new google.maps.Map(document.getElementById('map'), {
-      center: { lat: ${centerLat}, lng: ${centerLng} }, zoom: 14,
-      disableDefaultUI: true, zoomControl: true,
-      styles: [{ featureType: 'poi', stylers: [{ visibility: 'off' }] }, { featureType: 'transit', stylers: [{ visibility: 'off' }] }]
-    });
-    const bounds = new google.maps.LatLngBounds();
-    let hasPoint = false;
-    ${pickupCoords?.lat ? `
-    new google.maps.Marker({
-      position: { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} }, map,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#16A34A', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 },
-      title: 'Pickup', animation: google.maps.Animation.DROP
-    });
-    bounds.extend({ lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} }); hasPoint = true;
-    ` : ''}
-    ${dropCoords?.lat ? `
-    new google.maps.Marker({
-      position: { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} }, map,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 10, fillColor: '#E91E63', fillOpacity: 1, strokeColor: '#fff', strokeWeight: 3 },
-      title: 'Drop', animation: google.maps.Animation.DROP
-    });
-    bounds.extend({ lat: ${dropCoords.lat}, lng: ${dropCoords.lng} }); hasPoint = true;
-    ` : ''}
-    ${driverLat && driverLng ? `
-    new google.maps.Marker({
-      position: { lat: ${driverLat}, lng: ${driverLng} }, map,
-      label: { text: '🚗', fontSize: '22px' },
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
-      title: 'Driver'
-    });
-    bounds.extend({ lat: ${driverLat}, lng: ${driverLng} }); hasPoint = true;
-    ` : ''}
-    ${customerLat && customerLng ? `
-    new google.maps.Marker({
-      position: { lat: ${customerLat}, lng: ${customerLng} }, map,
-      label: { text: '🧑', fontSize: '22px' },
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 0, fillOpacity: 0, strokeOpacity: 0 },
-      title: 'Customer'
-    });
-    bounds.extend({ lat: ${customerLat}, lng: ${customerLng} }); hasPoint = true;
-    ` : ''}
-    ${pickupCoords?.lat && dropCoords?.lat ? `
-    const ds = new google.maps.DirectionsService();
-    const dr = new google.maps.DirectionsRenderer({ map, suppressMarkers: true, polylineOptions: { strokeColor: '#E91E63', strokeWeight: 4, strokeOpacity: 0.8 } });
-    ds.route({ origin: { lat: ${pickupCoords.lat}, lng: ${pickupCoords.lng} }, destination: { lat: ${dropCoords.lat}, lng: ${dropCoords.lng} }, travelMode: 'DRIVING' }, (r, s) => { if (s === 'OK') dr.setDirections(r); });
-    ` : ''}
-    if (hasPoint) { map.fitBounds(bounds, 80); if (map.getZoom() > 16) map.setZoom(16); }
-  }
-</script>
-<script async src="https://maps.googleapis.com/maps/api/js?key=${MAPS_KEY}&callback=initMap"></script>
-</body>
-</html>`;
-
-  return <WebView source={{ html }} style={{ height, width: '100%' }} scrollEnabled={false} javaScriptEnabled domStorageEnabled />;
-};
 
 // ─── Count-Up — earnings number badhta dikhe ───
 const CountUp = ({ value, style, prefix = '₹' }: any) => {
