@@ -1765,6 +1765,15 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (screen === 'splash' || screen === 'permissions') return true;
       // Full-screen navigation: back exits nav and returns to the Live tab.
       if (inNavMode) { setInNavMode(false); setActiveTab('live'); return true; }
+      /* Login ke OTP panne par back ka matlab "number badalna" hai, "app band
+         karna" nahi. Pehle yahan seedha app band ho jaata tha - aadmi galat
+         number daal kar OTP ke panne par pahunch jaye to uske paas wapas jaane
+         ka koi tarika hi nahi tha (screen par "Change Number" tha, par phone
+         ka apna back button app hi band kar deta tha). */
+      if (screen === 'login' && regStep === 0 && loginOtpSent) {
+        setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setResult('');
+        return true;
+      }
       if (screen === 'login' && regStep === 0) return false; // App exit
       if (screen === 'login' && regStep > 0) {
         if (regStep === 99) { setRegStep(0); return true; }
@@ -1779,7 +1788,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     };
     const backHandler = BackHandler.addEventListener('hardwareBackPress', backAction);
     return () => backHandler.remove();
-  }, [screen, regStep, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen, inNavMode]);
+  }, [screen, regStep, loginOtpSent, showChat, activeTab, tripSummary, paymentWaiting, driverSubScreen, inNavMode]);
 
   // Refresh driver notifications when center is opened
   useEffect(() => {
@@ -2626,6 +2635,40 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     setLoading(false);
   };
 
+  /* Registration ka OTP - login wale raaste se ALAG.
+
+     Dono panno ke OTP khaane ek hi handler par hain, aur wo chhah ank poore
+     hote hi verifyLoginOtp chala deta tha. Wo login ka raasta hai: OTP
+     jaanchne ke baad /api/driver/login poochhta hai. Registration ke waqt us
+     number ka driver record hota hi nahi - wo to ban hi raha hai - to jawab
+     aata tha "This number is not registered. Please sign up as a Sppero Buddy
+     first."
+
+     Yaani registration ke beech me app kehta tha ki pehle jaakar registration
+     karo. Number verify kiya hi isliye ja raha tha ki registration ho.
+
+     Ab registration ka apna raasta hai: OTP jaancho, token rakho, aur agle
+     kadam par le jao. Driver ka record us safar ke ANT me banta hai, shuruat
+     me nahi - to yahan uska na hona bilkul theek hai. */
+  const verifyRegOtp = async (otpOverride?: string) => {
+    const otpToUse = otpOverride || loginOtpDigits.join('');
+    if (!otpToUse || otpToUse.length !== 6) { setResult('❌ Enter a 6 digit OTP'); return; }
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/verify-otp`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }),
+      });
+      const data = await res.json();
+      if (data.token) {
+        await AsyncStorage.setItem('driverToken', data.token);
+        setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']);
+        setRegStep(2);
+      } else setResult('❌ ' + (data.error || 'Incorrect OTP'));
+    } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
+    setLoading(false);
+  };
+
   const verifyLoginOtp = async (otpOverride?: string) => {
     const otpToUse = otpOverride || loginOtp;
     if (!otpToUse || otpToUse.length !== 6) { setResult('❌ Enter a 6 digit OTP'); return; }
@@ -2862,7 +2905,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setLoginOtp(newDigits.join(''));
       loginOtpRefs.current[Math.min(index + digits.length, 6) - 1]?.focus();
       if (newDigits.filter(d => d !== '').length === 6) {
-        setTimeout(() => verifyLoginOtp(newDigits.join('')), 300);
+        // Registration ka panna alag raaste par jaata hai - warna wahan
+        // login ki jaanch chalti hai aur "register nahi ho" wala sandesh aata.
+        setTimeout(() => (regStep === 1 ? verifyRegOtp : verifyLoginOtp)(newDigits.join('')), 300);
       }
       return;
     }
@@ -4268,17 +4313,9 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             {result ? <Text style={s.err}>{result}</Text> : null}
             <TouchableOpacity style={[s.btn, (loading || loginOtpDigits.join('').length < 6) && { opacity: 0.5 }]}
               disabled={loading || loginOtpDigits.join('').length < 6}
-              onPress={async () => {
-                const otpToUse = loginOtpDigits.join('');
-                setLoading(true);
-                try {
-                  const res = await fetch(`${API}/api/auth/verify-otp`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: regData.phone, otp: otpToUse, name: '' }) });
-                  const data = await res.json();
-                  if (data.token) { await AsyncStorage.setItem('driverToken', data.token); setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']); setRegStep(2); }
-                  else setResult('❌ ' + (data.error || 'Incorrect OTP'));
-                } catch (_e) { setResult('❌ Could not reach Sppero. Check your connection and try again.'); }
-                setLoading(false);
-              }}>
+              // Wahi function jo chhah ank poore hone par apne aap chalta hai -
+              // do nakal rakhne par ek din ek badalti hai aur doosri nahi.
+              onPress={() => verifyRegOtp()}>
               <Text style={s.btnTxt}>{loading ? t('reg_verifying') : t('reg_verify_next')}</Text>
             </TouchableOpacity>
             {/* Resend */}
