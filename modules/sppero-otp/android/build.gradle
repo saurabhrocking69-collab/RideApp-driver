@@ -1,0 +1,22 @@
+apply plugin: 'com.android.library'
+apply plugin: 'expo-module-gradle-plugin'
+
+group = 'com.sppero.otp'
+version = '1.0.0'
+
+android {
+  namespace "com.sppero.otp"
+  defaultConfig {
+    versionCode 1
+    versionName "1.0.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // SMS User Consent aur SMS Retriever - dono isi me hain.
+  // Koi SMS permission nahi maangta.
+  implementation 'com.google.android.gms:play-services-auth-api-phone:18.0.2'
+}

@@ -42,3 +42,7 @@ yarn-error.*
 
 # IDE cache (Android Studio / IntelliJ)
 .idea/
+
+# Local module ka Gradle output - ye banaya hua hai, source nahi.
+# Root ka /android isko nahi dhakta (wo sirf root ka folder hai).
+modules/*/android/build/

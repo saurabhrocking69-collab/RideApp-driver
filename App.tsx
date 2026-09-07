@@ -12,6 +12,7 @@ import * as Updates from 'expo-updates';
 import * as Notifications from 'expo-notifications';
 import { DriverLiveMap } from './DriverLiveMap';
 import { VehicleArt } from './VehicleArt';
+import { startSmsOtp } from './modules/sppero-otp';
 import { useVoiceNav } from './useVoiceNav';
 import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
@@ -2915,6 +2916,32 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       loginOtpRefs.current[index - 1]?.focus();
     }
   };
+
+  /* SMS aate hi code apne aap bhar jaye - Google ka SMS User Consent.
+
+     Dono panne isi ek sunne wale se chalte hain: login ka OTP aur registration
+     ka OTP - dono loginOtpDigits hi bharte hain. Verify alag-alag hai, aur
+     wahi baant yahan bhi rakhi gayi hai jo handleLoginOtpChange me hai:
+     registration (regStep 1) apne raaste, warna login ke.
+
+     Koi SMS permission nahi lagti. Bina tap ke bharna (SMS Retriever) isse
+     bhi achha hota par uske liye SMS ke ant me app ka hash chahiye, jo abhi
+     ke template me nahi hai - dekho modules/sppero-otp.
+
+     Purane builds me native hissa nahi hai; wahan ye chup-chaap kuchh nahi
+     karta. */
+  const smsCodeRef = useRef<string>('');
+  useEffect(() => {
+    if (!loginOtpSent && regStep !== 1) return;
+    return startSmsOtp((code) => {
+      // Ek hi code do baar na chale - galat koshishein ginti me aati hain.
+      if (!/^\d{6}$/.test(code) || smsCodeRef.current === code) return;
+      smsCodeRef.current = code;
+      setLoginOtpDigits(code.split(''));
+      setLoginOtp(code);
+      setTimeout(() => (regStep === 1 ? verifyRegOtp : verifyLoginOtp)(code), 250);
+    });
+  }, [loginOtpSent, regStep]);
 
   // Resend timer
   useEffect(() => {
