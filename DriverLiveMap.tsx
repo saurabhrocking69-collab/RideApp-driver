@@ -4,6 +4,7 @@ import MapView, { Marker, Polyline, Circle, Polygon, AnimatedRegion, PROVIDER_GO
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { maneuverIcon } from './maneuverIcon';
 import { isNimble } from './vehicles';
+import { VehicleArt, vehicleArtBox } from './VehicleArt';
 
 const MAPS_KEY = 'AIzaSyAK3HFrZsahMLNVUFgxGAQMw_6OATDD8q4';
 const API      = 'https://rideapp-backend-production-5e1c.up.railway.app';
@@ -21,16 +22,9 @@ const HEAT_FILL:   Record<string, string> = { high: 'rgba(255,45,120,0.25)', med
 const HEAT_STROKE: Record<string, string> = { high: 'rgba(255,45,120,0.60)', medium: 'rgba(245,158,11,0.60)', low: 'rgba(5,150,105,0.50)' };
 const CELL = 0.009;
 
-const VEHICLE_ICONS: Record<string, string> = {
-  bike: '🏍️', green_bike: '🛵', auto: '🛺', electric_auto: '🛺',
-  eriksha: '🛺', car: '🚕', luxury: '🚙',
-};
-// eriksha/electric_auto share a base emoji with auto (Unicode has no dedicated
-// e-rickshaw glyph) — this small badge is what actually tells them apart.
-const VEHICLE_BADGE: Record<string, string | null> = {
-  bike: null, car: null, luxury: null, auto: null,
-  green_bike: '⚡', electric_auto: '⚡', eriksha: '🌿',
-};
+/* VEHICLE_ICONS / VEHICLE_BADGE yahan se hata diye gaye - ab gaadi asli
+   tasveer se dikhti hai. Wo farq jo badge batata tha (bijli, patti) ab bhi
+   dikhta hai, VehicleArt ke andar. */
 
 function zonePolygon(lat: number, lng: number) {
   return [
@@ -133,9 +127,11 @@ function computeBearing(lat1: number, lng1: number, lat2: number, lng2: number):
 }
 
 // ── Driver self-marker — large circle with bearing arrow ──────────────────────
-function DriverMarker({ vehicleType, heading, navMode }: { vehicleType: string; heading: number; navMode?: boolean }) {
-  const icon  = VEHICLE_ICONS[vehicleType] || '🛺';
-  const badge = VEHICLE_BADGE[vehicleType];
+const SELF_ART = 46;   // gaadi ka sabse lamba pehlu, screen par
+
+function DriverMarker({ vehicleType, heading, navMode, onArtReady }: {
+  vehicleType: string; heading: number; navMode?: boolean; onArtReady?: () => void;
+}) {
   // The marker is a billboard (Marker has no `flat` prop, so flat=false): it
   // always faces the screen and does NOT rotate with the map.
   //
@@ -148,18 +144,25 @@ function DriverMarker({ vehicleType, heading, navMode }: { vehicleType: string; 
   //
   // In north-up mode the map is unrotated, so the arrow does carry the bearing.
   const arrowDeg = navMode ? 0 : heading;
+
+  /* Dabba gaadi ke VIKARN jitna - warna mudte hi wo kat jaati.
+     Marker apne bachche ke dabbe jitna hi bitmap banata hai; jo bahar nikla
+     wo kat jaata hai. Customer app me yahi galti thi aur wahan car har 360 ke
+     360 kon par katti thi. */
+  const box = vehicleArtBox(vehicleType, SELF_ART);
+  const glow = Math.round(SELF_ART * 0.95);
   return (
-    <View style={styles.driverOuter}>
-      <View style={[styles.bearingArrow, { transform: [{ rotate: `${arrowDeg}deg` }] }]}>
-        <View style={styles.bearingTip} />
-      </View>
-      <View style={styles.driverInner}>
-        <Text style={{ fontSize: 20 }}>{icon}</Text>
-        {badge ? (
-          <View style={styles.vehicleBadge}>
-            <Text style={{ fontSize: 9 }}>{badge}</Text>
-          </View>
-        ) : null}
+    <View style={{ width: box, height: box, alignItems: 'center', justifyContent: 'center' }}>
+      {/* "Main yahan hoon" - wahi NAV_BLUE jo pehle gole ka rang tha, taaki
+          nazar wahin jaye jahan pehle jaati thi. Ye ghoomta nahi, isliye
+          rotate wale hisse se bahar hai. */}
+      <View style={{
+        position: 'absolute', width: glow, height: glow, borderRadius: glow / 2,
+        backgroundColor: 'rgba(26,115,232,0.18)',
+        borderWidth: 1.5, borderColor: 'rgba(26,115,232,0.45)',
+      }} />
+      <View style={{ transform: [{ rotate: `${arrowDeg}deg` }] }}>
+        <VehicleArt vehicleType={vehicleType} size={SELF_ART} onReady={onArtReady} />
       </View>
     </View>
   );
@@ -318,6 +321,26 @@ export const DriverLiveMap = memo(function DriverLiveMap({
   // heading is persisted as a ref so camera effect always reads the latest value
   const headingRef = useRef(0);
   const [heading, setHeading] = useState(0);
+
+  /* Apne marker ka bitmap kab dobara khinche.
+
+     Emoji ke zamane me ye hamesha `false` tha aur theek tha - emoji ghoomta
+     nahi, to bachcha kabhi badalta hi nahi tha. Ab gaadi mudti hai, aur `false`
+     par wo mudna bitmap tak pahunchta hi nahi - gaadi pehli disha me atki
+     dikhti.
+
+     Sthir `true` bhi galat hota: phir Android har frame par bitmap banata,
+     tab bhi jab gaadi khadi ho - aur driver ka phone poore din isi screen par
+     rehta hai. Isliye sirf mudne ke thodi der baad tak.
+
+     navMode bhi is soochi me hai kyoki wo bhi gaadi ka kon badal deta hai
+     (nav me camera khud ghoom jaata hai, to gaadi seedhi ho jaati hai). */
+  const [selfTracking, setSelfTracking] = useState(true);
+  useEffect(() => {
+    setSelfTracking(true);
+    const id = setTimeout(() => setSelfTracking(false), 900);
+    return () => clearTimeout(id);
+  }, [heading, vehicleType, navMode]);
 
   const driverRegion = useRef(
     new AnimatedRegion({
@@ -734,10 +757,29 @@ export const DriverLiveMap = memo(function DriverLiveMap({
           </Marker>
         )}
 
-        {/* Animated driver marker */}
+        {/* Apni gaadi ka marker.
+
+            tracksViewChanges pehle `false` tha aur emoji ke saath theek tha -
+            emoji ghoomta nahi, to bachcha kabhi badalta hi nahi tha. Ab gaadi
+            MUDTI hai, aur `false` par wo mudna bitmap tak pahunchta hi nahi:
+            gaadi pehli disha me atki dikhti.
+
+            Sthir `true` bhi galat hota - phir Android har frame par bitmap
+            banata, tab bhi jab gaadi khadi ho. Isliye sirf mudne ke thodi der
+            baad tak (dekho selfTracking). */}
         {driverLat != null && driverLng != null && (
-          <Marker.Animated coordinate={driverRegion as any} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={false}>
-            <DriverMarker vehicleType={vehicleType} heading={heading} navMode={navMode} />
+          <Marker.Animated coordinate={driverRegion as any} anchor={{ x: 0.5, y: 0.5 }} tracksViewChanges={selfTracking}>
+            <DriverMarker
+              vehicleType={vehicleType}
+              heading={heading}
+              navMode={navMode}
+              /* Tasveer aate hi ek baar aur khichwao - warna pehle khich chuka
+                 khali bitmap hamesha ke liye khali reh jaata. */
+              onArtReady={() => {
+                setSelfTracking(true);
+                setTimeout(() => setSelfTracking(false), 600);
+              }}
+            />
           </Marker.Animated>
         )}
       </MapView>
@@ -811,26 +853,10 @@ const MAP_STYLE = [
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  driverOuter:  { alignItems: 'center', justifyContent: 'center', width: 54, height: 54 },
-  bearingArrow: { position: 'absolute', width: 54, height: 54, alignItems: 'center' },
-  bearingTip: {
-    width: 0, height: 0,
-    borderLeftWidth: 5, borderRightWidth: 5, borderBottomWidth: 10,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderBottomColor: NAV_BLUE,
-  },
-  driverInner: {
-    width: 42, height: 42, borderRadius: 21,
-    backgroundColor: NAV_BLUE, alignItems: 'center', justifyContent: 'center',
-    elevation: 8, shadowColor: NAV_BLUE, shadowOpacity: 0.5, shadowRadius: 10,
-    borderWidth: 3, borderColor: '#fff',
-  },
-  vehicleBadge: {
-    position: 'absolute', bottom: -2, right: -2,
-    width: 16, height: 16, borderRadius: 8,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: C.green,
-    alignItems: 'center', justifyContent: 'center',
-  },
+  /* driverOuter / bearingArrow / bearingTip / driverInner / vehicleBadge
+     hata diye gaye. Wo neela gola, uske andar ka emoji aur uper ka teer the.
+     Ab gaadi apni tasveer se dikhti hai aur khud mudti hai, to teer ka kaam
+     hi nahi bacha - dekho DriverMarker. */
 
   pickupRing: {
     width: 22, height: 22, borderRadius: 11,

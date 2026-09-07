@@ -12,6 +12,7 @@ import * as Updates from 'expo-updates';
 import { WebView } from 'react-native-webview';
 import * as Notifications from 'expo-notifications';
 import { DriverLiveMap } from './DriverLiveMap';
+import { VehicleArt } from './VehicleArt';
 import { useVoiceNav } from './useVoiceNav';
 import { VoiceNavBar } from './VoiceNavBar';
 import { FuelLogScreen } from './FuelLogScreen';
@@ -6951,9 +6952,13 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 <Text style={{ color: 'rgba(26,18,0,0.8)', fontSize: 11, fontWeight: '900', letterSpacing: 2.5, marginBottom: 8 }}>
                   {rideReq?.is_favourite_request ? '⭐ SEEDHI RIDE REQUEST' : '🔔 NAYI RIDE AAYI!'}
                 </Text>
-                <Text style={{ fontSize: 72, marginBottom: 4 }}>
-                  {vehEmoji(rideReq?.ride_type)}
-                </Text>
+                {/* Asli gaadi, emoji nahi. Yahan wo 72px par dikhti hai -
+                    itne bade naap par emoji ka phonewala roop saaf dikh jaata
+                    hai (har phone par alag), aur tasveer ye bhi bata deti hai
+                    ki gaadi kaisi hai. */}
+                <View style={{ marginBottom: 4 }}>
+                  <VehicleArt vehicleType={rideReq?.ride_type} size={72} />
+                </View>
                 <Text style={{ color: '#1A1200', fontSize: 26, fontWeight: '900', letterSpacing: 0.5 }}>
                   {rideReq?.passenger_name || 'Passenger'}
                 </Text>
@@ -7517,7 +7522,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <>
                 <PulseView>
                   <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: 'rgba(16,185,129,0.15)', alignItems: 'center', justifyContent: 'center', borderWidth: 2.5, borderColor: 'rgba(16,185,129,0.4)' }}>
-                    <Text style={{ fontSize: 44 }}>🚗</Text>
+                    {/* Driver ki APNI gaadi. Yahan pehle har driver ko car ka
+                        emoji dikhta tha - bike wale ko bhi, auto wale ko bhi.
+                        Wo uski apni gaadi hai jiska wo intezaar kar raha hai,
+                        to wahi dikhni chahiye. */}
+                    <VehicleArt vehicleType={driverInfo?.vehicle_type} size={52} />
                   </View>
                 </PulseView>
                 <Text style={{ fontSize: 22, fontWeight: '900', color: '#0F172A', marginTop: 24, textAlign: 'center' }}>{t('live_waiting_title')}</Text>
@@ -7634,9 +7643,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                   does not — and that space is exactly what pushed Accept off
                   the screen. */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 2 }}>
-                <Text style={{ fontSize: 30 }}>
-                  {vehEmoji(rideReq?.ride_type)}
-                </Text>
+                {/* 34 ka naap 30px ke emoji jitni hi UNCHAI leta hai, aur
+                    chaudai me usse kam - yaani uper wali baat (Accept screen
+                    se bahar chala gaya tha) yahan phir se nahi hoti. */}
+                <VehicleArt vehicleType={rideReq?.ride_type} size={34} />
                 <View>
                   {rideReq?.is_parcel && (
                     <Text style={{ color: 'rgba(255,255,255,0.5)', fontSize: 10, fontWeight: '700', letterSpacing: 0.5 }}>SENDER</Text>
