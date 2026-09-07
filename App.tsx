@@ -1256,10 +1256,35 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
 
   const [favouriteCount, setFavouriteCount] = useState<number | null>(null);
   // Login banner animations
-  const [loginCaptionIdx, setLoginCaptionIdx] = useState(0);
+  // loginCaptionIdx/Fade/Slide hata diye - wo ek-ek karke badalne wali
+  // caption ke liye the, jo ab chalti patti ban chuki hai.
   const loginGlowAnim     = useRef(new Animated.Value(0.3)).current;
-  const loginCaptionFade  = useRef(new Animated.Value(1)).current;
-  const loginCaptionSlide = useRef(new Animated.Value(0)).current;
+  /* Sadak par chalti patti.
+
+     Poori soochi DO baar likhi jaati hai aur ek nakal ki chaudai jitna khiska
+     kar wapas shuru se - isse jodh kabhi dikhta nahi. Chaudai onLayout se
+     naapi jaati hai, andaaze se nahi: bhasha badalne par shabd lambe-chhote
+     hote hain, aur tay chaudai par jodh dikhne lagta.
+
+     Chaal ki raftaar chaudai ke hisaab se hai (40 px/second), taaki lambi
+     patti tez aur chhoti dheemi na lage. */
+  const [capStripW, setCapStripW] = useState(0);
+  const capMarquee = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!capStripW) return;
+    capMarquee.setValue(0);
+    const anim = Animated.loop(
+      Animated.timing(capMarquee, {
+        toValue: -capStripW,
+        duration: Math.max(6000, Math.round(capStripW / 40) * 1000),
+        easing: Easing.linear,
+        useNativeDriver: true,
+      }),
+    );
+    anim.start();
+    return () => anim.stop();
+  }, [capStripW]);
+
   const [lastRideId, setLastRideId]         = useState<string>('');
 
   // ── Cancel Popup (customer or driver cancels) ─
@@ -1436,20 +1461,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       Animated.timing(loginGlowAnim, { toValue: 0.25, duration: 2000, useNativeDriver: true }),
     ]));
     glow.start();
-    const iv = setInterval(() => {
-      Animated.parallel([
-        Animated.timing(loginCaptionFade, { toValue: 0, duration: 250, useNativeDriver: true }),
-        Animated.timing(loginCaptionSlide, { toValue: -14, duration: 250, useNativeDriver: true }),
-      ]).start(() => {
-        setLoginCaptionIdx(i => (i + 1) % 5);
-        loginCaptionSlide.setValue(14);
-        Animated.parallel([
-          Animated.timing(loginCaptionFade, { toValue: 1, duration: 250, useNativeDriver: true }),
-          Animated.timing(loginCaptionSlide, { toValue: 0, duration: 250, useNativeDriver: true }),
-        ]).start();
-      });
-    }, 3000);
-    return () => { glow.stop(); clearInterval(iv); };
+    /* Ek-ek karke baat badalne wala timer yahan se hata diya gaya.
+
+       Wo har teen second me setLoginCaptionIdx chalata tha, yaani poora login
+       panna dobara banta tha - aur ab uske dikhane ko kuch bacha hi nahi:
+       baatein neeche chalti patti me hain, jo apne aap chalti hai aur jiske
+       liye kisi state ko chhune ki zaroorat nahi.
+
+       Chhod dena "kuch nahi bigadta" jaisa lagta, par wo har teen second me
+       ek bekaar render karta rehta - us panne par jahan aadmi sirf number
+       likh raha hota hai. */
+    return () => { glow.stop(); };
   }, [screen]);
 
   // ── Notification Handler ──────────────────────
@@ -4856,7 +4878,6 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       { emoji: '🛺', line1: t('cap3_l1'), line2: t('cap3_l2'), sub: t('cap3_sub') },
       { emoji: '⭐', line1: t('cap4_l1'), line2: t('cap4_l2'), sub: t('cap4_sub') },
     ];
-    const cap = LOGIN_CAPTIONS[loginCaptionIdx];
 
     return (
       <KeyboardAvoidingView style={{ flex: 1, backgroundColor: '#08080F' }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -4955,21 +4976,33 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 10, fontWeight: '700', letterSpacing: 2.5 }}>INDIA KA APNA RIDE PLATFORM</Text>
             </View>
 
-            {/* Animated motivational caption */}
-            <View style={{ position: 'absolute', top: '28%', left: 0, right: 0, paddingHorizontal: 28, alignItems: 'center' }}>
-              <Animated.View style={{ alignItems: 'center', opacity: loginCaptionFade, transform: [{ translateY: loginCaptionSlide }] }}>
-                <Text style={{ fontSize: 48, marginBottom: 12 }}>{cap.emoji}</Text>
-                <Text style={{ color: '#FFFFFF', fontSize: 28, fontWeight: '900', textAlign: 'center', letterSpacing: -0.3, lineHeight: 34 }}>{cap.line1}</Text>
-                <Text style={{ color: C.pink, fontSize: 28, fontWeight: '900', textAlign: 'center', letterSpacing: -0.3, lineHeight: 34, marginBottom: 10 }}>{cap.line2}</Text>
-                <Text style={{ color: 'rgba(255,255,255,0.45)', fontSize: 12, textAlign: 'center', fontWeight: '500', lineHeight: 19, maxWidth: 260 }}>{cap.sub}</Text>
-              </Animated.View>
-            </View>
+            {/* Baatein sadak par chalti hui - tasveer ke uper nahi.
 
-            {/* Caption progress dots */}
-            <View style={{ position: 'absolute', bottom: 118, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
-              {[0,1,2,3,4].map(i => (
-                <View key={i} style={{ width: i === loginCaptionIdx ? 22 : 6, height: 6, borderRadius: 3, backgroundColor: i === loginCaptionIdx ? C.pink : 'rgba(255,255,255,0.2)' }} />
-              ))}
+                Pehle ye 48px emoji aur do 28px lines ke roop me tasveer ke
+                THEEK BEECH (top:28%) par thi. Wo captain ke chehre aur uske
+                phone ke uper aa baithti thi: dono cheezein ek hi jagah, aur
+                dono ka nuksaan - na tasveer dikhti thi na baat padhi jaati
+                thi.
+
+                Ab wo us kaali patti par hai jo tasveer ke neeche waise bhi
+                khali padi hai, ek hi line me, dayein se bayein chalti hui.
+                Dots hata diye: wo ek-ek karke aane wali baaton ke liye the;
+                ab sab ek hi patti me chalti hain. */}
+            <View style={{ position: 'absolute', bottom: 108, left: 0, right: 0, height: 30, overflow: 'hidden', justifyContent: 'center' }} pointerEvents="none">
+              <Animated.View style={{ flexDirection: 'row', transform: [{ translateX: capMarquee }] }}>
+                {[0, 1].map(copy => (
+                  <View key={copy} style={{ flexDirection: 'row', alignItems: 'center' }}
+                        onLayout={copy === 0 ? (e) => setCapStripW(e.nativeEvent.layout.width) : undefined}>
+                    {LOGIN_CAPTIONS.map((c, i) => (
+                      <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 34 }}>
+                        <Text style={{ fontSize: 15, marginRight: 8 }}>{c.emoji}</Text>
+                        <Text style={{ color: '#FFFFFF', fontSize: 13.5, fontWeight: '800', letterSpacing: 0.2 }}>{c.line1} </Text>
+                        <Text style={{ color: C.pink, fontSize: 13.5, fontWeight: '800', letterSpacing: 0.2 }}>{c.line2}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ))}
+              </Animated.View>
             </View>
 
             {/* Stats strip */}
