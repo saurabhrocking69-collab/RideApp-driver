@@ -23,7 +23,7 @@ import { Audio } from 'expo-av';
 /* authFetch yahan se NAHI aata - is file me apna authFetch pehle se hai
    (neeche), aur wahi 14 jagah lagi hui hai. api.ts wala DeleteAccountSheet ke
    liye joda gaya tha, jiske paas apna koi nahi tha. */
-import { apiGet, apiPost, apiAuthPost, apiAuthGet } from './api';
+import { apiGet, apiPost, apiAuthPost, apiAuthGet, authGet, authPost } from './api';
 // Keep the screen on during navigation. Guarded so the app never crashes if the
 // native module isn't in the build yet (activates in dev builds immediately; in
 // the production APK after the next native rebuild).
@@ -1681,7 +1681,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
          a different road. Re-registering a token is harmless, so it retries. */
       let saved = false;
       for (let i = 0; i < 4; i++) {
-        const r = await apiPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
+        const r = await authPost('/api/auth/save-fcm-token', { phone: userPhone, token, role: 'driver' });
         if (r && !r._error && !r.error && (r._status == null || r._status < 400)) { saved = true; break; }
         await new Promise(res => setTimeout(res, 1500 * (i + 1)));
       }
@@ -2516,7 +2516,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (activeTab === 'profile' && phone) {
       // Google juda hai ya nahi - warna pankti hamesha "jodein" kehti rahegi.
       loadGoogleLink();
-      fetch(`${API}/api/favourites/driver-count?phone=${phone}`)
+      authFetch(`${API}/api/favourites/driver-count?phone=${phone}`)
         .then(r => r.json()).then(d => setFavouriteCount(d.count ?? 0)).catch(() => {});
     }
   }, [activeTab, phone]);

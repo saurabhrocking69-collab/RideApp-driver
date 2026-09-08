@@ -36,6 +36,22 @@ export const authFetch = async (url: string, opts: any = {}): Promise<Response> 
   });
 };
 
+/* Token khud dhoondhne wale do helper - customer app jaise.
+
+   apiAuthGet/apiAuthPost token DALWATE hain, jo har call site par ek aur
+   line maangta hai. Ye wahi kaam karte hain par token khud le lete hain, to
+   maujooda apiGet/apiPost wali jagah ek shabd me badal jaati hai. */
+export const authGet = async (path: string): Promise<any> => {
+  const r = await authFetch(API + path);
+  try { return await r.json(); } catch (_e) { return null; }
+};
+export const authPost = async (path: string, body: any): Promise<any> => {
+  const r = await authFetch(API + path, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  try { return await r.json(); } catch (_e) { return null; }
+};
+
 // ─── Fetch with timeout (10 sec default) ───
 const fetchWithTimeout = async (url: string, options: any = {}, timeout = 10000): Promise<Response> => {
   const controller = new AbortController();
