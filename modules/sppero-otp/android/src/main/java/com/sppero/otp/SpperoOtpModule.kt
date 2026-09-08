@@ -42,9 +42,12 @@ class SpperoOtpModule : Module() {
     Name("SpperoOtp")
     Events("onOtp")
 
-    Function("start") { start() }
-    Function("stop") { stop() }
-    Function("getAppHash") { appHash() }
+    /* Teeno ek try me. JS `start()` ko try me bulata hai, par ye pakka karna
+       ki yahan se koi cheez upar na jaye - kyoki ek bhi bina pakdi hui gadbad
+       ka matlab hai koi login hi nahi kar payega. */
+    Function("start") { try { start() } catch (_: Throwable) {} }
+    Function("stop") { try { stop() } catch (_: Throwable) {} }
+    Function("getAppHash") { try { appHash() } catch (_: Throwable) { "" } }
 
     OnActivityResult { _, payload ->
       if (payload.requestCode == REQ_CONSENT) {
@@ -66,7 +69,22 @@ class SpperoOtpModule : Module() {
     stop()
 
     val r = object : BroadcastReceiver() {
-      override fun onReceive(c: Context?, intent: Intent?) {
+      /* Poora onReceive ek try me hai, aur wo dikhawa nahi hai.
+
+         Ye MAIN THREAD par chalta hai. Yahan se nikla koi bhi exception seedhe
+         app ko le doobta hai - koi red screen nahi, app bas band. Ek captain ke
+         saath theek yahi hua: OTP ka panna khula tha, SMS aane hi wala tha, aur
+         app band ho gayi. Wajah log ke bina dikhi nahi, isliye ab ye hissa aisa
+         likha gaya hai ki wajah chahe jo ho, app na gire - OTP haath se bhar
+         lena us se bahut behtar hai ki app hi band ho jaye.
+
+         appContext.currentActivity apne aap me phenk sakta hai (sirf null nahi
+         deta) - wo bhi isi ke andar hai. */
+      override fun onReceive(c: Context?, intent: Intent?) = try {
+        onSms(intent)
+      } catch (_: Throwable) { /* chup - app girne se OTP na bharna behtar hai */ }
+
+      private fun onSms(intent: Intent?) {
         if (intent?.action != SmsRetriever.SMS_RETRIEVED_ACTION) return
         val extras = intent.extras ?: return
         val status = if (Build.VERSION.SDK_INT >= 33)
@@ -81,9 +99,12 @@ class SpperoOtpModule : Module() {
         else
           @Suppress("DEPRECATION") extras.getParcelable<Intent>(SmsRetriever.EXTRA_CONSENT_INTENT)
 
+        if (consent == null) return
         val act = appContext.currentActivity ?: return
-        if (consent != null) {
-          // Nateeja OnActivityResult me aayega.
+        /* Activity kholna main thread ka kaam hai. onReceive waise to main
+           thread par hi chalta hai, par ise saaf-saaf post karna sasta hai aur
+           ek poora khatra hata deta hai. Nateeja OnActivityResult me aayega. */
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
           try { act.startActivityForResult(consent, REQ_CONSENT) } catch (_: Throwable) {}
         }
       }
