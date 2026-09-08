@@ -20,6 +20,9 @@ import { ZoneAlertBanner, ZoneAlertSender, type ZoneAlert } from './ZoneAlertBan
 import { UpdateBanner } from './UpdateBanner';
 import { DeleteAccountSheet } from './DeleteAccountSheet';
 import { Audio } from 'expo-av';
+/* authFetch yahan se NAHI aata - is file me apna authFetch pehle se hai
+   (neeche), aur wahi 14 jagah lagi hui hai. api.ts wala DeleteAccountSheet ke
+   liye joda gaya tha, jiske paas apna koi nahi tha. */
 import { apiGet, apiPost, apiAuthPost, apiAuthGet } from './api';
 // Keep the screen on during navigation. Guarded so the app never crashes if the
 // native module isn't in the build yet (activates in dev builds immediately; in
@@ -1572,7 +1575,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         setDriverTicketsLoading(true);
         setDrSubScreen('ticket-list');
         if (dp) {
-          fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(dp)}&role=driver`)
+          authFetch(`${API}/api/support/tickets?phone=${encodeURIComponent(dp)}&role=driver`)
             .then(r => r.json())
             .then(d => setDriverTickets(d.tickets || []))
             .catch(() => {})
@@ -1629,12 +1632,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       if (s !== 'active') return;
       const t = driverActiveTicketRef.current;
       if (t) {
-        fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`)
+        authFetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`)
           .then(r => r.json())
           .then(d => setDriverTicketDetail(d))
           .catch(() => {});
       } else if (driverSubScreen === 'ticket-list') {
-        fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`)
+        authFetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`)
           .then(r => r.json())
           .then(d => setDriverTickets(d.tickets || []))
           .catch(() => {});
@@ -8344,7 +8347,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       try {
         const rideLinkedCats = ['payment_refused','abusive_customer','customer_no_show','vehicle_damage','false_accusation','wrong_location'];
         const linkedRideId = rideLinkedCats.includes(driverTicketCategory) && paymentRideId ? paymentRideId : undefined;
-        const r = await fetch(`${API}/api/support/tickets`, {
+        const r = await authFetch(`${API}/api/support/tickets`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ phone, role: 'driver', category: driverTicketCategory, description: driverTicketDesc.trim(), ...(linkedRideId ? { ride_id: linkedRideId } : {}) }),
         });
@@ -8820,7 +8823,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           </View>
           {[
             { icon: '🎫', label: t('ticket_new_label'), sub: t('ticket_new_sub'), color: C.pink, action: () => { setDriverTicketCategory(''); setDriverTicketDesc(''); setDriverTicketSuccess(null); setDrSubScreen('ticket-new'); } },
-            { icon: '📋', label: t('ticket_list_label'), sub: t('ticket_list_sub'), color: '#3B82F6', action: () => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); } },
+            { icon: '📋', label: t('ticket_list_label'), sub: t('ticket_list_sub'), color: '#3B82F6', action: () => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); authFetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); } },
             // Play requires this to be reachable in-app, not only by email.
             { icon: '🗑️', label: 'Delete Account', sub: 'Request deletion of your account and data', color: C.red, action: () => setShowDeleteAccount(true) },
             { icon: '💬', label: 'WhatsApp', sub: t('whatsapp_fast_sub'), color: '#25D366', action: () => Linking.openURL('https://wa.me/919999999999?text=Hi%20Sppero%20Driver%20Support') },
@@ -8875,7 +8878,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 {tp('ticket_reply_sla', { h: String(driverTicketSuccess.sla_hours) })}
               </Text>
               <TouchableOpacity
-                onPress={() => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); }}
+                onPress={() => { setDriverActiveTicket(null); setDriverTicketDetail(null); setDriverTickets([]); setDriverTicketsLoading(true); setDrSubScreen('ticket-list'); authFetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); }}
                 style={{ backgroundColor: C.pink, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 32, width: '100%', alignItems: 'center', marginBottom: 10 }}>
                 <Text style={{ color: '#fff', fontWeight: '900', fontSize: 15 }}>{t('view_my_tickets_btn')}</Text>
               </TouchableOpacity>
@@ -8951,12 +8954,12 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
         if (!driverTicketReply.trim() || !driverActiveTicket || driverTicketReplying) return;
         setDriverTicketReplying(true);
         try {
-          await fetch(`${API}/api/support/tickets/${driverActiveTicket.id}/reply`, {
+          await authFetch(`${API}/api/support/tickets/${driverActiveTicket.id}/reply`, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, message: driverTicketReply.trim() }),
           });
           setDriverTicketReply('');
-          const r = await fetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`);
+          const r = await authFetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`);
           const d = await r.json();
           setDriverTicketDetail(d);
         } catch { Alert.alert('Error', 'Could not send reply.'); }
@@ -8971,7 +8974,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <View style={s.topBar}>
               <TouchableOpacity onPress={() => { setDriverActiveTicket(null); setDriverTicketDetail(null); }} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
               <Text style={s.greeting} numberOfLines={1}>{driverActiveTicket.ticket_no || 'Ticket'}</Text>
-              <TouchableOpacity onPress={() => { setDriverTicketDetailLoading(true); fetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`).then(r => r.json()).then(d => setDriverTicketDetail(d)).catch(() => {}).finally(() => setDriverTicketDetailLoading(false)); }} style={{ padding: 4 }}><Ionicons name="refresh" size={20} color="#fff" /></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setDriverTicketDetailLoading(true); authFetch(`${API}/api/support/tickets/${driverActiveTicket.id}?phone=${encodeURIComponent(phone)}`).then(r => r.json()).then(d => setDriverTicketDetail(d)).catch(() => {}).finally(() => setDriverTicketDetailLoading(false)); }} style={{ padding: 4 }}><Ionicons name="refresh" size={20} color="#fff" /></TouchableOpacity>
             </View>
             <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
               <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 8 }}>
@@ -9053,7 +9056,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             <TouchableOpacity onPress={() => setDrSubScreen('support')} style={{ padding: 4 }}><Ionicons name="arrow-back" size={22} color="#fff" /></TouchableOpacity>
             <Text style={s.greeting}>📋 {t('ticket_list_label')}</Text>
             <TouchableOpacity
-              onPress={() => { setDriverTickets([]); setDriverTicketsLoading(true); fetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); }}
+              onPress={() => { setDriverTickets([]); setDriverTicketsLoading(true); authFetch(`${API}/api/support/tickets?phone=${encodeURIComponent(phone)}&role=driver`).then(r => r.json()).then(d => setDriverTickets(d.tickets || [])).catch(() => {}).finally(() => setDriverTicketsLoading(false)); }}
               style={{ padding: 4 }}>
               <Ionicons name="refresh" size={20} color="#fff" />
             </TouchableOpacity>
@@ -9091,7 +9094,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                           setDriverTicketDetailLoading(true);
                           setDriverTicketDetail(null);
                           try {
-                            const r = await fetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
+                            const r = await authFetch(`${API}/api/support/tickets/${t.id}?phone=${encodeURIComponent(phone)}`);
                             const d = await r.json();
                             setDriverTicketDetail(d);
                           } catch {}

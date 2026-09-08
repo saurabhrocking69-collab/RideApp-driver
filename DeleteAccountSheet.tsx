@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal, View, Text, TouchableOpacity, TextInput, ActivityIndicator, ScrollView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { C } from './theme';
-import { API } from './api';
+import { API, authFetch } from './api';
 
 // Account deletion, as Google Play requires it: initiated from inside the app,
 // with what will happen spelled out before anything is confirmed.
@@ -31,7 +31,7 @@ export function DeleteAccountSheet({
   const load = async () => {
     setLoading(true); setErr('');
     try {
-      const r = await fetch(`${API}/api/account/deletion?phone=${encodeURIComponent(phone)}&role=${role}`);
+      const r = await authFetch(`${API}/api/account/deletion?phone=${encodeURIComponent(phone)}&role=${role}`);
       setState(await r.json());
     } catch { setErr('Could not reach the server. Check your connection.'); }
     setLoading(false);
@@ -43,7 +43,7 @@ export function DeleteAccountSheet({
   const submit = async () => {
     setBusy(true); setErr('');
     try {
-      const r = await fetch(`${API}/api/account/deletion`, {
+      const r = await authFetch(`${API}/api/account/deletion`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone, role, reason }),
       });
@@ -57,7 +57,7 @@ export function DeleteAccountSheet({
   const cancelRequest = async () => {
     setBusy(true); setErr('');
     try {
-      const r = await fetch(`${API}/api/account/deletion/cancel`, {
+      const r = await authFetch(`${API}/api/account/deletion/cancel`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ phone }),
       });

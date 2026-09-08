@@ -5,6 +5,37 @@
 
 export const API = 'https://api.sppero.com';
 
+/* fetch, par token ke saath - aur signature bilkul fetch jaisa.
+
+   Ye jaan-boojh kar apiAuthGet/apiAuthPost se ALAG hai. Wo parsed data dete
+   hain; ye Response deta hai, theek fetch ki tarah. Isse maujooda `fetch(...)`
+   wali jagahon par sirf ek shabd badalna padta hai aur upar ka `.json()`
+   waisa ka waisa sahi rehta hai.
+
+   Yahi galti pehle ho chuki hai: fetch ko parsed-data wale helper me badla
+   gaya tha aur `.json()` upar laga rah gaya - chaar jagah chupchaap toot gaya
+   tha aur try/catch ne use nigal liya.
+
+   Token pehle memory se, phir AsyncStorage se. Memory isliye ki customer app
+   me AsyncStorage ka seedha padhna api.ts ke andar khali laut raha tha,
+   jabki wahi padhna App ke andar chalta tha. */
+let _driverToken = '';
+export const setDriverToken = (t: string | null | undefined): void => { _driverToken = t || ''; };
+
+export const authFetch = async (url: string, opts: any = {}): Promise<Response> => {
+  let t = _driverToken;
+  if (!t) {
+    try {
+      const AS = require('@react-native-async-storage/async-storage').default;
+      t = (await AS.getItem('driverToken')) || '';
+    } catch (_e) { t = ''; }
+  }
+  return fetch(url, {
+    ...opts,
+    headers: { ...(opts.headers || {}), ...(t ? { Authorization: `Bearer ${t}` } : {}) },
+  });
+};
+
 // ─── Fetch with timeout (10 sec default) ───
 const fetchWithTimeout = async (url: string, options: any = {}, timeout = 10000): Promise<Response> => {
   const controller = new AbortController();
