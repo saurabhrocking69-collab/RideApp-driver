@@ -2273,7 +2273,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
   useEffect(() => {
     if (!showChat || !activeRide?.id) return;
     const load = async () => {
-      try { const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); lastChatCount.current = (d.messages || []).length; setUnreadChat(0); } catch (_e) {}
+      try { const r = await authFetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); lastChatCount.current = (d.messages || []).length; setUnreadChat(0); } catch (_e) {}
     };
     load();
     const iv = setInterval(load, 5000);
@@ -2285,7 +2285,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!showHourlyChat || !activeHourlyRide?.id) return;
     const load = async () => {
       try {
-        const r = await fetch(`${API}/api/chat/h_${activeHourlyRide.id}`);
+        const r = await authFetch(`${API}/api/chat/h_${activeHourlyRide.id}`);
         const d = await r.json();
         if (Array.isArray(d.messages)) setHourlyChatMsgs(d.messages);
       } catch (_e) {}
@@ -2300,14 +2300,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!msg || !activeHourlyRide?.id) return;
     if (!text) setHourlyChatInput('');
     try {
-      const res = await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: `h_${activeHourlyRide.id}`, sender: 'driver', message: msg }) });
+      const res = await authFetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: `h_${activeHourlyRide.id}`, sender: 'driver', message: msg }) });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         Alert.alert('', err.error || 'Message not sent — try again.');
         if (!text) setHourlyChatInput(msg);
         return;
       }
-      const r = await fetch(`${API}/api/chat/h_${activeHourlyRide.id}`);
+      const r = await authFetch(`${API}/api/chat/h_${activeHourlyRide.id}`);
       const d = await r.json();
       if (Array.isArray(d.messages)) setHourlyChatMsgs(d.messages);
     } catch (_e) {
@@ -2446,7 +2446,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     if (!activeRide?.id || showChat) return;
     const iv = setInterval(async () => {
       try {
-        const r = await fetch(`${API}/api/chat/${activeRide.id}`);
+        const r = await authFetch(`${API}/api/chat/${activeRide.id}`);
         const d = await r.json();
         const msgs = d.messages || [];
         if (msgs.length > lastChatCount.current) {
@@ -2469,7 +2469,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     let lastCount = 0;
     const iv = setInterval(async () => {
       try {
-        const r = await fetch(`${API}/api/chat/h_${activeHourlyRide.id}`);
+        const r = await authFetch(`${API}/api/chat/h_${activeHourlyRide.id}`);
         const d = await r.json();
         const msgs = d.messages || [];
         if (msgs.length > lastCount) {
@@ -3811,7 +3811,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     const msg = text ?? chatInput;
     if (!msg.trim() || !activeRide?.id) return;
     if (!text) setChatInput('');
-    try { await fetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await fetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
+    try { await authFetch(`${API}/api/chat/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ride_id: activeRide.id, sender: 'driver', message: msg }) }); const r = await authFetch(`${API}/api/chat/${activeRide.id}`); const d = await r.json(); setChatMsgs(d.messages || []); } catch (_e) {}
   };
   const callCustomer = async () => {
     const body: any = { caller_role: 'driver' };
@@ -3819,7 +3819,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     else if (activeHourlyRide?.id) body.booking_id = activeHourlyRide.id;
     else return;
     try {
-      const r = await fetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const r = await authFetch(`${API}/api/call/initiate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
       const data = await readJson(r);
       if (!data.success) { Alert.alert('Call', data.error || 'Could not place the call'); return; }
       if (data.method === 'direct' && data.call_number) Linking.openURL(`tel:${data.call_number}`);
