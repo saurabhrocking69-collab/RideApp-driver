@@ -1302,7 +1302,10 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
           try {
             const res  = await fetch(`${API}/api/driver/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ phone: savedPhone }) });
             const data = await res.json();
-            if (data.success) {
+            // data.driver bhi hona chahiye - warna neeche .status padhne par
+            // app khulte hi gir jaati hai, aur aadmi ke paas koi raasta nahi
+            // bachta kyoki ye har baar shuru me chalta hai.
+            if (data.success && data.driver) {
               setDriverInfo(data.driver);
               await AsyncStorage.setItem('driverInfo', JSON.stringify(data.driver));
               if (data.driver.status === 'approved') {
@@ -2617,6 +2620,17 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       const data = await res.json();
       if (data.token) {
         await AsyncStorage.setItem('driverToken', data.token);
+        /* FCM token ABHI save karo, poore login ka intezaar mat karo.
+
+           Pehle ye sirf login ke baad hota tha. Par ek naya captain
+           registration bhejne ke BAAD approval ka intezaar karta hai - us
+           samay tak wo kabhi login hua hi nahi hota, to uska
+           driver_fcm_token khali rehta tha. Backend tab grahak app ke token
+           par bhej deta tha (COALESCE), aur "account approve ho gaya" wali
+           soochna Sppero me aa jaati thi - tap karne par galat app khulti.
+           Backend ka wo fallback hata diya gaya hai; ab token ka yahan hona
+           zaroori hai, warna soochna kahin jayegi hi nahi. */
+        registerFCM(regData.phone).catch(() => {});
         setResult(''); setLoginOtpSent(false); setLoginOtpDigits(['','','','','','']);
         setRegStep(2);
       } else setResult('❌ ' + (data.error || 'Incorrect OTP'));
@@ -2663,6 +2677,14 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
       setResult(via === 'google'
         ? '✅ Signed in as ' + (phoneNum || 'your Google account') + ' — but there is no Captain account for this number yet. Tap "Become Sppero Buddy" below to register.'
         : '❌ ' + data.message);
+      return;
+    }
+    /* data.driver ka hona jaancha nahi ja raha tha. success sach ho aur driver
+       na aaye to yahan `undefined.status` padha jaata hai. Aisa jawab aana
+       nahi chahiye - par login jaisi cheez ko "nahi aana chahiye" par tikana
+       theek nahi. */
+    if (!data.driver) {
+      setResult('❌ Could not load your Captain profile — please try again.');
       return;
     }
     if (data.driver.status === 'approved') {
