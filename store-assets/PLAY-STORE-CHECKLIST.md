@@ -2,13 +2,29 @@
 
 Everything below is ready to paste into Play Console once your developer account is active.
 
-> ⚠️ **Hard blocker before submitting** — same backend, same issue: `ALLOW_TEST_OTP=true`
-> on Railway currently lets `000000` log into any driver account with no real OTP, and
-> leaks the real OTP in the API response. Fix sequence: get a Fast2SMS (or similar) API
-> key → add it as `FAST2SMS_API_KEY` on Railway (send-otp already sends real SMS once
-> that's set) → confirm real login works → then set `ALLOW_TEST_OTP=false`. Do this
-> before uploading — Google's reviewer needs to actually receive an OTP to sign up.
-
+> **Status — 10 Sept 2026, live par jaancha gaya.**
+>
+> Pehle yahan ek "hard blocker" likha tha: `ALLOW_TEST_OTP=true`, OTP jawab me
+> leak hota hai, aur koi SMS provider nahi hai. **Teeno baatein ab puri ho chuki
+> hain** — `TWOFACTOR_KEY` lag chuka hai, `send-otp` asli SMS bhejta hai aur
+> jawab me OTP nahi deta, aur `ALLOW_TEST_OTP` ab kuchh grant hi nahi karta.
+> Naye rider aur driver sign up kar sakte hain.
+>
+> **Jo ab bhi baaki hai, upload se pehle:**
+>
+> 1. **Screenshots** — is folder me sirf icon aur feature graphic hain. Play kam
+>    se kam 2 phone screenshot maangta hai (4-8 behtar). Sirf aap le sakte hain.
+> 2. **Reviewer ka demo khaata** — Google ka reviewer Bharat ke bahar hota hai
+>    aur bharatiya SMS nahi pa sakta. Backend me iske liye ek alag darwaza hai:
+>    `REVIEW_PHONE` + `REVIEW_OTP` (Railway par set karein). Wo number Play
+>    Console ke **App access** section me daalein, warna review "we could not
+>    access your app" kehkar wapas aa jayegi.
+> 3. **(Sirf driver app)** Background location ka declaration form + screen
+>    recording video — Section 5 dekhein.
+>
+> Privacy Policy URL: **https://sppero.com/privacy** (chalta hua, jaancha gaya).
+> Purani checklist `api.sppero.com/privacy` kehti thi - wo bhi chalta hai, par
+> asli website behtar dikhti hai reviewer ko.
 ## 1. Assets in this folder
 - `hi-res-icon-512.png` — 512x512 store icon
 - `feature-graphic-1024x500.png` — store listing banner
@@ -66,7 +82,7 @@ Answer **Yes** — this app collects or shares user data. Declare:
 
 - Data encrypted in transit: **Yes**
 - Users can request data deletion: **Yes** — via `help@sppero.com`
-- Privacy Policy URL: **https://api.sppero.com/privacy**
+- Privacy Policy URL: **https://sppero.com/privacy**
 
 ## 4. Content Rating questionnaire
 
@@ -93,7 +109,7 @@ Category: **Utility / Business**. No violence, gambling, drugs, or adult content
 - [ ] Data safety form filled (Section 3 above)
 - [ ] Content rating questionnaire completed (Section 4 above)
 - [ ] Background location permission declaration + video submitted (Section 5)
-- [ ] Privacy Policy URL added: `https://api.sppero.com/privacy`
+- [ ] Privacy Policy URL added: `https://sppero.com/privacy`
 - [ ] Production AAB built (`eas build --platform android --profile production`) and uploaded
 - [ ] If this is a brand-new developer account: complete the mandatory closed testing track (12 testers, 14 continuous days) before Google allows a production release.
 
