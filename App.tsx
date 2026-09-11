@@ -6882,7 +6882,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
                 )}
               </View>
 
-              {eta ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
+              {/* Trip chalu hote hi chhup jaati hai - neeche 'kitna baaki'
+                  wali aa jaati hai, aur do bina-label ke number ek saath
+                  (jisme bacha hua poore se bada) uljhan hi paida karte hain.
+                  Ye number accept ka faisla lene ke liye tha; wo kaam ho chuka. */}
+              {eta && activeRide.status !== 'started' ? <View style={{ backgroundColor: 'rgba(34,197,94,0.12)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}><Text style={{ color: '#22C55E', fontWeight: '700', fontSize: 13 }}>🕐 {eta}</Text></View> : null}
               {distToPickup && (activeRide.status === 'matched' || activeRide.status === 'arrived') && (
                 <View style={{ backgroundColor: 'rgba(233,30,99,0.08)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(233,30,99,0.25)', flexDirection: 'row', justifyContent: 'center', gap: 6 }}>
                   <Text style={{ color: C.pink, fontWeight: '700', fontSize: 14 }}>📍 {distToPickup}</Text>
@@ -7984,7 +7988,11 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
               </View>
 
               {/* ETA / Distance banners */}
-              {eta ? (
+              {/* Trip chalu hote hi chhup jaati hai - neeche 'kitna baaki' wali
+                  aa jaati hai, aur do bina-label ke number ek saath (jisme bacha
+                  hua poore se bada) uljhan hi paida karte hain. Ye number accept
+                  ka faisla lene ke liye tha; wo kaam ho chuka. */}
+              {eta && activeRide.status !== 'started' ? (
                 <View style={{ backgroundColor: 'rgba(34,197,94,0.1)', borderRadius: 10, padding: 10, marginBottom: 10, alignItems: 'center', borderWidth: 1, borderColor: 'rgba(34,197,94,0.3)' }}>
                   <Text style={{ color: C.green, fontWeight: '700', fontSize: 14 }}>🕐 {eta}</Text>
                 </View>
