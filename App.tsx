@@ -4687,7 +4687,7 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
             placeholder="1234 5678 9012"
             keyboardType="numeric"
             maxLength={14}
-            value={aadhaarDigits.replace(/(\d{4})(\d{0,4})(\d{0,4})/, (_, a, b, c) => [a, b, c].filter(Boolean).join(' '))}
+            value={aadhaarDigits.replace(/(\d{4})(\d{0,4})(\d{0,4})/, (_m: string, a: string, b: string, c: string) => [a, b, c].filter(Boolean).join(' '))}
             onChangeText={(v) => updateReg('aadhaar_number', v.replace(/\D/g, '').slice(0, 12))}
           />
           {aadhaarDigits.length > 0 && (

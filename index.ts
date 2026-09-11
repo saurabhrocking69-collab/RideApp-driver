@@ -78,7 +78,13 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+/* children ko props me, teesre tark me nahi.
+
+   Teesra tark bilkul sahi API hai aur chalta bhi hai - par TypeScript ke
+   overload use ErrorBoundary ki `children` wali shart se jod nahi paate, aur
+   ek error deta hai jo kuchh todti nahi par asli error ko chhupa deti hai.
+   Banta bilkul wahi hai. */
 const Root = () =>
-  React.createElement(ErrorBoundary, {}, React.createElement(App));
+  React.createElement(ErrorBoundary, { children: React.createElement(App) });
 
 registerRootComponent(Root);
