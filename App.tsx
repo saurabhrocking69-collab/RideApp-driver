@@ -3286,6 +3286,16 @@ const [hourlyTimerSec, setHourlyTimerSec]     = useState(0);
     // resolves, firing two concurrent accept calls for the same ride.
     if (acceptInFlightRef.current) return;
     acceptInFlightRef.current = true;
+    /* Ungli ko jawab USI pal - request abhi hawa me hai.
+
+       Driver gaadi chala raha hota hai aur screen ghoor nahi sakta. Dabane par
+       kuchh mehsoos na ho to wo dobara dabata hai, phir teesri baar - wahi
+       wajah hai ki upar `acceptInFlightRef` ka pehra rakhna pada tha.
+
+       25ms jaan-boojh kar: ride aane wali thartharahat lambi hai
+       ([0,600,150,600]) aur ye usse alag mehsoos honi chahiye. Ye ek "tap" ka
+       jawab hai, alarm nahi. */
+    try { Vibration.vibrate(25); } catch (_e) {}
     setLoading(true);
     const data = await authRidePost('/api/rides/accept', { ride_id: rideReq.id, driver_phone: phone });
     acceptInFlightRef.current = false;
